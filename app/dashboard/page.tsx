@@ -28,7 +28,6 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   const value = payload.value
   if (!value) return null
 
-  // Simple text wrapping
   const words = String(value).split(' ')
   return (
     <g transform={`translate(${x},${y})`}>
@@ -43,11 +42,13 @@ const CustomXAxisTick = ({ x, y, payload }) => {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [view, setView] = useState('surat') // 'surat' or 'bayaran'
+  const [view, setView] = useState('surat')
   const [surat, setSurat] = useState<Surat[]>([])
   const [bayaran, setBayaran] = useState<Bayaran[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedKawasan, setSelectedKawasan] = useState<string | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+  const [selectedKawasanForKategori, setSelectedKawasanForKategori] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -160,6 +161,38 @@ export default function DashboardPage() {
         }, [] as { name: string; value: number }[])
     : []
 
+  const kawasanDataForSelectedStatus = selectedStatus
+    ? bayaran
+        .filter((item) => item.statusBayaran === selectedStatus)
+        .reduce((acc, item) => {
+          const kawasan = item.daripada || 'Tidak Diketahui'
+          const nilai = parseFloat(item.nilaiBayaran.replace(/[^0-9.-]+/g, '')) || 0
+          const existingKawasan = acc.find((k) => k.name === kawasan)
+          if (existingKawasan) {
+            existingKawasan.value += nilai
+          } else {
+            acc.push({ name: kawasan, value: nilai })
+          }
+          return acc
+        }, [] as { name: string; value: number }[])
+    : []
+
+  const kontrakDataForKategoriDrilldown = (selectedStatus && selectedKawasanForKategori)
+    ? bayaran
+        .filter((item) => item.statusBayaran === selectedStatus && item.daripada === selectedKawasanForKategori)
+        .reduce((acc, item) => {
+          const kontrak = item.noKontrak || 'Tiada Kontrak'
+          const nilai = parseFloat(item.nilaiBayaran.replace(/[^0-9.-]+/g, '')) || 0
+          const existingKontrak = acc.find((k) => k.name === kontrak)
+          if (existingKontrak) {
+            existingKontrak.value += nilai
+          } else {
+            acc.push({ name: kontrak, value: nilai })
+          }
+          return acc
+        }, [] as { name: string; value: number }[])
+    : []
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -187,7 +220,7 @@ export default function DashboardPage() {
               </Sheet>
               <CardTitle className="text-base md:text-xl">Dashboard</CardTitle>
             </div>
-            <Tabs defaultValue="surat" onValueChange={setView} className="w-[200px]">
+            <Tabs defaultValue="surat" onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); }} className="w-[200px]">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="surat">Surat</TabsTrigger>
                 <TabsTrigger value="bayaran">Bayaran</TabsTrigger>
@@ -388,16 +421,52 @@ export default function DashboardPage() {
                 <TabsContent value="kategori" className="mt-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Statistik Kategori Bayaran</CardTitle>
+                      <div className="flex justify-between items-center">
+                        <CardTitle>
+                          {!selectedStatus
+                            ? 'Statistik Kategori Bayaran'
+                            : selectedStatus && !selectedKawasanForKategori
+                            ? `Pecahan Kawasan untuk Status: ${selectedStatus}`
+                            : `Pecahan Kontrak untuk Kawasan: ${selectedKawasanForKategori}`}
+                        </CardTitle>
+                        {(selectedStatus || selectedKawasanForKategori) && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              if (selectedKawasanForKategori) {
+                                setSelectedKawasanForKategori(null)
+                              } else {
+                                setSelectedStatus(null)
+                              }
+                            }}
+                          >
+                            Kembali
+                          </Button>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={bayaranKategoriData}>
+                        <BarChart
+                          data={
+                            !selectedStatus
+                              ? bayaranKategoriData
+                              : selectedStatus && !selectedKawasanForKategori
+                              ? kawasanDataForSelectedStatus
+                              : kontrakDataForKategoriDrilldown
+                          }
+                        >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
+                          <XAxis dataKey="name" tick={<CustomXAxisTick />} interval={0} />
                           <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#3b82f6" />
+                          <Tooltip formatter={(value) => selectedStatus ? `RM ${Number(value).toLocaleString()}` : value} />
+                          <Bar dataKey="value" fill="#3b82f6" onClick={(data) => {
+                              if (!selectedStatus) {
+                                  setSelectedStatus(data.name)
+                              } else if (selectedStatus && !selectedKawasanForKategori) {
+                                  setSelectedKawasanForKategori(data.name)
+                              }
+                          }} />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
