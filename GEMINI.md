@@ -4,7 +4,7 @@ This file helps Gemini understand your project's conventions and configurations.
 
 ## Project Overview
 
-- **Description:** (Cadangan: Terangkan secara ringkas tentang projek `crud-surat` ini, tujuan utamanya, dan untuk siapa ia dibina.)
+- **Description:** Web `crud-surat` ini bertujuan untuk memrekod setiap surat masuk dan status bayaran, ia dibina bagi memudahkan staf terpilih untuk tambah, edit, dan padam sesuatu surat atau rekod bayaran.
 - **Tech Stack:** Next.js, TypeScript, Tailwind CSS, Google Sheets API
 
 ## Getting Started
@@ -44,3 +44,16 @@ This file helps Gemini understand your project's conventions and configurations.
   - "Untuk komponen UI baharu, ikut struktur dan gaya yang sedia ada dalam direktori `components/ui`."
 - **Do Not Touch:**
   - (Senaraikan fail atau direktori yang tidak sepatutnya diubah oleh Gemini, cth: `.env.local`, `next.config.mjs` melainkan diminta secara spesifik).
+
+## Environment Variables
+
+1. NEXT_PUBLIC_IMGBB_API_KEY
+2. GOOGLE_APPLICATION_CREDENTIALS
+3. GOOGLE_SHEET_ID
+4. GOOGLE_PRIVATE_KEY
+5. GOOGLE_CLIENT_EMAIL
+
+## Testing
+
+1. ubah layout ke modem
+2. cuba ubah nak guna react
