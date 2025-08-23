@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Prevent auto-zoom on input focus for mobile devices */
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* This prevents iOS from zooming in */
+  }
+
+  /* Additional fix for mobile inputs */
+  @media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea,
+    button {
+      font-size: 16px !important; /* Force 16px to prevent zoom */
+    }
+  }
+}
+
+/* Modern minimalist styles */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md;
+}
+
+.sidebar-item {
+  @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors;
+}
+
+.sidebar-item-active {
+  @apply bg-secondary text-primary font-medium;
+}
+
+.sidebar-item-inactive {
+  @apply text-muted-foreground hover:bg-secondary hover:text-primary;
+}
+
+.status-badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+.status-progress {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+.status-completed {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.table-container {
+  @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+}
+
+.table-header {
+  @apply sticky top-0 z-10 bg-card;
+}
+
+.table-row {
+  @apply border-b transition-colors hover:bg-muted/50;
+}
+
+.table-cell {
+  @apply p-4 align-middle [&:has([role=checkbox])]:pr-0;
+}
+
+/* Add these animation styles at the end of the file */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-in-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.3s ease-in-out;
+}
+
+.animate-pulse {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Responsive table styles */
+@media (max-width: 768px) {
+  .mobile-card {
+    @apply rounded-lg border p-4 mb-4 bg-card text-card-foreground shadow-sm transition-all;
+  }
+
+  .mobile-card-header {
+    @apply flex justify-between items-center mb-2;
+  }
+
+  .mobile-card-content {
+    @apply space-y-2;
+  }
+
+  .mobile-card-footer {
+    @apply flex flex-wrap gap-2 mt-3 pt-2 border-t;
+  }
+}
+
+/* Fix for double scrollbar */
+.max-h-screen {
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .text-xs {
+    font-size: 0.7rem;
+  }
+
+  .text-sm {
+    font-size: 0.8rem;
+  }
+}
+
+/* Add this to the end of the file to prevent auto-zoom on input focus */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
