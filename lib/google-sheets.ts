@@ -95,58 +95,7 @@ export async function getAllUsers(): Promise<User[]> {
   }
 }
 
-// Get Unit and PIC data from AUTH sheet
-export async function getUnitAndPicData() {
-  try {
-    const sheets = await initializeSheets()
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!G2:H",
-    })
 
-    const rows = response.data.values || []
-
-    // If no data is returned, return empty arrays
-    if (!rows || rows.length === 0) {
-      return { units: [], unitPicMap: {} }
-    }
-
-    // Create a map of unit to PICs
-    const unitPicMap: Record<string, string[]> = {}
-
-    // Process rows to build the map
-    rows.forEach((row) => {
-      const unit = row[0] || "Unknown"
-      const pic = row[1] || "Unknown"
-
-      if (unit) {
-        if (!unitPicMap[unit]) {
-          unitPicMap[unit] = []
-        }
-
-        // Only add PIC if not already in the array and not empty
-        if (pic && !unitPicMap[unit].includes(pic)) {
-          unitPicMap[unit].push(pic)
-        }
-      }
-    })
-
-    // Ensure all units have at least one PIC
-    Object.keys(unitPicMap).forEach((unit) => {
-      if (unitPicMap[unit].length === 0) {
-        unitPicMap[unit] = ["Tiada PIC"]
-      }
-    })
-
-    // Get unique units
-    const units = Object.keys(unitPicMap)
-
-    return { units, unitPicMap }
-  } catch (error) {
-    console.error("Error fetching unit and PIC data from Google Sheets:", error)
-    return { units: [], unitPicMap: {} }
-  }
-}
 
 // Get unique daripada/kepada values from SURAT sheet
 export async function getDaripadaKepadaValues() {
@@ -446,13 +395,13 @@ export async function getStatusLadangData() {
   }
 }
 
-// Get Penerima data from AUTH sheet column U, V, and their associated status bayaran
+// Get Penerima data from UNIT sheet
 export async function getPenerimaData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!U2:Z", // Extended to include more columns if needed
+      range: "UNIT!A2:C", // Fetch Unit, PIC, and potential default status
     })
 
     const rows = response.data.values || []
@@ -462,13 +411,19 @@ export async function getPenerimaData() {
     }
 
     return rows
-      .map((row) => ({
-        name: row[0] || "",
-        unit: row[1] || "",
-        display: `${row[0] || ""} (${row[1] || ""})`,
-        defaultStatus: row[2] || "", // Column W - default status for this penerima
-      }))
-      .filter((item) => item.name.trim() !== "")
+      .map((row) => {
+        const unit = row[0] || ""
+        const name = row[1] || ""
+        const defaultStatus = row[2] || "" // Column C for default status
+
+        return {
+          unit,
+          name,
+          display: `${name} (${unit})`,
+          defaultStatus,
+        }
+      })
+      .filter((item) => item.name.trim() !== "" && item.unit.trim() !== "")
   } catch (error) {
     console.error("Error fetching penerima data from Google Sheets:", error)
     return []
@@ -562,5 +517,44 @@ export async function getStatusBayaranData() {
   } catch (error) {
     console.error("Error fetching status bayaran data from Google Sheets:", error)
     return []
+  }
+}
+// Get Unit and PIC data from UNIT sheet
+export async function getUnitAndPicData() {
+  try {
+    const sheets = await initializeSheets()
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "UNIT!A2:B",
+    })
+
+    const rows = response.data.values || []
+
+    if (!rows || rows.length === 0) {
+      return { units: [], unitPicMap: {} }
+    }
+
+    const unitPicMap: Record<string, string[]> = {}
+
+    rows.forEach((row) => {
+      const unit = row[0] || ""
+      const pic = row[1] || ""
+
+      if (unit) {
+        if (!unitPicMap[unit]) {
+          unitPicMap[unit] = []
+        }
+        if (pic && !unitPicMap[unit].includes(pic)) {
+          unitPicMap[unit].push(pic)
+        }
+      }
+    })
+
+    const units = Object.keys(unitPicMap)
+
+    return { units, unitPicMap }
+  } catch (error) {
+    console.error("Error fetching unit and PIC data from Google Sheets:", error)
+    return { units: [], unitPicMap: {} }
   }
 }
