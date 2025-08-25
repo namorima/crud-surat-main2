@@ -1427,19 +1427,28 @@ Detail: ${directLink}
                           "table-row text-sm transition-all duration-200 hover:bg-muted/30",
                           item.statusBayaran?.toLowerCase() === "selesai" &&
                             "bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900",
+                          item.statusBayaran?.toUpperCase() === "BATAL" &&
+                            "bg-red-100 hover:bg-red-200 dark:bg-red-950 dark:hover:bg-red-900 text-red-800 dark:text-red-200 font-medium",
                         )}
                       >
                         {columnVisibility.id && (
                           <TableCell className="py-2">
                             <Badge
-                              variant={item.statusBayaran?.toLowerCase() === "selesai" ? "default" : "outline"}
-                              className={cn(
-                                "cursor-pointer hover:bg-primary/90",
+                              variant={
+                                item.statusBayaran?.toUpperCase() === "BATAL" ||
                                 item.statusBayaran?.toLowerCase() === "selesai"
-                                  ? "bg-green-600 hover:bg-green-700 text-white"
-                                  : item.tarikhHantar
-                                    ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                                    : "",
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={cn(
+                                "cursor-pointer",
+                                item.statusBayaran?.toUpperCase() === "BATAL"
+                                  ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
+                                  : item.statusBayaran?.toLowerCase() === "selesai"
+                                    ? "bg-green-600 hover:bg-green-700 text-white"
+                                    : item.tarikhHantar
+                                      ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                                      : "hover:bg-primary/90",
                               )}
                               onClick={() => {
                                 setSelectedBayaran(item)
@@ -1539,24 +1548,33 @@ Detail: ${directLink}
                     key={item.id}
                     className={cn(
                       "p-3 transition-all duration-200 hover:bg-muted/30",
-                      item.statusBayaran?.toLowerCase() === "selesai" &&
-                        "border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:hover:bg-green-900",
-                      item.tarikhHantar &&
-                        item.statusBayaran?.toLowerCase() !== "selesai" &&
-                        "border-orange-200 bg-orange-50 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950 dark:hover:bg-orange-900",
+                      item.statusBayaran?.toUpperCase() === "BATAL"
+                        ? "border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-800 dark:bg-red-950 dark:hover:bg-red-900"
+                        : item.statusBayaran?.toLowerCase() === "selesai"
+                          ? "border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:hover:bg-green-900"
+                          : item.tarikhHantar
+                            ? "border-orange-200 bg-orange-50 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950 dark:hover:bg-orange-900"
+                            : "",
                     )}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex flex-col">
                         <Badge
-                          variant={item.statusBayaran?.toLowerCase() === "selesai" ? "default" : "outline"}
-                          className={cn(
-                            "mb-1 w-fit",
+                          variant={
+                            item.statusBayaran?.toUpperCase() === "BATAL" ||
                             item.statusBayaran?.toLowerCase() === "selesai"
-                              ? "bg-green-600 hover:bg-green-700 text-white"
-                              : item.tarikhHantar
-                                ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                                : "",
+                              ? "default"
+                              : "outline"
+                          }
+                          className={cn(
+                            "mb-1 w-fit cursor-pointer",
+                            item.statusBayaran?.toUpperCase() === "BATAL"
+                              ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
+                              : item.statusBayaran?.toLowerCase() === "selesai"
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : item.tarikhHantar
+                                  ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                                  : "",
                           )}
                           onClick={() => {
                             setSelectedBayaran(item)
@@ -1784,10 +1802,16 @@ Detail: ${directLink}
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.tarikhBayar ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar
+                            ? "bg-red-500 text-white"
+                            : selectedBayaran.tarikhBayar
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-300 text-gray-600",
                         )}
                       >
-                        {selectedBayaran.tarikhBayar ? (
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : selectedBayaran.tarikhBayar ? (
                           <span className="text-white">✓</span>
                         ) : (
                           <DollarSign className="h-4 w-4" />
@@ -1823,10 +1847,16 @@ Detail: ${directLink}
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.tarikhHantar ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar
+                            ? "bg-red-500 text-white"
+                            : selectedBayaran.tarikhHantar
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-300 text-gray-600",
                         )}
                       >
-                        {selectedBayaran.tarikhHantar ? (
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : selectedBayaran.tarikhHantar ? (
                           <span className="text-white">✓</span>
                         ) : (
                           <Send className="h-4 w-4" />
@@ -1852,10 +1882,16 @@ Detail: ${directLink}
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.tarikhPn ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn
+                            ? "bg-red-500 text-white"
+                            : selectedBayaran.tarikhPn
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-300 text-gray-600",
                         )}
                       >
-                        {selectedBayaran.tarikhPn ? (
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : selectedBayaran.tarikhPn ? (
                           <span className="text-white">✓</span>
                         ) : (
                           <FilePen className="h-4 w-4" />
@@ -1876,10 +1912,16 @@ Detail: ${directLink}
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.tarikhPpnP ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP
+                            ? "bg-red-500 text-white"
+                            : selectedBayaran.tarikhPpnP
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-300 text-gray-600",
                         )}
                       >
-                        {selectedBayaran.tarikhPpnP ? (
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : selectedBayaran.tarikhPpnP ? (
                           <span className="text-white">✓</span>
                         ) : (
                           <Signature className="h-4 w-4" />
@@ -1900,10 +1942,16 @@ Detail: ${directLink}
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.tarikhMemoLadang ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang
+                            ? "bg-red-500 text-white"
+                            : selectedBayaran.tarikhMemoLadang
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-300 text-gray-600",
                         )}
                       >
-                        {selectedBayaran.tarikhMemoLadang ? (
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : selectedBayaran.tarikhMemoLadang ? (
                           <span className="text-white">✓</span>
                         ) : (
                           <DollarSign className="h-4 w-4" />
@@ -1926,8 +1974,19 @@ Detail: ${directLink}
 
                     {/* Tarikh Terima */}
                     <div className="flex items-start space-x-4 relative z-10">
-                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-medium">
-                        <span className="text-white">✓</span>
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
+                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL"
+                            ? "bg-red-500 text-white"
+                            : "bg-green-500 text-white",
+                        )}
+                      >
+                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" ? (
+                          <span className="text-white font-bold text-lg">!</span>
+                        ) : (
+                          <span className="text-white">✓</span>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -1944,7 +2003,14 @@ Detail: ${directLink}
               {/* Nota Kaki Section */}
               {selectedBayaran.notaKaki && (
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <Label className="text-sm font-medium text-muted-foreground">Nota Kaki</Label>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Nota Kaki</Label>
+                    {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && (
+                      <Badge variant="destructive" className="text-xs">
+                        BATAL
+                      </Badge>
+                    )}
+                  </div>
                   <div className="mt-1">
                     <p className="text-xs text-red-500 whitespace-normal break-words">
                       {renderNotaKakiWithLinks(selectedBayaran.notaKaki)}
