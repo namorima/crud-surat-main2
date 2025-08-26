@@ -125,7 +125,7 @@ export async function getDaripadaKepadaValues() {
     return uniqueValues
   } catch (error) {
     console.error("Error fetching daripada/kepada values from Google Sheets:", error)
-    return []
+    throw new Error(`Failed to fetch daripada/kepada values from Google Sheets: ${error.message}`)
   }
 }
 
@@ -278,7 +278,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
 }
 
 // Add a new bayaran record to the REKOD BAYARAN sheet
-export async function addBayaran(bayaran: Omit<Bayaran, "id">): Promise<void> {
+export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
   try {
     const sheets = await initializeSheets()
 
@@ -322,6 +322,13 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">): Promise<void> {
       },
     })
 
+    await addAuditLog({
+      bayaranId: nextId.toString(),
+      user: user,
+      action: "CREATE",
+      details: `Rekod bayaran baru dicipta`,
+    })
+
     console.log("Bayaran added successfully:", result.data)
   } catch (error) {
     console.error("Error adding bayaran to Google Sheets:", error)
@@ -330,7 +337,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">): Promise<void> {
 }
 
 // Update a bayaran record in the REKOD BAYARAN sheet
-export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id">): Promise<void> {
+export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
   try {
     const sheets = await initializeSheets()
     await sheets.spreadsheets.values.update({
@@ -362,6 +369,13 @@ export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id
         ],
       },
     })
+
+    await addAuditLog({
+      bayaranId: bayaran.id || "Unknown",
+      user: user,
+      action: "UPDATE",
+      details: `Rekod bayaran dikemaskini`, // You might want to add more details here
+    })
   } catch (error) {
     console.error("Error updating bayaran in Google Sheets:", error)
     throw new Error(`Failed to update bayaran in Google Sheets: ${error.message}`)
@@ -369,7 +383,7 @@ export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id
 }
 
 // Delete a row from the REKOD BAYARAN sheet
-export async function deleteBayaran(rowIndex: number): Promise<void> {
+export async function deleteBayaran(rowIndex: number, user: string): Promise<void> {
   try {
     const sheets = await initializeSheets()
 
@@ -399,9 +413,85 @@ export async function deleteBayaran(rowIndex: number): Promise<void> {
         ],
       },
     })
+
+    // Get the ID of the deleted bayaran for the audit log
+    // This requires fetching all data again, which is inefficient but necessary if ID is not passed
+    const allBayaran = await getAllBayaran() // Re-fetch to get current state after deletion
+    const deletedBayaranId = allBayaran[rowIndex]?.id || "Unknown"
+
+    await addAuditLog({
+      bayaranId: deletedBayaranId,
+      user: user,
+      action: "DELETE",
+      details: `Rekod bayaran dipadam`, // You might want to add more details here
+    })
   } catch (error) {
     console.error("Error deleting bayaran from Google Sheets:", error)
     throw new Error(`Failed to delete bayaran from Google Sheets: ${error.message}`)
+  }
+}
+
+// Bulk update the status of bayaran records
+export async function bulkUpdateBayaranStatus(ids: string[], newStatus: string, user: string): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+    const allBayaran = await getAllBayaran()
+
+    const requests = ids.map((id) => {
+      const rowIndex = allBayaran.findIndex((item) => item.id === id)
+      if (rowIndex === -1) {
+        return null
+      }
+
+      // Add audit log for each updated record
+      addAuditLog({
+        bayaranId: id,
+        user: user,
+        action: "BULK_UPDATE_STATUS",
+        details: `Status rekod dikemaskini kepada '${newStatus}'`, // You might want to add more details here
+      })
+
+      return {
+        range: `REKOD BAYARAN!M${rowIndex + 2}`,
+        values: [[newStatus]],
+      }
+    }).filter((req) => req !== null) as { range: string; values: string[][] }[]
+
+    if (requests.length === 0) {
+      return
+    }
+
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: requests,
+      },
+    })
+  } catch (error) {
+    console.error("Error bulk updating bayaran status in Google Sheets:", error)
+    throw new Error(`Failed to bulk update bayaran status in Google Sheets: ${error.message}`)
+  }
+}
+
+// Add a log to the audit trail sheet
+export async function addAuditLog(log: { bayaranId: string; user: string; action: string; details: string }): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+    const timestamp = new Date().toISOString()
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "AUDIT_BAYARAN!A2:E",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [[timestamp, log.bayaranId, log.user, log.action, log.details]],
+      },
+    })
+  } catch (error) {
+    console.error("Error adding audit log to Google Sheets:", error)
+    // We don't throw an error here because the main operation should not fail if logging fails
   }
 }
 
@@ -428,17 +518,17 @@ export async function getStatusLadangData() {
       .filter((item) => item.status.trim() !== "")
   } catch (error) {
     console.error("Error fetching status ladang data from Google Sheets:", error)
-    return []
+    throw new Error(`Failed to fetch status ladang data from Google Sheets: ${error.message}`)
   }
 }
 
-// Get Penerima data from UNIT sheet
+// Get Penerima data from AUTH sheet
 export async function getPenerimaData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "UNIT!A2:C", // Fetch Unit, PIC, and potential default status
+      range: "AUTH!U2:V", // Fetch PENERIMA (U) and UNIT (V)
     })
 
     const rows = response.data.values || []
@@ -449,21 +539,20 @@ export async function getPenerimaData() {
 
     return rows
       .map((row) => {
-        const unit = row[0] || ""
-        const name = row[1] || ""
-        const defaultStatus = row[2] || "" // Column C for default status
+        const name = row[0] || ""
+        const unit = row[1] || ""
 
         return {
           unit,
           name,
           display: `${name} (${unit})`,
-          defaultStatus,
+          defaultStatus: "", // No default status from this sheet
         }
       })
       .filter((item) => item.name.trim() !== "" && item.unit.trim() !== "")
   } catch (error) {
     console.error("Error fetching penerima data from Google Sheets:", error)
-    return []
+    throw new Error(`Failed to fetch penerima data from Google Sheets: ${error.message}`)
   }
 }
 
@@ -526,7 +615,7 @@ export async function getContractCategoryData() {
     return { contractData, categoryData, allContracts, allCategories }
   } catch (error) {
     console.error("Error fetching contract and category data from Google Sheets:", error)
-    return { contractData: {}, categoryData: {}, allContracts: [], allCategories: [] }
+    throw new Error(`Failed to fetch contract and category data from Google Sheets: ${error.message}`)
   }
 }
 
@@ -553,7 +642,7 @@ export async function getStatusBayaranData() {
       .filter((item) => item.status.trim() !== "")
   } catch (error) {
     console.error("Error fetching status bayaran data from Google Sheets:", error)
-    return []
+    throw new Error(`Failed to fetch status bayaran data from Google Sheets: ${error.message}`)
   }
 }
 // Get Unit and PIC data from UNIT sheet
@@ -592,6 +681,6 @@ export async function getUnitAndPicData() {
     return { units, unitPicMap }
   } catch (error) {
     console.error("Error fetching unit and PIC data from Google Sheets:", error)
-    return { units: [], unitPicMap: {} }
+    throw new Error(`Failed to fetch unit and PIC data from Google Sheets: ${error.message}`)
   }
 }

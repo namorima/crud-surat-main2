@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllBayaran, addBayaran } from "@/lib/google-sheets"
+import { BayaranSchema } from "@/types/bayaran-schema"
+import { z } from "zod"
 
 export async function GET() {
   try {
@@ -14,26 +16,28 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const { user, ...bayaranData } = body
 
-    // Validate required fields
-    if (!body.daripada || !body.tarikhTerima || !body.perkara) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
+    // Validate input using Zod
+    const validatedData = BayaranSchema.parse(bayaranData)
 
     // Convert date format if needed (from YYYY-MM-DD to DD/MM/YYYY)
     const formattedData = {
-      ...body,
-      tarikhTerima: body.tarikhTerima ? formatDateForSheet(body.tarikhTerima) : "",
-      tarikhMemoLadang: body.tarikhMemoLadang ? formatDateForSheet(body.tarikhMemoLadang) : "",
-      tarikhHantar: body.tarikhHantar ? formatDateForSheet(body.tarikhHantar) : "",
-      tarikhBayar: body.tarikhBayar ? formatDateForSheet(body.tarikhBayar) : "",
-      tarikhPpnP: body.tarikhPpnP ? formatDateForSheet(body.tarikhPpnP) : "",
-      tarikhPn: body.tarikhPn ? formatDateForSheet(body.tarikhPn) : "",
+      ...validatedData,
+      tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
+      tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
+      tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",
+      tarikhBayar: validatedData.tarikhBayar ? formatDateForSheet(validatedData.tarikhBayar) : "",
+      tarikhPpnP: validatedData.tarikhPpnP ? formatDateForSheet(validatedData.tarikhPpnP) : "",
+      tarikhPn: validatedData.tarikhPn ? formatDateForSheet(validatedData.tarikhPn) : "",
     }
 
-    await addBayaran(formattedData)
+    await addBayaran(formattedData, user || "Unknown")
     return NextResponse.json({ success: true, message: "Bayaran record added successfully" })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 })
+    }
     console.error("Error in POST /api/bayaran:", error)
     return NextResponse.json({ error: "Failed to add bayaran record" }, { status: 500 })
   }

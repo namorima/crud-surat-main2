@@ -58,6 +58,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { BayaranShareImageGenerator } from "@/components/bayaran-share-image-generator"
+import { BayaranTable } from "@/components/bayaran/BayaranTable"
+import { DetailDialog } from "@/components/bayaran/DetailDialog"
+import { AddEditForm } from "@/components/bayaran/AddEditForm"
+import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog"
 import { toast } from "sonner"
 
 // Number of items per page
@@ -84,7 +88,7 @@ export default function BayaranPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [kategoriFilter, setKategoriFilter] = useState<string>("all")
   const [kontrakFilter, setKontrakFilter] = useState<string>("all")
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [dateFilter, setDateFilter] = useState<[Date | undefined, Date | undefined]>([undefined, undefined])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null)
@@ -94,6 +98,8 @@ export default function BayaranPage() {
   const [editingBayaran, setEditingBayaran] = useState<Bayaran | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false)
 
   // Sorting state - Default sort by ID descending (largest first)
   const [sortField, setSortField] = useState<keyof Bayaran | null>("id")
@@ -371,10 +377,25 @@ export default function BayaranPage() {
       filtered = filtered.filter((item) => item.noKontrak === kontrakFilter)
     }
 
-    // Apply date filter - default to 2025 if no specific date filter
-    if (dateFilter) {
-      const filterDate = format(dateFilter, "dd/MM/yyyy")
-      filtered = filtered.filter((item) => item.tarikhTerima === filterDate)
+    // Apply date range filter
+    if (dateFilter[0]) {
+      const fromDate = dateFilter[0]
+      const toDate = dateFilter[1] || fromDate // If no end date, use start date
+
+      filtered = filtered.filter((item) => {
+        if (!item.tarikhTerima) return false
+        const dateParts = item.tarikhTerima.split("/")
+        if (dateParts.length !== 3) return false
+        const itemDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`)
+
+        if (isNaN(itemDate.getTime())) return false
+
+        // Normalize dates to remove time part
+        const from = new Date(fromDate.setHours(0, 0, 0, 0))
+        const to = new Date(toDate.setHours(23, 59, 59, 999))
+
+        return itemDate >= from && itemDate <= to
+      })
     } else {
       // Default filter for 2025 - show all 2025 records
       filtered = filtered.filter((item) => {
@@ -730,6 +751,7 @@ export default function BayaranPage() {
 
       const payload = {
         ...formData,
+        user: user?.name || "Unknown",
       }
 
       let response
@@ -841,7 +863,7 @@ export default function BayaranPage() {
     setIsDeleting(true)
 
     try {
-      const response = await fetch(`/api/bayaran/${selectedBayaran.id}`, {
+      const response = await fetch(`/api/bayaran/${selectedBayaran.id}?user=${user?.name || "Unknown"}`, {
         method: "DELETE",
       })
 
@@ -1129,14 +1151,19 @@ Detail: ${directLink}
                     <Button
                       variant="outline"
                       size="icon"
-                      className={cn(dateFilter && "text-primary", "h-7 w-7 md:h-8 md:w-8")}
+                      className={cn(dateFilter[0] && "text-primary", "h-7 w-7 md:h-8 md:w-8")}
                     >
                       <Calendar className="h-3 w-3 md:h-4 md:w-4" />
                       <span className="sr-only">Filter Tarikh</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="end">
-                    <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateFilter} initialFocus />
+                    <CalendarComponent
+                      mode="range"
+                      selected={{ from: dateFilter[0], to: dateFilter[1] }}
+                      onSelect={(range) => setDateFilter([range?.from, range?.to])}
+                      initialFocus
+                    />
                   </PopoverContent>
                 </Popover>
               )}
@@ -1252,6 +1279,20 @@ Detail: ${directLink}
                 >
                   <Plus className="h-3 w-3 md:h-4 md:w-4" />
                   <span className="sr-only">Tambah Rekod</span>
+                </Button>
+              )}
+
+              {/* Bulk Action Button */}
+              {selectedRows.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowBulkEditDialog(true)}
+                  className="h-7 w-7 md:h-8 md:w-8"
+                  title="Bulk Edit"
+                >
+                  <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="sr-only">Bulk Edit</span>
                 </Button>
               )}
 
@@ -1376,336 +1417,28 @@ Detail: ${directLink}
           </div>
         </CardHeader>
         <CardContent className="overflow-hidden">
-          <div className="overflow-x-auto">
-            {/* Desktop view */}
-            <div className="hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
-              <Table>
-                <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-sm">
-                  <TableRow>
-                    {columnVisibility.id && (
-                      <TableHead className="w-[80px] cursor-pointer" onClick={() => handleSort("id")}>
-                        <div className="flex items-center">
-                          ID
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.daripadaTarikh && (
-                      <TableHead className="w-[150px]">
-                        <div className="flex items-center">Daripada / Tarikh</div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.perkara && (
-                      <TableHead className="w-[400px] cursor-pointer" onClick={() => handleSort("perkara")}>
-                        <div className="flex items-center">
-                          Perkara / Details
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.nilaiBayaran && (
-                      <TableHead
-                        className="w-[150px] cursor-pointer text-right"
-                        onClick={() => handleSort("nilaiBayaran")}
-                      >
-                        <div className="flex items-center justify-end">
-                          Nilai Bayaran
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.bayaranKe && (
-                      <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort("bayaranKe")}>
-                        <div className="flex items-center">
-                          Bayaran Ke
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.noKontrak && (
-                      <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort("noKontrak")}>
-                        <div className="flex items-center">
-                          No Kontrak
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.tarikhBayar && (
-                      <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort("tarikhBayar")}>
-                        <div className="flex items-center">
-                          Tarikh Bayar
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedBayaran.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        {loading ? (
-                          <div className="flex justify-center">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                          </div>
-                        ) : error ? (
-                          <div className="text-destructive">Error loading data. Please try again.</div>
-                        ) : (
-                          <div>
-                            <p className="text-muted-foreground">Tiada data bayaran dijumpai</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-2 bg-transparent"
-                              onClick={fetchWithCache}
-                            >
-                              Muat Semula Data
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    displayedBayaran.map((item) => (
-                      <TableRow
-                        key={item.id}
-                        className={cn(
-                          "table-row text-sm transition-all duration-200 hover:bg-muted/30",
-                          item.statusBayaran?.toLowerCase() === "selesai" &&
-                            "bg-green-50 hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900",
-                          item.statusBayaran?.toUpperCase() === "BATAL" &&
-                            "bg-red-100 hover:bg-red-200 dark:bg-red-950 dark:hover:bg-red-900 text-red-800 dark:text-red-200 font-medium",
-                        )}
-                      >
-                        {columnVisibility.id && (
-                          <TableCell className="py-2">
-                            <Badge
-                              variant={
-                                item.statusBayaran?.toUpperCase() === "BATAL" ||
-                                item.statusBayaran?.toLowerCase() === "selesai"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className={cn(
-                                "cursor-pointer",
-                                item.statusBayaran?.toUpperCase() === "BATAL"
-                                  ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
-                                  : item.statusBayaran?.toLowerCase() === "selesai"
-                                    ? "bg-green-600 hover:bg-green-700 text-white"
-                                    : item.tarikhHantar
-                                      ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                                      : "hover:bg-primary/90",
-                              )}
-                              onClick={() => {
-                                setSelectedBayaran(item)
-                                setShowDetailDialog(true)
-                              }}
-                            >
-                              #{item.id}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        {columnVisibility.daripadaTarikh && (
-                          <TableCell className="py-2">
-                            <div className="flex flex-col">
-                              <div className="text-xs text-muted-foreground">{item.tarikhTerima}</div>
-                              <div className="font-medium">{item.daripada}</div>
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.perkara && (
-                          <TableCell className="py-2">
-                            <div className="space-y-2">
-                              <div className="whitespace-normal break-words max-w-[300px]" title={item.perkara}>
-                                {item.perkara}
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                <Badge
-                                  variant="outline"
-                                  className={cn("text-xs", getKategoriColor(item.kategori || ""))}
-                                >
-                                  {item.kategori}
-                                </Badge>
-                                <Badge
-                                  className={`text-xs ${getStatusColor(item.statusBayaran)}`}
-                                  style={getStatusBadgeStyle(item.statusBayaran)}
-                                >
-                                  {item.statusBayaran}
-                                </Badge>
-                                {item.noKontrak && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs cursor-pointer hover:bg-muted"
-                                    onClick={() => handleKontrakFilter(item.noKontrak || "")}
-                                  >
-                                    {item.noKontrak}
-                                  </Badge>
-                                )}
-                              </div>
-                              {item.notaKaki && (
-                                <div className="mt-1">
-                                  <p className="text-xs text-red-500 whitespace-normal break-words">
-                                    {renderNotaKakiWithLinks(item.notaKaki)}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.nilaiBayaran && (
-                          <TableCell className="py-2 text-right font-medium">
-                            {formatCurrency(item.nilaiBayaran)}
-                          </TableCell>
-                        )}
-                        {columnVisibility.bayaranKe && <TableCell className="py-2">{item.bayaranKe}</TableCell>}
-                        {columnVisibility.noKontrak && <TableCell className="py-2">{item.noKontrak || "-"}</TableCell>}
-                        {columnVisibility.tarikhBayar && (
-                          <TableCell className="py-2">{item.tarikhBayar || "-"}</TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile view */}
-            <div className="md:hidden space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto pb-4">
-              {displayedBayaran.length === 0 ? (
-                <div className="text-center py-8">
-                  {loading ? (
-                    <div className="flex justify-center">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-destructive">Error loading data. Please try again.</div>
-                  ) : (
-                    <div>
-                      <p className="text-muted-foreground">Tiada data bayaran dijumpai</p>
-                      <Button variant="outline" size="sm" className="mt-2 bg-transparent" onClick={fetchWithCache}>
-                        Muat Semula Data
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                displayedBayaran.map((item) => (
-                  <Card
-                    key={item.id}
-                    className={cn(
-                      "p-3 transition-all duration-200 hover:bg-muted/30",
-                      item.statusBayaran?.toUpperCase() === "BATAL"
-                        ? "border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-800 dark:bg-red-950 dark:hover:bg-red-900"
-                        : item.statusBayaran?.toLowerCase() === "selesai"
-                          ? "border-green-200 bg-green-50 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:hover:bg-green-900"
-                          : item.tarikhHantar
-                            ? "border-orange-200 bg-orange-50 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950 dark:hover:bg-orange-900"
-                            : "",
-                    )}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex flex-col">
-                        <Badge
-                          variant={
-                            item.statusBayaran?.toUpperCase() === "BATAL" ||
-                            item.statusBayaran?.toLowerCase() === "selesai"
-                              ? "default"
-                              : "outline"
-                          }
-                          className={cn(
-                            "mb-1 w-fit cursor-pointer",
-                            item.statusBayaran?.toUpperCase() === "BATAL"
-                              ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
-                              : item.statusBayaran?.toLowerCase() === "selesai"
-                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                : item.tarikhHantar
-                                  ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                                  : "",
-                          )}
-                          onClick={() => {
-                            setSelectedBayaran(item)
-                            setShowDetailDialog(true)
-                          }}
-                        >
-                          #{item.id}
-                        </Badge>
-                        <span className="font-medium text-sm">{item.daripada}</span>
-                        <span className="text-xs text-muted-foreground">{item.tarikhTerima}</span>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1">
-                          <Badge
-                            className={`text-[10px] ${getStatusColor(item.statusBayaran)}`}
-                            style={getStatusBadgeStyle(item.statusBayaran)}
-                          >
-                            {item.statusBayaran}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleShare(item)}
-                            disabled={isGeneratingImage || (sharingBayaran?.id === item.id && isSharing)}
-                          >
-                            {sharingBayaran?.id === item.id && isSharing ? (
-                              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                            ) : (
-                              <Share2 className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                        {item.noKontrak && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-1 py-0 text-red-800 dark:text-red-700 border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer mt-1"
-                            onClick={() => handleKontrakFilter(item.noKontrak)}
-                          >
-                            {item.noKontrak}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm whitespace-normal break-words">{item.perkara}</p>
-
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline" className={cn("text-[10px]", getKategoriColor(item.kategori || ""))}>
-                          {item.kategori}
-                        </Badge>
-                        {item.nomborBaucer && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px]",
-                              item.statusBayaran?.toLowerCase() === "selesai"
-                                ? "bg-green-100 text-green-800 border-green-300"
-                                : "",
-                            )}
-                          >
-                            {item.nomborBaucer}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">{formatCurrency(item.nilaiBayaran)}</span>
-                        <span className="text-xs text-muted-foreground font-bold">{item.bayaranKe}</span>
-                      </div>
-
-                      {item.notaKaki && (
-                        <div className="mt-2">
-                          <p className="text-xs text-red-500 whitespace-normal break-words">
-                            {renderNotaKakiWithLinks(item.notaKaki)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
+          <BayaranTable
+            displayedBayaran={displayedBayaran}
+            columnVisibility={columnVisibility}
+            handleSort={handleSort}
+            setSelectedBayaran={setSelectedBayaran}
+            setShowDetailDialog={setShowDetailDialog}
+            getKategoriColor={getKategoriColor}
+            getStatusColor={getStatusColor}
+            getStatusBadgeStyle={getStatusBadgeStyle}
+            formatCurrency={formatCurrency}
+            renderNotaKakiWithLinks={renderNotaKakiWithLinks}
+            handleKontrakFilter={handleKontrakFilter}
+            handleShare={handleShare}
+            isGeneratingImage={isGeneratingImage}
+            sharingBayaran={sharingBayaran}
+            isSharing={isSharing}
+            loading={loading}
+            error={error}
+            fetchWithCache={fetchWithCache}
+            selectedRows={selectedRows}
+            setSelectedRows={setSelectedRows}
+          />
 
           {/* Pagination - Non-sticky for mobile */}
           {filteredBayaran.length > 0 && (
@@ -1744,1370 +1477,67 @@ Detail: ${directLink}
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Badge
-                variant={selectedBayaran?.statusBayaran?.toLowerCase() === "selesai" ? "default" : "outline"}
-                className={cn(
-                  selectedBayaran?.statusBayaran?.toLowerCase() === "selesai"
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "",
-                )}
-              >
-                #{selectedBayaran?.id}
-              </Badge>
-              Detail Rekod Bayaran
-            </DialogTitle>
-          </DialogHeader>
-          {selectedBayaran && (
-            <div className="space-y-6">
-              {/* Basic Info Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Daripada</Label>
-                    <p className="text-sm font-medium">{selectedBayaran.daripada}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Perkara</Label>
-                    <p className="text-sm whitespace-normal break-words">{selectedBayaran.perkara}</p>
-                  </div>
-                  {/* Mobile layout: Kategori and No Kontrak in one line */}
-                  <div className="md:hidden flex gap-2">
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium text-muted-foreground">Kategori</Label>
-                      <div className="mt-1">
-                        <Badge
-                          variant="outline"
-                          className={cn("text-xs", getKategoriColor(selectedBayaran.kategori || ""))}
-                        >
-                          {selectedBayaran.kategori}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium text-muted-foreground">No Kontrak</Label>
-                      <p className="text-sm mt-1">{selectedBayaran.noKontrak || "-"}</p>
-                    </div>
-                  </div>
-                  {/* Desktop layout: Kategori only */}
-                  <div className="hidden md:block">
-                    <Label className="text-sm font-medium text-muted-foreground">Kategori</Label>
-                    <div className="ml-2">
-                      <Badge
-                        variant="outline"
-                        className={cn("text-xs", getKategoriColor(selectedBayaran.kategori || ""))}
-                      >
-                        {selectedBayaran.kategori}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {/* Mobile layout: Nilai Bayaran and Bayaran Ke in one line */}
-                  <div className="md:hidden flex gap-2">
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium text-muted-foreground">Nilai Bayaran</Label>
-                      <p className="text-sm font-medium">{formatCurrency(selectedBayaran.nilaiBayaran)}</p>
-                    </div>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium text-muted-foreground">Bayaran Ke</Label>
-                      <p className="text-sm">{selectedBayaran.bayaranKe}</p>
-                    </div>
-                  </div>
-                  {/* Desktop layout: Separate rows */}
-                  <div className="hidden md:block">
-                    <Label className="text-sm font-medium text-muted-foreground">Nilai Bayaran</Label>
-                    <p className="text-sm font-medium">{formatCurrency(selectedBayaran.nilaiBayaran)}</p>
-                  </div>
-                  <div className="hidden md:block">
-                    <Label className="text-sm font-medium text-muted-foreground">Bayaran Ke</Label>
-                    <p className="text-sm">{selectedBayaran.bayaranKe}</p>
-                  </div>
-                  <div className="hidden md:block">
-                    <Label className="text-sm font-medium text-muted-foreground">No Kontrak</Label>
-                    <p className="text-sm">{selectedBayaran.noKontrak || "-"}</p>
-                  </div>
-                </div>
-              </div>
+      <DetailDialog
+        showDetailDialog={showDetailDialog}
+        setShowDetailDialog={setShowDetailDialog}
+        selectedBayaran={selectedBayaran}
+        handleEdit={handleEdit}
+        handleShare={handleShare}
+        isSharing={isSharing}
+        isGeneratingImage={isGeneratingImage}
+        user={user}
+        showDeleteConfirm={showDeleteConfirm}
+        setShowDeleteConfirm={setShowDeleteConfirm}
+        handleDelete={handleDelete}
+        isDeleting={isDeleting}
+        getKategoriColor={getKategoriColor}
+        formatCurrency={formatCurrency}
+        formatDate={formatDate}
+        extractPenerimaWithUnit={extractPenerimaWithUnit}
+        renderNotaKakiWithLinks={renderNotaKakiWithLinks}
+      />
 
-              {/* Timeline Tracking Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Tracking Bayaran</h3>
-                <div className="relative">
-                  {/* Timeline Line - Behind icons and semi-transparent */}
-                  <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-300 opacity-50 -z-10"></div>
+      <AddEditForm
+        showAddDialog={showAddDialog}
+        setShowAddDialog={setShowAddDialog}
+        showEditDialog={showEditDialog}
+        setShowEditDialog={setShowEditDialog}
+        editingBayaran={editingBayaran}
+        setEditingBayaran={setEditingBayaran}
+        formData={formData}
+        setFormData={setFormData}
+        formOptions={formOptions}
+        handleSave={handleSave}
+        saving={saving}
+        user={user}
+        showDaripadaDropdown={showDaripadaDropdown}
+        setShowDaripadaDropdown={setShowDaripadaDropdown}
+        handleDaripadaChange={handleDaripadaChange}
+        filteredDaripadaSuggestions={filteredDaripadaSuggestions}
+        handleKontrakChange={handleKontrakChange}
+        getAvailableKontraks={getAvailableKontraks}
+        getAvailableKategoris={getAvailableKategoris}
+        handleCurrencyInputChange={handleCurrencyInputChange}
+        formatCurrencyInput={formatCurrencyInput}
+        shouldShowAdvancedFields={shouldShowAdvancedFields}
+        shouldShowHandoverFields={shouldShowHandoverFields}
+        shouldShowCompletionFields={shouldShowCompletionFields}
+        showPenerimaDropdown={showPenerimaDropdown}
+        setShowPenerimaDropdown={setShowPenerimaDropdown}
+        handlePenerimaChange={handlePenerimaChange}
+        filteredPenerimaData={filteredPenerimaData}
+        KATEGORI_COLORS={KATEGORI_COLORS}
+      />
 
-                  {/* Timeline Items */}
-                  <div className="space-y-6">
-                    {/* Tarikh Bayar */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar
-                            ? "bg-red-500 text-white"
-                            : selectedBayaran.tarikhBayar
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300 text-gray-600",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : selectedBayaran.tarikhBayar ? (
-                          <span className="text-white">✓</span>
-                        ) : (
-                          <DollarSign className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh Bayar</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedBayaran.tarikhBayar ? formatDate(selectedBayaran.tarikhBayar) : "Belum dibayar"}
-                          </p>
-                        </div>
-                        {selectedBayaran.nomborBaucer && (
-                          <div className="mt-1 ml-2">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs",
-                                selectedBayaran.statusBayaran?.toLowerCase() === "selesai"
-                                  ? "bg-green-100 text-green-800 border-green-300"
-                                  : "",
-                              )}
-                            >
-                              {selectedBayaran.nomborBaucer}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tarikh Hantar */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar
-                            ? "bg-red-500 text-white"
-                            : selectedBayaran.tarikhHantar
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300 text-gray-600",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : selectedBayaran.tarikhHantar ? (
-                          <span className="text-white">✓</span>
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh Hantar</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedBayaran.tarikhHantar ? formatDate(selectedBayaran.tarikhHantar) : "Belum dihantar"}
-                          </p>
-                        </div>
-                        {selectedBayaran.penerima && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Kepada: {extractPenerimaWithUnit(selectedBayaran.penerima)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tarikh PN */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn
-                            ? "bg-red-500 text-white"
-                            : selectedBayaran.tarikhPn
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300 text-gray-600",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : selectedBayaran.tarikhPn ? (
-                          <span className="text-white">✓</span>
-                        ) : (
-                          <FilePen className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh PN</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedBayaran.tarikhPn ? formatDate(selectedBayaran.tarikhPn) : "Belum diproses"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tarikh PPN (P) */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP
-                            ? "bg-red-500 text-white"
-                            : selectedBayaran.tarikhPpnP
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300 text-gray-600",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : selectedBayaran.tarikhPpnP ? (
-                          <span className="text-white">✓</span>
-                        ) : (
-                          <Signature className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh PPN (P)</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedBayaran.tarikhPpnP ? formatDate(selectedBayaran.tarikhPpnP) : "Belum diproses"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tarikh Memo Ladang */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang
-                            ? "bg-red-500 text-white"
-                            : selectedBayaran.tarikhMemoLadang
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-300 text-gray-600",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : selectedBayaran.tarikhMemoLadang ? (
-                          <span className="text-white">✓</span>
-                        ) : (
-                          <DollarSign className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh Memo Ladang</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedBayaran.tarikhMemoLadang
-                              ? formatDate(selectedBayaran.tarikhMemoLadang)
-                              : "Belum dibuat"}
-                          </p>
-                        </div>
-                        {selectedBayaran.statusLadang && (
-                          <p className="text-xs text-muted-foreground mt-1">Status: {selectedBayaran.statusLadang}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tarikh Terima */}
-                    <div className="flex items-start space-x-4 relative z-10">
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          selectedBayaran.statusBayaran?.toUpperCase() === "BATAL"
-                            ? "bg-red-500 text-white"
-                            : "bg-green-500 text-white",
-                        )}
-                      >
-                        {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" ? (
-                          <span className="text-white font-bold text-lg">!</span>
-                        ) : (
-                          <span className="text-white">✓</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Tarikh Terima</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(selectedBayaran.tarikhTerima)}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Daripada: {selectedBayaran.daripada}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nota Kaki Section */}
-              {selectedBayaran.notaKaki && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Nota Kaki</Label>
-                    {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && (
-                      <Badge variant="destructive" className="text-xs">
-                        BATAL
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="mt-1">
-                    <p className="text-xs text-red-500 whitespace-normal break-words">
-                      {renderNotaKakiWithLinks(selectedBayaran.notaKaki)}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <div className="flex flex-row gap-2 w-full sm:w-auto justify-between sm:justify-start">
-              {(user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && selectedBayaran?.statusBayaran === "KEWANGAN")) && (
-                <Button
-                  variant="outline"
-                  onClick={() => selectedBayaran && handleEdit(selectedBayaran)}
-                  className="flex-1 sm:flex-none"
-                >
-                  <Edit className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Edit</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => selectedBayaran && handleShare(selectedBayaran)}
-                disabled={isSharing || isGeneratingImage}
-                className="flex-1 sm:flex-none"
-              >
-                {isSharing ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                    <span className="hidden sm:inline">Sharing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Share</span>
-                  </>
-                )}
-              </Button>
-              <Button onClick={() => setShowDetailDialog(false)} className="flex-1 sm:flex-none">
-                <span className="hidden sm:inline mr-2">Tutup</span>
-                <X className="h-4 w-4 sm:hidden" />
-              </Button>
-              {user?.role === "semua" && (
-                <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="flex-1 sm:flex-none">
-                      <Trash2 className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Padam</span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Adakah anda pasti?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tindakan ini tidak boleh dibuat asal. Ini akan memadamkan rekod bayaran secara kekal.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                        {isDeleting ? (
-                          <>
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                            Memadam...
-                          </>
-                        ) : (
-                          "Padam"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Tambah Rekod Bayaran</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              {/* Daripada with suggestions - allows custom input */}
-              <div>
-                <Label>Daripada</Label>
-                <Popover open={showDaripadaDropdown} onOpenChange={setShowDaripadaDropdown}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={showDaripadaDropdown}
-                      className="w-full justify-between bg-transparent"
-                    >
-                      {formData.daripada || "Pilih atau taip nama/organisasi..."}
-                      <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Cari atau taip nama..."
-                        value={formData.daripada}
-                        onValueChange={handleDaripadaChange}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          <div className="p-2">
-                            <p className="text-sm text-muted-foreground mb-2">Tiada hasil dijumpai.</p>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                // Keep the current input value
-                                setShowDaripadaDropdown(false)
-                              }}
-                              className="w-full"
-                            >
-                              Gunakan "{formData.daripada}"
-                            </Button>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {filteredDaripadaSuggestions.map((suggestion) => (
-                            <CommandItem
-                              key={suggestion}
-                              value={suggestion}
-                              onSelect={() => {
-                                setFormData((prev) => ({ ...prev, daripada: suggestion, noKontrak: "", kategori: "" }))
-                                setShowDaripadaDropdown(false)
-                              }}
-                            >
-                              {suggestion}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label htmlFor="tarikhTerima">Tarikh Terima</Label>
-                <Input
-                  id="tarikhTerima"
-                  type="date"
-                  value={formData.tarikhTerima}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, tarikhTerima: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="perkara">Perkara</Label>
-                <Textarea
-                  id="perkara"
-                  value={formData.perkara}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, perkara: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-
-              {/* Nilai Bayaran and Bayaran Ke on same line */}
-              <div className="flex gap-2">
-                <div className="flex-[0.7]">
-                  <Label htmlFor="nilaiBayaran">Nilai Bayaran</Label>
-                  <Input
-                    id="nilaiBayaran"
-                    type="text"
-                    value={formatCurrencyInput(formData.nilaiBayaran)}
-                    onChange={handleCurrencyInputChange}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="flex-[0.3]">
-                  <Label htmlFor="bayaranKe">Bayaran Ke</Label>
-                  <Input
-                    id="bayaranKe"
-                    value={formData.bayaranKe}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, bayaranKe: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              {/* Mobile layout: No Kontrak and Kategori in one line */}
-              <div className="md:hidden flex gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="noKontrak">No Kontrak</Label>
-                  <Select value={formData.noKontrak} onValueChange={handleKontrakChange} disabled={!formData.daripada}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih no kontrak" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableKontraks().map((kontrak) => (
-                        <SelectItem key={kontrak} value={kontrak}>
-                          {kontrak}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="kategori">Kategori</Label>
-                  <Select
-                    value={formData.kategori}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, kategori: value }))}
-                    disabled={!formData.daripada || !formData.noKontrak}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableKategoris().map((kategori) => (
-                        <SelectItem key={kategori} value={kategori}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{
-                                backgroundColor: KATEGORI_COLORS[kategori?.toUpperCase()]
-                                  ? KATEGORI_COLORS[kategori?.toUpperCase()]
-                                      .split(" ")[0]
-                                      .replace("bg-[", "")
-                                      .replace("]", "")
-                                  : "#6b7280",
-                              }}
-                            />
-                            {kategori}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Desktop layout: Separate rows */}
-              <div className="hidden md:block">
-                <Label htmlFor="noKontrak">No Kontrak</Label>
-                <Select value={formData.noKontrak} onValueChange={handleKontrakChange} disabled={!formData.daripada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih no kontrak" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableKontraks().map((kontrak) => (
-                      <SelectItem key={kontrak} value={kontrak}>
-                        {kontrak}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="hidden md:block">
-                <Label htmlFor="kategori">Kategori</Label>
-                <Select
-                  value={formData.kategori}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, kategori: value }))}
-                  disabled={!formData.daripada || !formData.noKontrak}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableKategoris().map((kategori) => (
-                      <SelectItem key={kategori} value={kategori}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{
-                              backgroundColor: KATEGORI_COLORS[kategori?.toUpperCase()]
-                                ? KATEGORI_COLORS[kategori?.toUpperCase()]
-                                    .split(" ")[0]
-                                    .replace("bg-[", "")
-                                    .replace("]", "")
-                                : "#6b7280",
-                            }}
-                          />
-                          {kategori}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              {/* Status Ladang - Normal dropdown without auto-update */}
-              <div>
-                <Label>Status Ladang</Label>
-                <Select
-                  value={formData.statusLadang}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, statusLadang: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih status ladang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formOptions.statusLadangData.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Tarikh Memo Ladang - Moved here */}
-              <div>
-                <Label htmlFor="tarikhMemoLadang">Tarikh Memo Ladang</Label>
-                <Input
-                  id="tarikhMemoLadang"
-                  type="date"
-                  value={formData.tarikhMemoLadang}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tarikhMemoLadang: e.target.value,
-                      // Reset dependent fields when memo ladang date is cleared
-                      ...(e.target.value === "" && {
-                        tarikhPpnP: "",
-                        tarikhPn: "",
-                        tarikhHantar: "",
-                        penerima: "",
-                        statusBayaran: "",
-                        tarikhBayar: "",
-                        nomborBaucer: "",
-                      }),
-                    }))
-                  }
-                />
-              </div>
-
-              {/* Conditional Fields - Show only if Tarikh Memo Ladang is filled */}
-              {shouldShowAdvancedFields() && (
-                <>
-                  {/* Tarikh PPN (P) and Tarikh PN in one line */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label>Tarikh PPN (P)</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhPpnP}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, tarikhPpnP: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label>Tarikh PN</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhPn}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, tarikhPn: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Tarikh Hantar</Label>
-                    <Input
-                      type="date"
-                      value={formData.tarikhHantar}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          tarikhHantar: e.target.value,
-                          // Reset dependent fields when hantar date is cleared
-                          ...(e.target.value === "" && {
-                            penerima: "",
-                            statusBayaran: "",
-                            tarikhBayar: "",
-                            nomborBaucer: "",
-                          }),
-                        }))
-                      }
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Show only if both Memo Ladang and Hantar dates are filled */}
-              {shouldShowHandoverFields() && (
-                <>
-                  {/* Penerima with dropdown */}
-                  <div>
-                    <Label>Penerima</Label>
-                    <Popover open={showPenerimaDropdown} onOpenChange={setShowPenerimaDropdown}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={showPenerimaDropdown}
-                          className="w-full justify-between bg-transparent"
-                        >
-                          {formData.penerima || "Pilih atau taip nama penerima..."}
-                          <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput
-                            placeholder="Cari nama penerima..."
-                            value={formData.penerima}
-                            onValueChange={handlePenerimaChange}
-                          />
-                          <CommandList>
-                            <CommandEmpty>Tiada hasil dijumpai.</CommandEmpty>
-                            <CommandGroup className="max-h-[200px] overflow-y-auto">
-                              {filteredPenerimaData.map((item) => (
-                                <CommandItem
-                                  key={item.display}
-                                  value={item.display}
-                                  onSelect={() => {
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      penerima: item.display,
-                                      statusBayaran: item.defaultStatus || prev.statusBayaran,
-                                    }))
-                                    setShowPenerimaDropdown(false)
-                                  }}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{item.name}</span>
-                                    <span className="text-xs text-muted-foreground">({item.unit})</span>
-                                    {item.defaultStatus && (
-                                      <span className="text-xs text-blue-600">Default: {item.defaultStatus}</span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Status Bayaran with colors from AUTH sheet */}
-                  <div>
-                    <Label>Status Bayaran</Label>
-                    <Select
-                      value={formData.statusBayaran}
-                      onValueChange={(value) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          statusBayaran: value,
-                          // Reset completion fields if status is not SELESAI
-                          ...(value !== "SELESAI" && {
-                            tarikhBayar: "",
-                            nomborBaucer: "",
-                          }),
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih status bayaran" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {formOptions.statusBayaranData.map((item) => (
-                          <SelectItem key={item.status} value={item.status}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: item.colorHex }} />
-                              {item.status}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-
-              {/* Show only if status is SELESAI */}
-              {shouldShowCompletionFields() && (
-                <div>
-                  <Label>Nombor Baucer</Label>
-                  <Input
-                    placeholder="Masukkan nombor baucer"
-                    value={formData.nomborBaucer}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, nomborBaucer: e.target.value }))}
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label>Nota Kaki</Label>
-                <Textarea
-                  placeholder="Masukkan nota tambahan"
-                  className="min-h-[80px]"
-                  value={formData.notaKaki}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notaKaki: e.target.value }))}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAddDialog(false)
-                setFormData({
-                  daripada: "",
-                  tarikhTerima: "",
-                  perkara: "",
-                  nilaiBayaran: "",
-                  bayaranKe: "",
-                  kategori: "",
-                  noKontrak: "",
-                  tarikhMemoLadang: "",
-                  statusLadang: "",
-                  tarikhHantar: "",
-                  tarikhPpnP: "",
-                  tarikhPn: "",
-                  penerima: "",
-                  statusBayaran: "",
-                  tarikhBayar: "",
-                  nomborBaucer: "",
-                  notaKaki: "",
-                })
-              }}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Rekod Bayaran #{editingBayaran?.id}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Same form structure as Add Dialog */}
-            {/* Left Column */}
-            <div className="space-y-4">
-              {/* Daripada with suggestions - allows custom input */}
-              <div>
-                <Label>Daripada</Label>
-                <Popover open={showDaripadaDropdown} onOpenChange={setShowDaripadaDropdown}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={showDaripadaDropdown}
-                      className="w-full justify-between bg-transparent"
-                      disabled={user?.role === "KEWANGAN"}
-                    >
-                      {formData.daripada || "Pilih atau taip nama/organisasi..."}
-                      <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Cari atau taip nama..."
-                        value={formData.daripada}
-                        onValueChange={handleDaripadaChange}
-                        disabled={user?.role === "KEWANGAN"}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          <div className="p-2">
-                            <p className="text-sm text-muted-foreground mb-2">Tiada hasil dijumpai.</p>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setShowDaripadaDropdown(false)
-                              }}
-                              className="w-full"
-                              disabled={user?.role === "KEWANGAN"}
-                            >
-                              Gunakan "{formData.daripada}"
-                            </Button>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {filteredDaripadaSuggestions.map((suggestion) => (
-                            <CommandItem
-                              key={suggestion}
-                              value={suggestion}
-                              onSelect={() => {
-                                setFormData((prev) => ({ ...prev, daripada: suggestion, noKontrak: "", kategori: "" }))
-                                setShowDaripadaDropdown(false)
-                              }}
-                            >
-                              {suggestion}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label htmlFor="tarikhTerima">Tarikh Terima</Label>
-                <Input
-                  id="tarikhTerima"
-                  type="date"
-                  value={formData.tarikhTerima}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, tarikhTerima: e.target.value }))}
-                  disabled={user?.role === "KEWANGAN"}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="perkara">Perkara</Label>
-                <Textarea
-                  id="perkara"
-                  value={formData.perkara}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, perkara: e.target.value }))}
-                  rows={3}
-                  disabled={user?.role === "KEWANGAN"}
-                />
-              </div>
-
-              {/* Nilai Bayaran and Bayaran Ke on same line */}
-              <div className="flex gap-2">
-                <div className="flex-[0.7]">
-                  <Label htmlFor="nilaiBayaran">Nilai Bayaran</Label>
-                  <Input
-                    id="nilaiBayaran"
-                    type="text"
-                    value={formatCurrencyInput(formData.nilaiBayaran)}
-                    onChange={handleCurrencyInputChange}
-                    placeholder="0.00"
-                    disabled={user?.role === "KEWANGAN"}
-                  />
-                </div>
-                <div className="flex-[0.3]">
-                  <Label htmlFor="bayaranKe">Bayaran Ke</Label>
-                  <Input
-                    id="bayaranKe"
-                    value={formData.bayaranKe}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, bayaranKe: e.target.value }))}
-                    disabled={user?.role === "KEWANGAN"}
-                  />
-                </div>
-              </div>
-
-              {/* Mobile layout: No Kontrak and Kategori in one line */}
-              <div className="md:hidden flex gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="noKontrak">No Kontrak</Label>
-                  <Select
-                    value={formData.noKontrak}
-                    onValueChange={handleKontrakChange}
-                    disabled={!formData.daripada || user?.role === "KEWANGAN"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih no kontrak" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableKontraks().map((kontrak) => (
-                        <SelectItem key={kontrak} value={kontrak}>
-                          {kontrak}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="kategori">Kategori</Label>
-                  <Select
-                    value={formData.kategori}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, kategori: value }))}
-                    disabled={!formData.daripada || !formData.noKontrak || user?.role === "KEWANGAN"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableKategoris().map((kategori) => (
-                        <SelectItem key={kategori} value={kategori}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{
-                                backgroundColor: KATEGORI_COLORS[kategori?.toUpperCase()]
-                                  ? KATEGORI_COLORS[kategori?.toUpperCase()]
-                                      .split(" ")[0]
-                                      .replace("bg-[", "")
-                                      .replace("]", "")
-                                  : "#6b7280",
-                              }}
-                            />
-                            {kategori}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Desktop layout: Separate rows */}
-              <div className="hidden md:block">
-                <Label htmlFor="noKontrak">No Kontrak</Label>
-                <Select
-                  value={formData.noKontrak}
-                  onValueChange={handleKontrakChange}
-                  disabled={!formData.daripada || user?.role === "KEWANGAN"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih no kontrak" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableKontraks().map((kontrak) => (
-                      <SelectItem key={kontrak} value={kontrak}>
-                        {kontrak}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="hidden md:block">
-                <Label htmlFor="kategori">Kategori</Label>
-                <Select
-                  value={formData.kategori}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, kategori: value }))}
-                  disabled={!formData.daripada || !formData.noKontrak || user?.role === "KEWANGAN"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableKategoris().map((kategori) => (
-                      <SelectItem key={kategori} value={kategori}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{
-                              backgroundColor: KATEGORI_COLORS[kategori?.toUpperCase()]
-                                ? KATEGORI_COLORS[kategori?.toUpperCase()]
-                                    .split(" ")[0]
-                                    .replace("bg-[", "")
-                                    .replace("]", "")
-                                : "#6b7280",
-                            }}
-                          />
-                          {kategori}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Right Column - Same as Add Dialog */}
-            <div className="space-y-4">
-              {/* Status Ladang - Normal dropdown without auto-update */}
-              <div>
-                <Label>Status Ladang</Label>
-                <Select
-                  value={formData.statusLadang}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, statusLadang: value }))}
-                  disabled={user?.role === "KEWANGAN"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih status ladang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formOptions.statusLadangData.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Tarikh Memo Ladang - Moved here */}
-              <div>
-                <Label htmlFor="tarikhMemoLadang">Tarikh Memo Ladang</Label>
-                <Input
-                  id="tarikhMemoLadang"
-                  type="date"
-                  value={formData.tarikhMemoLadang}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tarikhMemoLadang: e.target.value,
-                      // Reset dependent fields when memo ladang date is cleared
-                      ...(e.target.value === "" && {
-                        tarikhPpnP: "",
-                        tarikhPn: "",
-                        tarikhHantar: "",
-                        penerima: "",
-                        statusBayaran: "",
-                        tarikhBayar: "",
-                        nomborBaucer: "",
-                      }),
-                    }))
-                  }
-                  disabled={user?.role === "KEWANGAN"}
-                />
-              </div>
-
-              {/* Conditional Fields - Show only if Tarikh Memo Ladang is filled */}
-              {shouldShowAdvancedFields() && (
-                <>
-                  {/* Tarikh PPN (P) and Tarikh PN in one line */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label>Tarikh PPN (P)</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhPpnP}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, tarikhPpnP: e.target.value }))}
-                        disabled={user?.role === "KEWANGAN"}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label>Tarikh PN</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhPn}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, tarikhPn: e.target.value }))}
-                        disabled={user?.role === "KEWANGAN"}
-                      />
-                    </div>
-                  </div>
-
-                  <div hidden>
-                    <Label>Tarikh Hantar</Label>
-                    <Input
-                      type="date"
-                      value={formData.tarikhHantar}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          tarikhHantar: e.target.value,
-                          // Reset dependent fields when hantar date is cleared
-                          ...(e.target.value === "" && {
-                            penerima: "",
-                            statusBayaran: "",
-                            tarikhBayar: "",
-                            nomborBaucer: "",
-                          }),
-                        }))
-                      }
-                      disabled={user?.role === "KEWANGAN"}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Show only if both Memo Ladang and Hantar dates are filled */}
-              {shouldShowHandoverFields() && (
-                <>
-                  {/* Tarikh Hantar and Penerima in one line */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label>Tarikh Hantar</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhHantar}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            tarikhHantar: e.target.value,
-                            // Reset dependent fields when hantar date is cleared
-                            ...(e.target.value === "" && {
-                              penerima: "",
-                              statusBayaran: "",
-                              tarikhBayar: "",
-                              nomborBaucer: "",
-                            }),
-                          }))
-                        }
-                        disabled={user?.role === "KEWANGAN"}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Label>Penerima</Label>
-                      <Popover open={showPenerimaDropdown} onOpenChange={setShowPenerimaDropdown}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={showPenerimaDropdown}
-                            className="w-full justify-between bg-transparent"
-                            disabled={user?.role === "KEWANGAN"}
-                          >
-                            {formData.penerima || "Pilih nama penerima..."}
-                            <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Cari nama penerima..."
-                              value={formData.penerima}
-                              onValueChange={handlePenerimaChange}
-                              disabled={user?.role === "KEWANGAN"}
-                            />
-                            <CommandList>
-                              <CommandEmpty>Tiada hasil dijumpai.</CommandEmpty>
-                              <CommandGroup className="max-h-[200px] overflow-y-auto">
-                                {filteredPenerimaData.map((item) => (
-                                  <CommandItem
-                                    key={item.display}
-                                    value={item.display}
-                                    onSelect={() => {
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        penerima: item.name,
-                                        statusBayaran: item.defaultStatus || prev.statusBayaran,
-                                      }))
-                                      setShowPenerimaDropdown(false)
-                                    }}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{item.name}</span>
-                                      <span className="text-xs text-muted-foreground">({item.unit})</span>
-                                      {item.defaultStatus && (
-                                        <span className="text-xs text-blue-600">Default: {item.defaultStatus}</span>
-                                      )}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-
-                  {/* Status Bayaran and Tarikh Bayar in one line */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label>Status Bayaran</Label>
-                      <Select
-                        value={formData.statusBayaran}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            statusBayaran: value,
-                            // Reset completion fields if status is not SELESAI
-                            ...(value !== "SELESAI" && {
-                              tarikhBayar: "",
-                              nomborBaucer: "",
-                            }),
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih status bayaran" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formOptions.statusBayaranData.map((item) => (
-                            <SelectItem key={item.status} value={item.status}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-3 h-3 rounded-full border"
-                                  style={{ backgroundColor: item.colorHex }}
-                                />
-                                {item.status}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex-1">
-                      <Label>Tarikh Bayar</Label>
-                      <Input
-                        type="date"
-                        value={formData.tarikhBayar}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, tarikhBayar: e.target.value }))}
-                        disabled={formData.statusBayaran !== "SELESAI"}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Show only if status is SELESAI */}
-              {shouldShowCompletionFields() && (
-                <div>
-                  <Label>Nombor Baucer</Label>
-                  <Input
-                    placeholder="Masukkan nombor baucer"
-                    value={formData.nomborBaucer}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, nomborBaucer: e.target.value }))}
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label>Nota Kaki</Label>
-                <Textarea
-                  placeholder="Masukkan nota tambahan"
-                  className="min-h-[80px]"
-                  value={formData.notaKaki}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notaKaki: e.target.value }))}
-                  disabled={user?.role === "KEWANGAN"}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditDialog(false)
-                setEditingBayaran(null)
-                setFormData({
-                  daripada: "",
-                  tarikhTerima: "",
-                  perkara: "",
-                  nilaiBayaran: "",
-                  bayaranKe: "",
-                  kategori: "",
-                  noKontrak: "",
-                  tarikhMemoLadang: "",
-                  statusLadang: "",
-                  tarikhHantar: "",
-                  tarikhPpnP: "",
-                  tarikhPn: "",
-                  penerima: "",
-                  statusBayaran: "",
-                  tarikhBayar: "",
-                  nomborBaucer: "",
-                  notaKaki: "",
-                })
-              }}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Menyimpan..." : "Kemaskini"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BulkEditDialog
+        showBulkEditDialog={showBulkEditDialog}
+        setShowBulkEditDialog={setShowBulkEditDialog}
+        selectedRows={selectedRows}
+        setSelectedRows={setSelectedRows}
+        formOptions={formOptions}
+        fetchWithCache={fetchWithCache}
+        user={user}
+      />
 
       {/* Share Image Generator */}
       {sharingBayaran && (

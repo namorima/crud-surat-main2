@@ -49,6 +49,13 @@ Berikut adalah ringkasan penambahbaikan yang telah dilaksanakan:
     - Aplikasi kini berjaya menarik data "UNIT" dan "PIC TINDAKAN" dari sheet `UNIT` (lajur A & B).
     - Fungsi `getUnitAndPicData` telah ditambah semula dan dikonfigurasi untuk berfungsi dengan sumber data yang baru, memastikan komponen yang bergantung padanya kekal berfungsi.
 
+4.  **Pembaikan Ralat Aplikasi (Bug Fixing):**
+    - **Memperbaiki Ralat Binaan (Build Errors):** Menyelesaikan beberapa ralat yang menghalang aplikasi daripada berfungsi:
+      - `lib/google-sheets.ts`: Membuang blok `catch` yang berganda yang menyebabkan ralat sintaks.
+      - `app/api/bayaran/route.ts`: Menambah `}` yang tertinggal dan mengimport `zod` untuk mengendalikan pengesahan data.
+    - **Memperbaiki Ralat Runtime:**
+      - `components/bayaran/BayaranTable.tsx`: Menyelesaikan ralat `cn is not defined` dengan mengimport fungsi `cn` dari `@/lib/utils`.
+
 ## Cadangan Penambahbaikan (Oleh Gemini)
 
 Berikut adalah beberapa cadangan untuk meningkatkan kualiti, prestasi, dan kebolehselenggaraan (maintainability) projek ini pada masa hadapan.
