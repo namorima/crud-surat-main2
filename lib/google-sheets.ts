@@ -368,6 +368,43 @@ export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id
   }
 }
 
+// Delete a row from the REKOD BAYARAN sheet
+export async function deleteBayaran(rowIndex: number): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Get the sheet ID first
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    })
+
+    // Find the REKOD BAYARAN sheet ID
+    const sheetId =
+      spreadsheet.data.sheets?.find((sheet) => sheet.properties?.title === "REKOD BAYARAN")?.properties?.sheetId || 0
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: "ROWS",
+                startIndex: rowIndex + 1, // +1 because of header row
+                endIndex: rowIndex + 2,
+              },
+            },
+          },
+        ],
+      },
+    })
+  } catch (error) {
+    console.error("Error deleting bayaran from Google Sheets:", error)
+    throw new Error(`Failed to delete bayaran from Google Sheets: ${error.message}`)
+  }
+}
+
 // Get Status Ladang data from AUTH sheet column P and Q
 export async function getStatusLadangData() {
   try {

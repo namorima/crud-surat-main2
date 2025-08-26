@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateBayaran, getAllBayaran } from "@/lib/google-sheets"
+import { updateBayaran, getAllBayaran, deleteBayaran } from "@/lib/google-sheets"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -44,4 +44,24 @@ function formatDateForSheet(dateString: string): string {
   if (!dateString) return ""
   const [year, month, day] = dateString.split("-")
   return `${day}/${month}/${year}`
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params
+
+    // Get current data to find the row index
+    const allBayaran = await getAllBayaran()
+    const rowIndex = allBayaran.findIndex((item) => item.id === id)
+
+    if (rowIndex === -1) {
+      return NextResponse.json({ error: "Bayaran record not found" }, { status: 404 })
+    }
+
+    await deleteBayaran(rowIndex)
+    return NextResponse.json({ success: true, message: "Bayaran record deleted successfully" })
+  } catch (error) {
+    console.error("Error in DELETE /api/bayaran/[id]:", error)
+    return NextResponse.json({ error: "Failed to delete bayaran record" }, { status: 500 })
+  }
 }

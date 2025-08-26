@@ -31,7 +31,19 @@ import {
   FilePen,
   FilePenLineIcon as Signature,
   Send,
+  Trash2,
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
@@ -80,6 +92,7 @@ export default function BayaranPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingBayaran, setEditingBayaran] = useState<Bayaran | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Sorting state - Default sort by ID descending (largest first)
   const [sortField, setSortField] = useState<keyof Bayaran | null>("id")
@@ -819,6 +832,36 @@ export default function BayaranPage() {
       notaKaki: bayaran.notaKaki,
     })
     setShowEditDialog(true)
+  }
+
+  // Delete functionality
+  const handleDelete = async () => {
+    if (!selectedBayaran) return
+
+    try {
+      const response = await fetch(`/api/bayaran/${selectedBayaran.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        toast.success("Rekod bayaran berjaya dipadam")
+        setShowDetailDialog(false)
+        // Force refresh data
+        setLastFetchTime(null)
+        await fetchWithCache()
+        setTimeout(() => {
+          filterBayaran()
+        }, 100)
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || "Gagal memadam rekod bayaran")
+      }
+    } catch (error) {
+      console.error("Error deleting bayaran:", error)
+      toast.error("Ralat semasa memadam rekod bayaran")
+    } finally {
+      setShowDeleteConfirm(false)
+    }
   }
 
   // Share functionality
@@ -2054,6 +2097,28 @@ Detail: ${directLink}
                 <span className="hidden sm:inline mr-2">Tutup</span>
                 <X className="h-4 w-4 sm:hidden" />
               </Button>
+              {user?.role === "semua" && (
+                <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="flex-1 sm:flex-none">
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Padam</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Adakah anda pasti?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tindakan ini tidak boleh dibuat asal. Ini akan memadamkan rekod bayaran secara kekal.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete}>Padam</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
