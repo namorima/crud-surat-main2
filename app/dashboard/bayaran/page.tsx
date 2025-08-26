@@ -93,6 +93,7 @@ export default function BayaranPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingBayaran, setEditingBayaran] = useState<Bayaran | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Sorting state - Default sort by ID descending (largest first)
   const [sortField, setSortField] = useState<keyof Bayaran | null>("id")
@@ -837,6 +838,7 @@ export default function BayaranPage() {
   // Delete functionality
   const handleDelete = async () => {
     if (!selectedBayaran) return
+    setIsDeleting(true)
 
     try {
       const response = await fetch(`/api/bayaran/${selectedBayaran.id}`, {
@@ -861,6 +863,7 @@ export default function BayaranPage() {
       toast.error("Ralat semasa memadam rekod bayaran")
     } finally {
       setShowDeleteConfirm(false)
+      setIsDeleting(false)
     }
   }
 
@@ -2114,7 +2117,16 @@ Detail: ${directLink}
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete}>Padam</AlertDialogAction>
+                      <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                        {isDeleting ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+                            Memadam...
+                          </>
+                        ) : (
+                          "Padam"
+                        )}
+                      </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
