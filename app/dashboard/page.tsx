@@ -49,6 +49,8 @@ export default function DashboardPage() {
   const [selectedKawasan, setSelectedKawasan] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [selectedKawasanForKategori, setSelectedKawasanForKategori] = useState<string | null>(null)
+  const [selectedStatusForStatus, setSelectedStatusForStatus] = useState<string | null>(null)
+  const [selectedKawasanForStatus, setSelectedKawasanForStatus] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -193,6 +195,39 @@ export default function DashboardPage() {
         }, [] as { name: string; value: number }[])
     : []
 
+  // Data for Status tab drilldown
+  const kawasanDataForSelectedStatusTab = selectedStatusForStatus
+    ? bayaran
+        .filter((item) => item.statusBayaran === selectedStatusForStatus)
+        .reduce((acc, item) => {
+          const kawasan = item.daripada || 'Tidak Diketahui'
+          const nilai = parseFloat(item.nilaiBayaran.replace(/[^0-9.-]+/g, '')) || 0
+          const existingKawasan = acc.find((k) => k.name === kawasan)
+          if (existingKawasan) {
+            existingKawasan.value += nilai
+          } else {
+            acc.push({ name: kawasan, value: nilai })
+          }
+          return acc
+        }, [] as { name: string; value: number }[])
+    : []
+
+  const kontrakDataForStatusDrilldown = (selectedStatusForStatus && selectedKawasanForStatus)
+    ? bayaran
+        .filter((item) => item.statusBayaran === selectedStatusForStatus && item.daripada === selectedKawasanForStatus)
+        .reduce((acc, item) => {
+          const kontrak = item.noKontrak || 'Tiada Kontrak'
+          const nilai = parseFloat(item.nilaiBayaran.replace(/[^0-9.-]+/g, '')) || 0
+          const existingKontrak = acc.find((k) => k.name === kontrak)
+          if (existingKontrak) {
+            existingKontrak.value += nilai
+          } else {
+            acc.push({ name: kontrak, value: nilai })
+          }
+          return acc
+        }, [] as { name: string; value: number }[])
+    : []
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -220,7 +255,7 @@ export default function DashboardPage() {
               </Sheet>
               <CardTitle className="text-base md:text-xl">Dashboard</CardTitle>
             </div>
-            <Tabs value={view} onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); }} className="w-[200px]">
+            <Tabs value={view} onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); setSelectedStatusForStatus(null); setSelectedKawasanForStatus(null); }} className="w-[200px]">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="surat">Surat</TabsTrigger>
                 <TabsTrigger value="bayaran">Bayaran</TabsTrigger>
@@ -392,28 +427,79 @@ export default function DashboardPage() {
                 <TabsContent value="status" className="mt-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Statistik Status Bayaran</CardTitle>
+                      <div className="flex justify-between items-center">
+                        <CardTitle>
+                          {!selectedStatusForStatus
+                            ? 'Statistik Status Bayaran'
+                            : selectedStatusForStatus && !selectedKawasanForStatus
+                            ? `Pecahan Kawasan untuk Status: ${selectedStatusForStatus}`
+                            : `Pecahan Kontrak untuk Kawasan: ${selectedKawasanForStatus}`}
+                        </CardTitle>
+                        {(selectedStatusForStatus || selectedKawasanForStatus) && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              if (selectedKawasanForStatus) {
+                                setSelectedKawasanForStatus(null)
+                              } else {
+                                setSelectedStatusForStatus(null)
+                              }
+                            }}
+                          >
+                            Kembali
+                          </Button>
+                        )}
+                      </div>
                     </CardHeader>
                     <CardContent className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={bayaranStatusData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        {!selectedStatusForStatus ? (
+                          <PieChart>
+                            <Pie
+                              data={bayaranStatusData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              onClick={(entry) => {
+                                // Map display names to actual status values
+                                const statusMapping = {
+                                  'Selesai Bayar': 'SELESAI',
+                                  'Belum Bayar': 'KEWANGAN',
+                                  'Hold / KIV': 'HOLD / KIV'
+                                }
+                                setSelectedStatusForStatus(statusMapping[entry.name] || entry.name)
+                              }}
+                            >
+                              {bayaranStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Legend />
+                            <Tooltip />
+                          </PieChart>
+                        ) : (
+                          <BarChart
+                            data={
+                              selectedStatusForStatus && !selectedKawasanForStatus
+                                ? kawasanDataForSelectedStatusTab
+                                : kontrakDataForStatusDrilldown
+                            }
                           >
-                            {bayaranStatusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Legend />
-                          <Tooltip />
-                        </PieChart>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" tick={<CustomXAxisTick />} interval={0} />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `RM ${Number(value).toLocaleString()}`} />
+                            <Bar dataKey="value" fill="#3b82f6" onClick={(data) => {
+                                if (selectedStatusForStatus && !selectedKawasanForStatus) {
+                                    setSelectedKawasanForStatus(data.name)
+                                }
+                            }} />
+                          </BarChart>
+                        )}
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>
