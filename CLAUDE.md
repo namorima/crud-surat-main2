@@ -100,3 +100,4 @@ The application expects specific sheet structures:
 - Display user-friendly error messages for sheet access issues
 - ImgBB upload failures should be gracefully handled
 - add to memory
+- to memorize
