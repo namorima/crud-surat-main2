@@ -241,7 +241,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "REKOD BAYARAN!A2:R", // Extended to column R
+      range: "REKOD BAYARAN!A2:S", // Extended to column S
     })
 
     const rows = response.data.values || []
@@ -270,6 +270,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
       notaKaki: row[15] || "",
       tarikhPpnP: row[16] || "", // New field - Column Q
       tarikhPn: row[17] || "", // New field - Column R
+      namaKontraktor: row[18] || "", // New field - Column S
     }))
   } catch (error) {
     console.error("Error fetching bayaran data from Google Sheets:", error)
@@ -286,6 +287,10 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
     const currentData = await getAllBayaran()
     const nextId =
       currentData.length > 0 ? Math.max(...currentData.map((item) => Number.parseInt(item.id) || 0)) + 1 : 1
+
+    // Get contractor data to lookup contractor name
+    const contractData = await getContractCategoryData()
+    const namaKontraktor = contractData.contractorData[bayaran.noKontrak] || ""
 
     // Prepare the row data in the correct order
     const rowData = [
@@ -307,6 +312,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
       bayaran.notaKaki || "", // Column P
       bayaran.tarikhPpnP || "", // Column Q
       bayaran.tarikhPn || "", // Column R
+      namaKontraktor, // Column S - Auto-populated from KONTRAK sheet
     ]
 
     console.log("Adding bayaran with data:", rowData)
@@ -314,7 +320,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
     // Append the new row directly to the end of the data
     const result = await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "REKOD BAYARAN!A2:R",
+      range: "REKOD BAYARAN!A2:S",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
@@ -340,9 +346,14 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
 export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
   try {
     const sheets = await initializeSheets()
+    
+    // Get contractor data to lookup contractor name
+    const contractData = await getContractCategoryData()
+    const namaKontraktor = contractData.contractorData[bayaran.noKontrak] || ""
+    
     await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `REKOD BAYARAN!A${rowIndex + 2}:R${rowIndex + 2}`,
+      range: `REKOD BAYARAN!A${rowIndex + 2}:S${rowIndex + 2}`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -365,6 +376,7 @@ export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id
             bayaran.notaKaki,
             bayaran.tarikhPpnP,
             bayaran.tarikhPn,
+            namaKontraktor, // Column S - Auto-populated from KONTRAK sheet
           ],
         ],
       },
@@ -556,51 +568,58 @@ export async function getPenerimaData() {
   }
 }
 
-// Get contract and category data from AUTH sheet - Updated for LADANG NEGERI logic
+// Get contract and category data from KONTRAK sheet - Updated for LADANG NEGERI logic
 export async function getContractCategoryData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!L2:N",
+      range: "KONTRAK!A2:D",
     })
 
     const rows = response.data.values || []
 
     if (!rows || rows.length === 0) {
-      return { contractData: {}, categoryData: {}, allContracts: [], allCategories: [] }
+      return { contractData: {}, categoryData: {}, allContracts: [], allCategories: [], contractorData: {} }
     }
 
-    // Group data by daripada (column L)
+    // Group data by kawasan (column A)
     const contractData: Record<string, string[]> = {}
     const categoryData: Record<string, Record<string, string[]>> = {}
+    const contractorData: Record<string, string> = {} // noKontrak -> namaKontraktor
     const allContracts: string[] = []
     const allCategories: string[] = []
 
     rows.forEach((row) => {
-      const daripada = row[0] || ""
+      const kawasan = row[0] || ""
       const noKontrak = row[1] || ""
       const kategori = row[2] || ""
+      const namaKontraktor = row[3] || ""
 
-      if (daripada.trim() === "") return
+      if (kawasan.trim() === "") return
 
       // Build contract data
-      if (!contractData[daripada]) {
-        contractData[daripada] = []
+      if (!contractData[kawasan]) {
+        contractData[kawasan] = []
       }
-      if (noKontrak && !contractData[daripada].includes(noKontrak)) {
-        contractData[daripada].push(noKontrak)
+      if (noKontrak && !contractData[kawasan].includes(noKontrak)) {
+        contractData[kawasan].push(noKontrak)
       }
 
       // Build category data
-      if (!categoryData[daripada]) {
-        categoryData[daripada] = {}
+      if (!categoryData[kawasan]) {
+        categoryData[kawasan] = {}
       }
-      if (!categoryData[daripada][noKontrak]) {
-        categoryData[daripada][noKontrak] = []
+      if (!categoryData[kawasan][noKontrak]) {
+        categoryData[kawasan][noKontrak] = []
       }
-      if (kategori && !categoryData[daripada][noKontrak].includes(kategori)) {
-        categoryData[daripada][noKontrak].push(kategori)
+      if (kategori && !categoryData[kawasan][noKontrak].includes(kategori)) {
+        categoryData[kawasan][noKontrak].push(kategori)
+      }
+
+      // Build contractor data mapping
+      if (noKontrak && namaKontraktor) {
+        contractorData[noKontrak] = namaKontraktor
       }
 
       // Collect all contracts and categories for LADANG NEGERI
@@ -612,7 +631,7 @@ export async function getContractCategoryData() {
       }
     })
 
-    return { contractData, categoryData, allContracts, allCategories }
+    return { contractData, categoryData, allContracts, allCategories, contractorData }
   } catch (error) {
     console.error("Error fetching contract and category data from Google Sheets:", error)
     throw new Error(`Failed to fetch contract and category data from Google Sheets: ${error.message}`)

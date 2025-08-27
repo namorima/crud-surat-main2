@@ -7,6 +7,7 @@ export type Bayaran = {
   bayaranKe: string
   kategori: string
   noKontrak: string
+  namaKontraktor: string // New field - Column S
   tarikhMemoLadang: string
   statusLadang: string
   tarikhHantar: string

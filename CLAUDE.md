@@ -25,9 +25,10 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
 - **Authentication**: Custom implementation with localStorage
 - **Key Sheets**:
   - `SURAT` - Letter records
-  - `REKOD BAYARAN` - Payment records  
+  - `REKOD BAYARAN` - Payment records (includes auto-populated NAMA KONTRAKTOR in column S)
   - `AUTH` - User authentication and configuration data
   - `UNIT` - Unit and PIC (Person in Charge) mappings
+  - `KONTRAK` - Contract and category data (KAWASAN, NO KONTRAK, KATEGORI, NAMA KONTRAKTOR)
   - `AUDIT_BAYARAN` - Payment audit trail
 
 ### Core Data Types
@@ -42,6 +43,8 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
 - **Google Sheets Integration**: All CRUD operations go through Google Sheets API (lib/google-sheets.ts)
 - **Audit Trail**: Payment operations are logged to `AUDIT_BAYARAN` sheet
 - **Bulk Operations**: Support for bulk status updates on payment records
+- **Auto-populated Contractor Names**: When adding/updating payment records, contractor names are automatically looked up from KONTRAK sheet and stored in REKOD BAYARAN column S
+- **Display Logic**: Payment tables show contractor names instead of contract numbers for better readability
 
 ### Authentication Flow
 - Custom auth provider using Google Sheets as user store (lib/auth-provider.tsx)
@@ -67,9 +70,11 @@ GOOGLE_CLIENT_EMAIL="your_service_account_email"
 
 ### Google Sheets Setup
 The application expects specific sheet structures:
-- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `AUDIT_BAYARAN`
+- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`
 - Column mappings are hardcoded in `lib/google-sheets.ts`
 - Service account needs Sheets API access
+- `KONTRAK` sheet structure: Column A=KAWASAN, B=NO KONTRAK, C=KATEGORI, D=NAMA KONTRAKTOR
+- `REKOD BAYARAN` sheet: Column S=NAMA KONTRAKTOR (auto-populated from KONTRAK sheet)
 
 ## Development Guidelines
 
@@ -94,3 +99,4 @@ The application expects specific sheet structures:
 - Google Sheets operations include comprehensive error handling
 - Display user-friendly error messages for sheet access issues
 - ImgBB upload failures should be gracefully handled
+- add to memory

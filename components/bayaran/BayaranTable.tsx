@@ -123,9 +123,9 @@ export function BayaranTable({
                 </TableHead>
               )}
               {columnVisibility.noKontrak && (
-                <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort("noKontrak")}>
+                <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort("namaKontraktor")}>
                   <div className="flex items-center">
-                    No Kontrak
+                    Nama Kontraktor
                     <ArrowUpDown className="ml-1 h-4 w-4" />
                   </div>
                 </TableHead>
@@ -271,7 +271,11 @@ export function BayaranTable({
                     </TableCell>
                   )}
                   {columnVisibility.bayaranKe && <TableCell className="py-2">{item.bayaranKe}</TableCell>}
-                  {columnVisibility.noKontrak && <TableCell className="py-2">{item.noKontrak || "-"}</TableCell>}
+                  {columnVisibility.noKontrak && (
+                    <TableCell className="py-2">
+                      {item.namaKontraktor || item.noKontrak || "-"}
+                    </TableCell>
+                  )}
                   {columnVisibility.tarikhBayar && (
                     <TableCell className="py-2">{item.tarikhBayar || "-"}</TableCell>
                   )}
@@ -367,14 +371,17 @@ export function BayaranTable({
                       )}
                     </Button>
                   </div>
-                  {item.noKontrak && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1 py-0 text-red-800 dark:text-red-700 border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer mt-1"
-                      onClick={() => handleKontrakFilter(item.noKontrak)}
-                    >
-                      {item.noKontrak}
-                    </Badge>
+                  {(item.namaKontraktor || item.noKontrak) && (
+                    <div className="flex flex-col items-end mt-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1 py-0 text-red-800 dark:text-red-700 border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+                        onClick={() => handleKontrakFilter(item.noKontrak)}
+                        title={item.noKontrak}
+                      >
+                        {item.namaKontraktor || item.noKontrak}
+                      </Badge>
+                    </div>
                   )}
                 </div>
               </div>

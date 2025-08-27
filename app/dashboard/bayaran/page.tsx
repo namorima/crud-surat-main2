@@ -137,6 +137,7 @@ export default function BayaranPage() {
     categoryData: {} as Record<string, Record<string, string[]>>,
     allContracts: [] as string[],
     allCategories: [] as string[],
+    contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -282,6 +283,7 @@ export default function BayaranPage() {
           categoryData: data.categoryData || {},
           allContracts: data.allContracts || [],
           allCategories: data.allCategories || [],
+          contractorData: data.contractorData || {},
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });

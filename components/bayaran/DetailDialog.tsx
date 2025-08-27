@@ -95,8 +95,12 @@ export function DetailDialog({
                     </div>
                   </div>
                   <div className="flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">No Kontrak</Label>
-                    <p className="text-sm mt-1">{selectedBayaran.noKontrak || "-"}</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Nama Kontraktor</Label>
+                    <p className="text-sm mt-1">
+                      {selectedBayaran.namaKontraktor && selectedBayaran.noKontrak
+                        ? `${selectedBayaran.namaKontraktor} (${selectedBayaran.noKontrak})`
+                        : selectedBayaran.namaKontraktor || selectedBayaran.noKontrak || "-"}
+                    </p>
                   </div>
                 </div>
                 {/* Desktop layout: Kategori only */}
@@ -134,8 +138,12 @@ export function DetailDialog({
                   <p className="text-sm">{selectedBayaran.bayaranKe}</p>
                 </div>
                 <div className="hidden md:block">
-                  <Label className="text-sm font-medium text-muted-foreground">No Kontrak</Label>
-                  <p className="text-sm">{selectedBayaran.noKontrak || "-"}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">Nama Kontraktor</Label>
+                  <p className="text-sm">
+                    {selectedBayaran.namaKontraktor && selectedBayaran.noKontrak
+                      ? `${selectedBayaran.namaKontraktor} (${selectedBayaran.noKontrak})`
+                      : selectedBayaran.namaKontraktor || selectedBayaran.noKontrak || "-"}
+                  </p>
                 </div>
               </div>
             </div>
