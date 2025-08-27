@@ -137,30 +137,30 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
       const perkaraY = wrapText(ctx, bayaran.perkara, 130, 120, 240, 16) // ✅ wrap text
 
       ctx.font = "14px Inter"
-      ctx.fillText("Kategori:", 30, perkaraY)
+      ctx.fillText("Kategori:", 30, perkaraY + 20)
       ctx.fillStyle = getKategoriColor(bayaran.kategori)
-      ctx.fillRect(130, perkaraY - 15, 100, 20)
+      ctx.fillRect(130, perkaraY + 5, 100, 20)
       ctx.fillStyle = "#000"
       ctx.font = "bold 12px Inter"
-      ctx.fillText(bayaran.kategori, 135, perkaraY)
+      ctx.fillText(bayaran.kategori, 135, perkaraY + 20)
 
       ctx.font = "14px Inter"
       ctx.fillStyle = "#000"
-      ctx.fillText("No Kontrak:", 30, perkaraY + 30)
+      ctx.fillText("No Kontrak:", 30, perkaraY + 50)
       ctx.font = "bold 14px Inter"
-      ctx.fillText(bayaran.noKontrak || "-", 130, perkaraY + 30)
+      ctx.fillText(bayaran.noKontrak || "-", 130, perkaraY + 50)
 
       ctx.font = "14px Inter"
-      ctx.fillText("Nilai:", 30, perkaraY + 60)
+      ctx.fillText("Nilai:", 30, perkaraY + 80)
       ctx.font = "bold 14px Inter"
       ctx.fillStyle = bayaran.tarikhBayar ? "#16a34a" : "#dc2626"
-      ctx.fillText(formatCurrency(bayaran.nilaiBayaran), 130, perkaraY + 60)
+      ctx.fillText(formatCurrency(bayaran.nilaiBayaran), 130, perkaraY + 80)
 
       ctx.font = "14px Inter"
       ctx.fillStyle = "#000"
-      ctx.fillText("Bayaran Ke:", 30, perkaraY + 90)
+      ctx.fillText("Bayaran Ke:", 30, perkaraY + 110)
       ctx.font = "bold 14px Inter"
-      ctx.fillText(bayaran.bayaranKe || "-", 130, perkaraY + 90)
+      ctx.fillText(bayaran.bayaranKe || "-", 130, perkaraY + 110)
 
       // Add BATAL badge if status is BATAL
       const isCancelled = bayaran.statusBayaran?.toUpperCase() === "BATAL"
@@ -218,7 +218,7 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
       if (bayaran.notaKaki) {
         ctx.fillStyle = "#dc2626"
         ctx.font = "italic 12px Inter"
-        ctx.fillText(`Nota: ${bayaran.notaKaki}`, 20, startY + 60)
+        wrapText(ctx, `Nota: ${bayaran.notaKaki}`, 20, startY + 60, 360, 14)
       }
 
       ctx.font = "10px Inter"
