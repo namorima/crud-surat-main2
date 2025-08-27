@@ -371,7 +371,7 @@ export function BayaranTable({
                       )}
                     </Button>
                   </div>
-                  {(item.namaKontraktor || item.noKontrak) && (
+                  {item.noKontrak && (
                     <div className="flex flex-col items-end mt-1">
                       <Badge
                         variant="outline"
@@ -379,7 +379,7 @@ export function BayaranTable({
                         onClick={() => handleKontrakFilter(item.noKontrak)}
                         title={item.noKontrak}
                       >
-                        {item.namaKontraktor || item.noKontrak}
+                        {item.noKontrak}
                       </Badge>
                     </div>
                   )}
