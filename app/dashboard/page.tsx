@@ -220,7 +220,7 @@ export default function DashboardPage() {
               </Sheet>
               <CardTitle className="text-base md:text-xl">Dashboard</CardTitle>
             </div>
-            <Tabs defaultValue="surat" onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); }} className="w-[200px]">
+            <Tabs value={view} onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); }} className="w-[200px]">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="surat">Surat</TabsTrigger>
                 <TabsTrigger value="bayaran">Bayaran</TabsTrigger>
