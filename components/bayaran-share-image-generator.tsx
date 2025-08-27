@@ -38,10 +38,11 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
     label: string,
     value: string,
     active: boolean,
-    note?: string
+    note?: string,
+    isCancelled: boolean = false
   ) => {
-    const iconColor = active ? "#22c55e" : "#d1d5db"
-    const iconText = active ? "✓" : ""
+    const iconColor = isCancelled ? "#dc2626" : active ? "#22c55e" : "#d1d5db"
+    const iconText = isCancelled ? "!" : active ? "✓" : ""
 
     ctx.beginPath()
     ctx.arc(x, y, 10, 0, 2 * Math.PI)
@@ -161,6 +162,16 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
       ctx.font = "bold 14px Inter"
       ctx.fillText(bayaran.bayaranKe || "-", 130, perkaraY + 90)
 
+      // Add BATAL badge if status is BATAL
+      const isCancelled = bayaran.statusBayaran?.toUpperCase() === "BATAL"
+      if (isCancelled) {
+        ctx.fillStyle = "#dc2626"
+        ctx.fillRect(canvas.width - 120, 10, 100, 30)
+        ctx.fillStyle = "#ffffff"
+        ctx.font = "bold 14px Inter"
+        ctx.fillText("BATAL", canvas.width - 90, 30)
+      }
+
       ctx.font = "bold 18px Inter"
       ctx.fillStyle = "#000"
       ctx.fillText("Tracking Bayaran:", 20, 280)
@@ -172,7 +183,8 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
         "Tarikh Bayar",
         bayaran.tarikhBayar,
         !!bayaran.tarikhBayar,
-        bayaran.nomborBaucer ? `Baucer: ${bayaran.nomborBaucer}` : undefined
+        bayaran.nomborBaucer ? `Baucer: ${bayaran.nomborBaucer}` : undefined,
+        isCancelled
       )
       startY += 70
       drawTimelineItem(
@@ -182,14 +194,15 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
         "Tarikh Hantar",
         bayaran.tarikhHantar,
         !!bayaran.tarikhHantar,
-        bayaran.penerima ? `Penerima: ${bayaran.penerima}` : undefined
+        bayaran.penerima ? `Penerima: ${bayaran.penerima}` : undefined,
+        isCancelled
       )
       startY += 70
-      drawTimelineItem(ctx, 40, startY, "Tarikh PN", bayaran.tarikhPn, !!bayaran.tarikhPn)
+      drawTimelineItem(ctx, 40, startY, "Tarikh PN", bayaran.tarikhPn, !!bayaran.tarikhPn, undefined, isCancelled)
       startY += 70
-      drawTimelineItem(ctx, 40, startY, "Tarikh PPN (P)", bayaran.tarikhPpnP, !!bayaran.tarikhPpnP)
+      drawTimelineItem(ctx, 40, startY, "Tarikh PPN (P)", bayaran.tarikhPpnP, !!bayaran.tarikhPpnP, undefined, isCancelled)
       startY += 70
-      drawTimelineItem(ctx, 40, startY, "Memo Ladang", bayaran.tarikhMemoLadang, !!bayaran.tarikhMemoLadang)
+      drawTimelineItem(ctx, 40, startY, "Memo Ladang", bayaran.tarikhMemoLadang, !!bayaran.tarikhMemoLadang, undefined, isCancelled)
       startY += 70
       drawTimelineItem(
         ctx,
@@ -198,7 +211,8 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
         "Terima",
         bayaran.tarikhTerima,
         !!bayaran.tarikhTerima,
-        bayaran.daripada ? `Daripada: ${bayaran.daripada}` : undefined
+        bayaran.daripada ? `Daripada: ${bayaran.daripada}` : undefined,
+        isCancelled
       )
 
       if (bayaran.notaKaki) {
