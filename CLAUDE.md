@@ -5,21 +5,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Essential Commands
+
 - `pnpm dev` - Start development server (Next.js)
 - `pnpm build` - Build application for production
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint to check code quality
 
 ### Package Management
+
 - Use `pnpm` as the package manager (not npm or yarn)
 - `pnpm install` - Install dependencies
 
 ## Architecture Overview
 
 ### Application Type
+
 Next.js 15 application with TypeScript, using App Router and React 19. This is a Malaysian government letter and payment management system ("Sistem Pengurusan Surat dan Bayaran").
 
 ### Data Storage Architecture
+
 - **Primary Database**: Google Sheets API (not traditional database)
 - **Image Storage**: ImgBB API for file uploads
 - **Authentication**: Custom implementation with localStorage
@@ -32,11 +36,13 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
   - `AUDIT_BAYARAN` - Payment audit trail
 
 ### Core Data Types
+
 - `Surat` - Letter management with status tracking (types/surat.ts:11)
 - `Bayaran` - Payment records with extensive financial workflow (types/bayaran.ts)
 - `User` - Authentication with role-based access (types/user.ts)
 
 ### Key Business Logic
+
 - **Role-based Access**: Different dashboards for different user roles
   - `KEWANGAN` users → `/dashboard/bayaran` (Finance dashboard)
   - Other users → `/dashboard/surat` (Letter dashboard)
@@ -47,12 +53,14 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
 - **Display Logic**: Payment tables show contractor names instead of contract numbers for better readability
 
 ### Authentication Flow
+
 - Custom auth provider using Google Sheets as user store (lib/auth-provider.tsx)
 - User credentials stored in `AUTH` sheet
 - Session persistence via localStorage
 - Protected routes with role-based redirection
 
 ### UI Architecture
+
 - **Styling**: Tailwind CSS with shadcn/ui components
 - **Forms**: React Hook Form with Zod validation
 - **State Management**: React Context for authentication
@@ -61,6 +69,7 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
 ## Environment Setup
 
 ### Required Environment Variables
+
 ```env
 NEXT_PUBLIC_IMGBB_API_KEY="your_imgbb_api_key"
 GOOGLE_SHEET_ID="your_google_sheet_id"
@@ -69,7 +78,9 @@ GOOGLE_CLIENT_EMAIL="your_service_account_email"
 ```
 
 ### Google Sheets Setup
+
 The application expects specific sheet structures:
+
 - Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`
 - Column mappings are hardcoded in `lib/google-sheets.ts`
 - Service account needs Sheets API access
@@ -79,25 +90,27 @@ The application expects specific sheet structures:
 ## Development Guidelines
 
 ### Working with Google Sheets
+
 - All data operations go through `lib/google-sheets.ts`
 - Row indices are 0-based but sheet operations add +2 for headers
 - Use `getAllSurat()`, `getAllBayaran()` for data fetching
 - Audit logging is automatic for payment operations
 
 ### Adding New Features
+
 - Follow existing patterns in `app/dashboard/` for new pages
 - Use shadcn/ui components from `components/ui/`
 - TypeScript types are defined in `types/` directory
 - API routes follow Next.js App Router conventions in `app/api/`
 
 ### Authentication Integration
+
 - Use `useAuth()` hook from `lib/auth-provider.tsx`
 - Check user roles for feature access
 - Protected pages should redirect unauthenticated users
 
 ### Error Handling
+
 - Google Sheets operations include comprehensive error handling
 - Display user-friendly error messages for sheet access issues
 - ImgBB upload failures should be gracefully handled
-- add to memory
-- to memorize

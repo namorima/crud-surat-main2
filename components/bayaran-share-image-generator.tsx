@@ -117,24 +117,29 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       ctx.fillStyle = "#000000"
-      ctx.font = "bold 24px Inter"
+      ctx.font = "bold 20px Inter"
       ctx.fillText("Detail Rekod Bayaran", 20, 40)
       ctx.font = "bold 20px Inter"
       ctx.fillText(`#${bayaran.id}`, canvas.width - 90, 40)
 
       ctx.fillStyle = "#f3f4f6"
-      ctx.fillRect(20, 60, canvas.width - 40, 200)
+      ctx.fillRect(20, 60, canvas.width - 40, 230)
 
       ctx.fillStyle = "#000"
       ctx.font = "14px Inter"
-      ctx.fillText("Daripada:", 30, 90)
+      ctx.fillText("Id:", 30, 90)
       ctx.font = "bold 14px Inter"
-      ctx.fillText(bayaran.daripada, 130, 90)
+      ctx.fillText(bayaran.id, 130, 90)
 
       ctx.font = "14px Inter"
-      ctx.fillText("Perkara:", 30, 120)
+      ctx.fillText("Daripada:", 30, 120)
       ctx.font = "bold 14px Inter"
-      const perkaraY = wrapText(ctx, bayaran.perkara, 130, 120, 240, 16) // ✅ wrap text
+      ctx.fillText(bayaran.daripada, 130, 120)
+
+      ctx.font = "14px Inter"
+      ctx.fillText("Perkara:", 30, 150)
+      ctx.font = "bold 14px Inter"
+      const perkaraY = wrapText(ctx, bayaran.perkara, 130, 150, 240, 16) // ✅ wrap text
 
       ctx.font = "14px Inter"
       ctx.fillText("Kategori:", 30, perkaraY + 20)
