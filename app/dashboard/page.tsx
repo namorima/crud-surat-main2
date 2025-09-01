@@ -19,6 +19,12 @@ import {
   Cell,
   Legend,
 } from 'recharts'
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import { FileText, Clock, CheckCircle, AlertCircle, Menu, DollarSign, PauseCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -42,7 +48,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [view, setView] = useState('surat')
+  const [view, setView] = useState('bayaran')
   const [surat, setSurat] = useState<Surat[]>([])
   const [bayaran, setBayaran] = useState<Bayaran[]>([])
   const [loading, setLoading] = useState(true)
@@ -122,15 +128,154 @@ export default function DashboardPage() {
   const holdKivBayaran = Array.isArray(bayaran) ? bayaran.filter((item) => item.statusBayaran === 'HOLD / KIV').length : 0
 
   const bayaranStatusData = [
-    { name: 'Selesai Bayar', value: selesaiBayaran, color: '#22c55e' },
-    { name: 'Belum Bayar', value: belumBayar, color: '#f97316' },
-    { name: 'Hold / KIV', value: holdKivBayaran, color: '#eab308' },
+    { name: 'selesai', label: 'Selesai Bayar', value: selesaiBayaran, fill: 'var(--color-selesai)' },
+    { name: 'belum', label: 'Belum Bayar', value: belumBayar, fill: 'var(--color-belum)' },
+    { name: 'hold', label: 'Hold / KIV', value: holdKivBayaran, fill: 'var(--color-hold)' },
   ]
 
-  const bayaranKategoriData = [
-    { name: 'KEWANGAN', value: belumBayar },
-    { name: 'SELESAI', value: selesaiBayaran },
+  const bayaranStatusConfig = {
+    value: {
+      label: "Jumlah",
+    },
+    selesai: {
+      label: "Selesai Bayar",
+      color: "#22c55e",
+    },
+    belum: {
+      label: "Belum Bayar", 
+      color: "#f97316",
+    },
+    hold: {
+      label: "Hold / KIV",
+      color: "#eab308",
+    },
+  } satisfies ChartConfig
+
+  // Group bayaran by status with kawasan breakdown for kategori tab
+  const bayaranByStatusWithKawasan = bayaran.reduce((acc, item) => {
+    const status = item.statusBayaran || 'Tidak Diketahui'
+    const kawasan = item.daripada || 'Tidak Diketahui'
+    
+    if (!acc[status]) {
+      acc[status] = { status, kawasanBreakdown: {} }
+    }
+    
+    if (!acc[status].kawasanBreakdown[kawasan]) {
+      acc[status].kawasanBreakdown[kawasan] = 0
+    }
+    
+    acc[status].kawasanBreakdown[kawasan] += 1
+    
+    return acc
+  }, {} as Record<string, { status: string; kawasanBreakdown: Record<string, number> }>)
+
+  // Convert to chart data format for status with stacked kawasan
+  const bayaranKategoriData = Object.entries(bayaranByStatusWithKawasan).map(([status, data]) => {
+    const result: any = { status }
+    Object.entries(data.kawasanBreakdown).forEach(([kawasan, count]) => {
+      result[kawasan] = count
+    })
+    return result
+  })
+
+  // Get unique kawasan names for config
+  const uniqueKawasan = [...new Set(bayaran.map(item => item.daripada || 'Tidak Diketahui'))].sort()
+  
+  // Enhanced color palette with more distinct colors
+  const kawasanColors = [
+    '#22c55e', // green
+    '#f97316', // orange  
+    '#eab308', // yellow
+    '#3b82f6', // blue
+    '#8b5cf6', // purple
+    '#ef4444', // red
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#f59e0b', // amber
+    '#10b981', // emerald
+    '#6366f1', // indigo
+    '#ec4899', // pink
+    '#14b8a6', // teal
+    '#f472b6', // rose
+    '#a855f7', // violet
+    '#0ea5e9', // sky
+    '#65a30d', // green-600
+    '#dc2626', // red-600
   ]
+
+  const bayaranKategoriConfig = uniqueKawasan.reduce((config, kawasan, index) => {
+    config[kawasan] = {
+      label: kawasan,
+      color: kawasanColors[index % kawasanColors.length],
+    }
+    return config
+  }, {} as ChartConfig)
+
+  // Data for kawasan drill-down with kontrak stacking
+  const kawasanDrilldownData = selectedStatus 
+    ? bayaran
+        .filter(item => item.statusBayaran === selectedStatus)
+        .reduce((acc, item) => {
+          const kawasan = item.daripada || 'Tidak Diketahui'
+          const kontrak = item.noKontrak || 'Tiada Kontrak'
+          
+          if (!acc[kawasan]) {
+            acc[kawasan] = { kawasan, kontrakBreakdown: {} }
+          }
+          
+          if (!acc[kawasan].kontrakBreakdown[kontrak]) {
+            acc[kawasan].kontrakBreakdown[kontrak] = 0
+          }
+          
+          acc[kawasan].kontrakBreakdown[kontrak] += 1
+          
+          return acc
+        }, {} as Record<string, { kawasan: string; kontrakBreakdown: Record<string, number> }>)
+    : {}
+
+  // Convert kawasan drill-down to chart format
+  const kawasanChartData = Object.entries(kawasanDrilldownData).map(([kawasan, data]) => {
+    const result: any = { kawasan }
+    Object.entries(data.kontrakBreakdown).forEach(([kontrak, count]) => {
+      result[kontrak] = count
+    })
+    return result
+  })
+
+  // Get unique kontrak for colors
+  const uniqueKontrak = selectedStatus 
+    ? [...new Set(bayaran.filter(item => item.statusBayaran === selectedStatus).map(item => item.noKontrak || 'Tiada Kontrak'))].sort()
+    : []
+
+  // Different color palette for kontrak to distinguish from kawasan
+  const kontrakColors = [
+    '#1f2937', // gray-800
+    '#7c3aed', // violet-600
+    '#059669', // emerald-600
+    '#dc2626', // red-600
+    '#2563eb', // blue-600
+    '#ea580c', // orange-600
+    '#7c2d12', // orange-900
+    '#166534', // green-800
+    '#1e1b4b', // indigo-900
+    '#7e22ce', // purple-600
+    '#0f766e', // teal-700
+    '#be123c', // rose-700
+    '#374151', // gray-700
+    '#4338ca', // indigo-600
+    '#b91c1c', // red-700
+    '#0369a1', // sky-700
+    '#16a34a', // green-600
+    '#c2410c', // orange-700
+  ]
+
+  const kontrakConfig = uniqueKontrak.reduce((config, kontrak, index) => {
+    config[kontrak] = {
+      label: kontrak,
+      color: kontrakColors[index % kontrakColors.length],
+    }
+    return config
+  }, {} as ChartConfig)
 
   const bayaranUnitData = bayaran.reduce(
     (acc, item) => {
@@ -451,37 +596,36 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        {!selectedStatusForStatus ? (
+                    <CardContent className="flex-1 pb-0">
+                      {!selectedStatusForStatus ? (
+                        <ChartContainer
+                          config={bayaranStatusConfig}
+                          className="mx-auto aspect-square max-h-[250px]"
+                        >
                           <PieChart>
+                            <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent hideLabel />}
+                            />
                             <Pie
                               data={bayaranStatusData}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              outerRadius={80}
-                              fill="#8884d8"
                               dataKey="value"
-                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              nameKey="name"
+                              innerRadius={60}
                               onClick={(entry) => {
                                 // Map display names to actual status values
                                 const statusMapping = {
-                                  'Selesai Bayar': 'SELESAI',
-                                  'Belum Bayar': 'KEWANGAN',
-                                  'Hold / KIV': 'HOLD / KIV'
+                                  'selesai': 'SELESAI',
+                                  'belum': 'KEWANGAN',
+                                  'hold': 'HOLD / KIV'
                                 }
                                 setSelectedStatusForStatus(statusMapping[entry.name] || entry.name)
                               }}
-                            >
-                              {bayaranStatusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Legend />
-                            <Tooltip />
+                            />
                           </PieChart>
-                        ) : (
+                        </ChartContainer>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={320}>
                           <BarChart
                             data={
                               selectedStatusForStatus && !selectedKawasanForStatus
@@ -499,8 +643,8 @@ export default function DashboardPage() {
                                 }
                             }} />
                           </BarChart>
-                        )}
-                      </ResponsiveContainer>
+                        </ResponsiveContainer>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -510,51 +654,70 @@ export default function DashboardPage() {
                       <div className="flex justify-between items-center">
                         <CardTitle>
                           {!selectedStatus
-                            ? 'Statistik Kategori Bayaran'
-                            : selectedStatus && !selectedKawasanForKategori
-                            ? `Pecahan Kawasan untuk Status: ${selectedStatus}`
-                            : `Pecahan Kontrak untuk Kawasan: ${selectedKawasanForKategori}`}
+                            ? 'Statistik Status Bayaran (Kawasan)'
+                            : `Pecahan Kawasan untuk Status: ${selectedStatus}`}
                         </CardTitle>
-                        {(selectedStatus || selectedKawasanForKategori) && (
+                        {selectedStatus && (
                           <Button
                             variant="outline"
-                            onClick={() => {
-                              if (selectedKawasanForKategori) {
-                                setSelectedKawasanForKategori(null)
-                              } else {
-                                setSelectedStatus(null)
-                              }
-                            }}
+                            onClick={() => setSelectedStatus(null)}
                           >
                             Kembali
                           </Button>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={
-                            !selectedStatus
-                              ? bayaranKategoriData
-                              : selectedStatus && !selectedKawasanForKategori
-                              ? kawasanDataForSelectedStatus
-                              : kontrakDataForKategoriDrilldown
-                          }
+                    <CardContent>
+                      <ChartContainer config={selectedStatus ? kontrakConfig : bayaranKategoriConfig}>
+                        <BarChart 
+                          accessibilityLayer 
+                          data={selectedStatus ? kawasanChartData : bayaranKategoriData}
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" tick={<CustomXAxisTick />} interval={0} />
-                          <YAxis />
-                          <Tooltip formatter={(value) => selectedStatus ? `RM ${Number(value).toLocaleString()}` : value} />
-                          <Bar dataKey="value" fill="#3b82f6" onClick={(data) => {
-                              if (!selectedStatus) {
-                                  setSelectedStatus(data.name)
-                              } else if (selectedStatus && !selectedKawasanForKategori) {
-                                  setSelectedKawasanForKategori(data.name)
-                              }
-                          }} />
+                          <CartesianGrid vertical={false} />
+                          <XAxis
+                            dataKey={selectedStatus ? "kawasan" : "status"}
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            tickFormatter={(value) => value.length > 10 ? value.slice(0, 10) + '...' : value}
+                          />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          {selectedStatus ? (
+                            // Show kontrak breakdown for selected status
+                            uniqueKontrak.map((kontrak, index) => (
+                              <Bar
+                                key={kontrak}
+                                dataKey={kontrak}
+                                stackId="a"
+                                fill={kontrakColors[index % kontrakColors.length]}
+                                radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKontrak.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                animationBegin={index * 100}
+                                animationDuration={1000}
+                                animationEasing="ease-out"
+                              />
+                            ))
+                          ) : (
+                            // Show kawasan breakdown by status
+                            uniqueKawasan.map((kawasan, index) => (
+                              <Bar
+                                key={kawasan}
+                                dataKey={kawasan}
+                                stackId="a"
+                                fill={kawasanColors[index % kawasanColors.length]}
+                                radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKawasan.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                animationBegin={index * 100}
+                                animationDuration={1000}
+                                animationEasing="ease-out"
+                                onClick={(data) => {
+                                  if (!selectedStatus) {
+                                    setSelectedStatus(data.status)
+                                  }
+                                }}
+                              />
+                            ))
+                          )}
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                     </CardContent>
                   </Card>
                 </TabsContent>
