@@ -110,7 +110,7 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
       if (!ctx) return
 
       canvas.width = 400
-      let startY = 340
+      let startY = 370
       canvas.height = startY + (6 * 70) + 130
 
       ctx.fillStyle = "#ffffff"
@@ -179,7 +179,7 @@ export function BayaranShareImageGenerator({ bayaran, onImageGenerated, onError 
 
       ctx.font = "bold 18px Inter"
       ctx.fillStyle = "#000"
-      ctx.fillText("Tracking Bayaran:", 20, 300)
+      ctx.fillText("Tracking Bayaran:", 20, 330)
 
       drawTimelineItem(
         ctx,
