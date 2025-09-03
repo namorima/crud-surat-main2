@@ -201,7 +201,9 @@ export function BayaranTable({
                         }
                         className={cn(
                           "cursor-pointer",
-                          item.statusBayaran?.toUpperCase() === "BATAL"
+                          item.statusLadang === "Hold / KIV"
+                            ? "bg-black hover:bg-gray-800 text-white border-black"
+                            : item.statusBayaran?.toUpperCase() === "BATAL"
                             ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
                             : item.statusBayaran?.toLowerCase() === "selesai"
                               ? "bg-green-600 hover:bg-green-700 text-white"
@@ -331,7 +333,9 @@ export function BayaranTable({
                     }
                     className={cn(
                       "mb-1 w-fit cursor-pointer",
-                      item.statusBayaran?.toUpperCase() === "BATAL"
+                      item.statusLadang === "Hold / KIV"
+                        ? "bg-black hover:bg-gray-800 text-white border-black"
+                        : item.statusBayaran?.toUpperCase() === "BATAL"
                         ? "bg-red-600 hover:bg-red-700 text-white border-red-700"
                         : item.statusBayaran?.toLowerCase() === "selesai"
                           ? "bg-green-600 hover:bg-green-700 text-white"
