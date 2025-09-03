@@ -557,6 +557,11 @@ export default function BayaranPage() {
 
   // Get status background color for badges
   const getStatusBadgeStyle = (status: string) => {
+    // Special handling for Hold / KIV status
+    if (status === "Hold / KIV") {
+      return { backgroundColor: "#000000", color: "#ffffff", border: "none" };
+    }
+    
     const statusData = formOptions.statusBayaranData.find((item) => item.status === status);
     if (statusData) {
       return { backgroundColor: statusData.colorHex, color: "white", border: "none" };
