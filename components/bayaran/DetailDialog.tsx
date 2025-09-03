@@ -327,7 +327,19 @@ export function DetailDialog({
                         </p>
                       </div>
                       {selectedBayaran.statusLadang && (
-                        <p className="text-xs text-muted-foreground mt-1">Status: {selectedBayaran.statusLadang}</p>
+                        <div className="mt-1">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs",
+                              selectedBayaran.statusLadang === "Hold / KIV" 
+                                ? "bg-black text-white border-black hover:bg-gray-800" 
+                                : ""
+                            )}
+                          >
+                            {selectedBayaran.statusLadang}
+                          </Badge>
+                        </div>
                       )}
                     </div>
                   </div>
