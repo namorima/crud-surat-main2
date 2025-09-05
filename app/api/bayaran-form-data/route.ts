@@ -21,14 +21,9 @@ export async function GET() {
         getAllBayaran(),
       ])
 
-    // Get unique Status Ladang values from REKOD BAYARAN sheet (column J)
-    const statusLadangFromBayaran = Array.from(
-      new Set(allBayaran.map((item) => item.statusLadang).filter(Boolean)),
-    ).sort()
-
     return NextResponse.json({
       daripadaSuggestions,
-      statusLadangData: statusLadangFromBayaran, // Use data from REKOD BAYARAN sheet
+      statusLadangData, // Use data from AUTH sheet with colors
       contractData: contractCategoryData.contractData,
       categoryData: contractCategoryData.categoryData,
       allContracts: contractCategoryData.allContracts,

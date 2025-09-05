@@ -318,9 +318,15 @@ export function AddEditForm({
                   <SelectValue placeholder="Pilih status ladang" />
                 </SelectTrigger>
                 <SelectContent>
-                  {formOptions.statusLadangData.map((status: any) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
+                  {formOptions.statusLadangData.map((item: any) => (
+                    <SelectItem key={item.status} value={item.status}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: item.colorHex }}
+                        />
+                        {item.status}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

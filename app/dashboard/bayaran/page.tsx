@@ -132,7 +132,7 @@ export default function BayaranPage() {
 
   const [formOptions, setFormOptions] = useState({
     daripadaSuggestions: [] as string[],
-    statusLadangData: [] as string[], // Changed to string array
+    statusLadangData: [] as Array<{status: string, colorHex: string}>, // Array of objects with status and colorHex
     contractData: {} as Record<string, string[]>,
     categoryData: {} as Record<string, Record<string, string[]>>,
     allContracts: [] as string[],
@@ -563,6 +563,41 @@ export default function BayaranPage() {
     }
     
     const statusData = formOptions.statusBayaranData.find((item) => item.status === status);
+    if (statusData) {
+      return { backgroundColor: statusData.colorHex, color: "white", border: "none" };
+    }
+    return {};
+  };
+
+  // Get status ladang color from AUTH sheet data
+  const getStatusLadangColor = (status: string) => {
+    const statusData = formOptions.statusLadangData.find((item) => item.status === status);
+    if (statusData) {
+      return `text-white border-0`;
+    }
+
+    // Fallback colors if not found in AUTH sheet
+    switch (status?.toLowerCase()) {
+      case "selesai":
+      case "completed":
+        return "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200";
+      case "pending":
+      case "menunggu":
+        return "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200";
+      case "dalam proses":
+      case "processing":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200";
+      case "batal":
+      case "cancelled":
+        return "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+
+  // Get status ladang background color for badges
+  const getStatusLadangBadgeStyle = (status: string) => {
+    const statusData = formOptions.statusLadangData.find((item) => item.status === status);
     if (statusData) {
       return { backgroundColor: statusData.colorHex, color: "white", border: "none" };
     }
