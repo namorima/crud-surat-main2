@@ -507,13 +507,13 @@ export async function addAuditLog(log: { bayaranId: string; user: string; action
   }
 }
 
-// Get Status Ladang data from AUTH sheet column P and Q
+// Get Status Ladang data from STATUS sheet where kategori is "STATUS LADANG"
 export async function getStatusLadangData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!P2:Q",
+      range: "STATUS!A2:C",
     })
 
     const rows = response.data.values || []
@@ -523,6 +523,7 @@ export async function getStatusLadangData() {
     }
 
     return rows
+      .filter((row) => row[2] === "STATUS LADANG") // Filter by kategori column C
       .map((row) => ({
         status: row[0] || "",
         colorHex: row[1] || "#6b7280", // Default gray color
@@ -638,13 +639,13 @@ export async function getContractCategoryData() {
   }
 }
 
-// Get Status Bayaran data from AUTH sheet column X and Y
+// Get Status Bayaran data from STATUS sheet where kategori is "STATUS BAYARAN"
 export async function getStatusBayaranData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!X2:Y",
+      range: "STATUS!A2:C",
     })
 
     const rows = response.data.values || []
@@ -654,6 +655,7 @@ export async function getStatusBayaranData() {
     }
 
     return rows
+      .filter((row) => row[2] === "STATUS BAYARAN") // Filter by kategori column C
       .map((row) => ({
         status: row[0] || "",
         colorHex: row[1] || "#6b7280", // Default gray color

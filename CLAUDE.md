@@ -34,6 +34,7 @@ Next.js 15 application with TypeScript, using App Router and React 19. This is a
   - `UNIT` - Unit and PIC (Person in Charge) mappings
   - `KONTRAK` - Contract and category data (KAWASAN, NO KONTRAK, KATEGORI, NAMA KONTRAKTOR)
   - `AUDIT_BAYARAN` - Payment audit trail
+  - `STATUS` - Status configurations for Status Ladang and Status Bayaran
 
 ### Core Data Types
 
@@ -81,11 +82,12 @@ GOOGLE_CLIENT_EMAIL="your_service_account_email"
 
 The application expects specific sheet structures:
 
-- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`
+- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`, `STATUS`
 - Column mappings are hardcoded in `lib/google-sheets.ts`
 - Service account needs Sheets API access
 - `KONTRAK` sheet structure: Column A=KAWASAN, B=NO KONTRAK, C=KATEGORI, D=NAMA KONTRAKTOR
 - `REKOD BAYARAN` sheet: Column S=NAMA KONTRAKTOR (auto-populated from KONTRAK sheet)
+- `STATUS` sheet structure: Column A=STATUS, B=COLOR_HEX, C=KATEGORI (either "STATUS LADANG" or "STATUS BAYARAN")
 
 ## Development Guidelines
 
