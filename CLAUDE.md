@@ -88,6 +88,9 @@ The application expects specific sheet structures:
 - `KONTRAK` sheet structure: Column A=KAWASAN, B=NO KONTRAK, C=KATEGORI, D=NAMA KONTRAKTOR
 - `REKOD BAYARAN` sheet: Column S=NAMA KONTRAKTOR (auto-populated from KONTRAK sheet)
 - `STATUS` sheet structure: Column A=STATUS, B=COLOR_HEX, C=KATEGORI (either "STATUS LADANG" or "STATUS BAYARAN")
+- `AUTH` sheet structure: Column A=USER_ID, B=PASSWORD, C=NAME, D=UNIT/ROLE, E=TYPE 
+  - For users: E is empty or contains role info, D contains user role
+  - For recipients: E contains "PENERIMA", C contains recipient name, D contains unit
 
 ## Development Guidelines
 

@@ -67,13 +67,13 @@ export async function getAllSurat(): Promise<Surat[]> {
   }
 }
 
-// Get all users from the AUTH sheet
+// Get all users from the AUTH sheet (exclude PENERIMA entries)
 export async function getAllUsers(): Promise<User[]> {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!A2:D",
+      range: "AUTH!A2:E", // Extend to column E to check type
     })
 
     const rows = response.data.values || []
@@ -83,12 +83,14 @@ export async function getAllUsers(): Promise<User[]> {
       return []
     }
 
-    return rows.map((row, index) => ({
-      id: row[0] || index.toString(),
-      password: row[1] || "",
-      name: row[2] || "",
-      role: row[3] || "viewer",
-    }))
+    return rows
+      .filter((row) => row[4] !== "PENERIMA") // Exclude PENERIMA entries from column E
+      .map((row, index) => ({
+        id: row[0] || index.toString(),
+        password: row[1] || "",
+        name: row[2] || "",
+        role: row[3] || "viewer",
+      }))
   } catch (error) {
     console.error("Error fetching users from Google Sheets:", error)
     throw new Error(`Failed to fetch users from Google Sheets: ${error.message}`)
@@ -535,13 +537,13 @@ export async function getStatusLadangData() {
   }
 }
 
-// Get Penerima data from AUTH sheet
+// Get Penerima data from AUTH sheet columns C, D, E where E is "PENERIMA"
 export async function getPenerimaData() {
   try {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "AUTH!U2:V", // Fetch PENERIMA (U) and UNIT (V)
+      range: "AUTH!C2:E", // Fetch NAME (C), UNIT (D), and TYPE (E)
     })
 
     const rows = response.data.values || []
@@ -551,6 +553,7 @@ export async function getPenerimaData() {
     }
 
     return rows
+      .filter((row) => row[2] === "PENERIMA") // Filter by type column E
       .map((row) => {
         const name = row[0] || ""
         const unit = row[1] || ""
