@@ -24,6 +24,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from '@/components/ui/chart'
 import { FileText, Clock, CheckCircle, AlertCircle, Menu, DollarSign, PauseCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -652,7 +654,7 @@ export default function DashboardPage() {
                   <Card>
                     <CardHeader>
                       <div className="flex justify-between items-center">
-                        <CardTitle>
+                        <CardTitle className="text-sm md:text-base">
                           {!selectedStatus
                             ? 'Statistik Status Bayaran (Kawasan)'
                             : `Pecahan Kawasan untuk Status: ${selectedStatus}`}
@@ -660,6 +662,7 @@ export default function DashboardPage() {
                         {selectedStatus && (
                           <Button
                             variant="outline"
+                            size="sm"
                             onClick={() => setSelectedStatus(null)}
                           >
                             Kembali
@@ -667,57 +670,78 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <ChartContainer config={selectedStatus ? kontrakConfig : bayaranKategoriConfig}>
-                        <BarChart 
-                          accessibilityLayer 
-                          data={selectedStatus ? kawasanChartData : bayaranKategoriData}
+                    <CardContent className="px-2 md:px-6">
+                      <div className="space-y-4">
+                        <ChartContainer
+                          config={selectedStatus ? kontrakConfig : bayaranKategoriConfig}
+                          className="h-[300px] md:h-[400px] w-full"
                         >
-                          <CartesianGrid vertical={false} />
-                          <XAxis
-                            dataKey={selectedStatus ? "kawasan" : "status"}
-                            tickLine={false}
-                            tickMargin={10}
-                            axisLine={false}
-                            tickFormatter={(value) => value.length > 10 ? value.slice(0, 10) + '...' : value}
-                          />
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          {selectedStatus ? (
-                            // Show kontrak breakdown for selected status
-                            uniqueKontrak.map((kontrak, index) => (
-                              <Bar
-                                key={kontrak}
-                                dataKey={kontrak}
-                                stackId="a"
-                                fill={kontrakColors[index % kontrakColors.length]}
-                                radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKontrak.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                                animationBegin={index * 100}
-                                animationDuration={1000}
-                                animationEasing="ease-out"
-                              />
-                            ))
-                          ) : (
-                            // Show kawasan breakdown by status
-                            uniqueKawasan.map((kawasan, index) => (
-                              <Bar
-                                key={kawasan}
-                                dataKey={kawasan}
-                                stackId="a"
-                                fill={kawasanColors[index % kawasanColors.length]}
-                                radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKawasan.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                                animationBegin={index * 100}
-                                animationDuration={1000}
-                                animationEasing="ease-out"
-                                onClick={(data) => {
-                                  if (!selectedStatus) {
-                                    setSelectedStatus(data.status)
-                                  }
-                                }}
-                              />
-                            ))
-                          )}
-                        </BarChart>
-                      </ChartContainer>
+                          <BarChart
+                            accessibilityLayer
+                            data={selectedStatus ? kawasanChartData : bayaranKategoriData}
+                            margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+                          >
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey={selectedStatus ? "kawasan" : "status"}
+                              tickLine={false}
+                              tickMargin={10}
+                              axisLine={false}
+                              angle={-45}
+                              textAnchor="end"
+                              height={80}
+                              interval={0}
+                              tick={{ fontSize: 10 }}
+                              tickFormatter={(value) => value.length > 15 ? value.slice(0, 15) + '...' : value}
+                            />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                            />
+                            <ChartLegend
+                              content={<ChartLegendContent className="flex-wrap gap-2 text-xs" />}
+                            />
+                            {selectedStatus ? (
+                              // Show kontrak breakdown for selected status
+                              uniqueKontrak.map((kontrak, index) => (
+                                <Bar
+                                  key={kontrak}
+                                  dataKey={kontrak}
+                                  stackId="a"
+                                  fill={kontrakColors[index % kontrakColors.length]}
+                                  radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKontrak.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                  animationBegin={index * 100}
+                                  animationDuration={1000}
+                                  animationEasing="ease-out"
+                                />
+                              ))
+                            ) : (
+                              // Show kawasan breakdown by status
+                              uniqueKawasan.map((kawasan, index) => (
+                                <Bar
+                                  key={kawasan}
+                                  dataKey={kawasan}
+                                  stackId="a"
+                                  fill={kawasanColors[index % kawasanColors.length]}
+                                  radius={index === 0 ? [0, 0, 4, 4] : index === uniqueKawasan.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                  animationBegin={index * 100}
+                                  animationDuration={1000}
+                                  animationEasing="ease-out"
+                                  onClick={(data) => {
+                                    if (!selectedStatus) {
+                                      setSelectedStatus(data.status)
+                                    }
+                                  }}
+                                />
+                              ))
+                            )}
+                          </BarChart>
+                        </ChartContainer>
+                        {/* Mobile hint */}
+                        <p className="text-xs text-muted-foreground text-center md:hidden">
+                          Tip: Pusingkan skrin untuk paparan yang lebih baik
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
