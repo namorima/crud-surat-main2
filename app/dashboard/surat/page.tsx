@@ -607,16 +607,18 @@ export default function SuratPage() {
         throw new Error(`Error adding data: ${response.status} ${response.statusText}`)
       }
 
-      // If this is a response to another letter, update the original letter's reference field
+      // If this is a response to another letter, update the original letter's reference field and status
       if (referenceBil) {
         const originalSurat = surat.find((item) => item.bil === referenceBil)
         if (originalSurat) {
           const updatedOriginalSurat = {
             ...originalSurat,
             reference: nextBil.toString(),
+            status: "SELESAI" as const, // Auto-update status to SELESAI when Respon is added
+            tarikhSelesai: getCurrentDateFormatted(), // Auto-fill tarikhSelesai with today's date
           }
 
-          // Update the original surat with the new reference
+          // Update the original surat with the new reference and status
           const updateResponse = await fetch("/api/surat", {
             method: "PUT",
             headers: {
@@ -629,7 +631,7 @@ export default function SuratPage() {
           })
 
           if (!updateResponse.ok) {
-            console.error("Failed to update original surat reference")
+            console.error("Failed to update original surat reference and status")
           }
         }
       }
@@ -2045,7 +2047,7 @@ export default function SuratPage() {
                             {item.reference ? (
                               <Badge
                                 variant="outline"
-                                className="cursor-pointer hover:bg-accent"
+                                className="cursor-pointer bg-black text-white hover:bg-black/80"
                                 onClick={() => handleBilReferenceClick(item.reference)}
                               >
                                 {item.reference}
@@ -2243,6 +2245,23 @@ export default function SuratPage() {
                           style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
                         >
                           PIC: {item.tindakanPic}
+                        </Badge>
+                      )}
+                      {item.reference ? (
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer text-[10px] bg-black text-white hover:bg-black/80"
+                          onClick={() => handleBilReferenceClick(item.reference)}
+                        >
+                          {item.reference}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer text-[10px] hover:bg-secondary/80"
+                          onClick={() => handleOpenAddDialog(item.bil)}
+                        >
+                          Respon
                         </Badge>
                       )}
                       <Button
