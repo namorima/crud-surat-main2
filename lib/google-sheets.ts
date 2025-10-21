@@ -36,7 +36,7 @@ export async function getAllSurat(): Promise<Surat[]> {
     const sheets = await initializeSheets()
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "SURAT!A2:L",
+      range: "SURAT!A2:M",
     })
 
     const rows = response.data.values || []
@@ -60,6 +60,7 @@ export async function getAllSurat(): Promise<Surat[]> {
       tarikhSelesai: row[9] || null,
       nota: row[10] || "",
       komen: row[11] || "",
+      reference: row[12] || "",
     }))
   } catch (error) {
     console.error("Error fetching data from Google Sheets:", error)
@@ -139,7 +140,7 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id">): Prom
     // Append the new row directly to the end of the data
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "SURAT!A2:L",
+      range: "SURAT!A2:M",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
@@ -157,6 +158,7 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id">): Prom
             surat.tarikhSelesai,
             surat.nota,
             surat.komen,
+            surat.reference,
           ],
         ],
       },
@@ -173,7 +175,7 @@ export async function updateSurat(rowIndex: number, surat: Omit<Surat, "id">): P
     const sheets = await initializeSheets()
     await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `SURAT!A${rowIndex + 2}:L${rowIndex + 2}`,
+      range: `SURAT!A${rowIndex + 2}:M${rowIndex + 2}`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -190,6 +192,7 @@ export async function updateSurat(rowIndex: number, surat: Omit<Surat, "id">): P
             surat.tarikhSelesai,
             surat.nota,
             surat.komen,
+            surat.reference,
           ],
         ],
       },

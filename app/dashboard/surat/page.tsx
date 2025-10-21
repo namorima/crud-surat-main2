@@ -126,7 +126,7 @@ export default function SuratPage() {
     tarikh: true,
     kategori: true,
     perkara: true,
-    tindakanPic: true,
+    reference: true,
     nota: true,
     actions: true,
   })
@@ -145,7 +145,11 @@ export default function SuratPage() {
     tarikhSelesai: "",
     nota: "",
     komen: "",
+    reference: "",
   })
+
+  // State untuk reference bil (untuk respon surat)
+  const [referenceBil, setReferenceBil] = useState<number | null>(null)
 
   // Check user permissions
   const canEdit = user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit
@@ -445,7 +449,8 @@ export default function SuratPage() {
           (item.perkara || "").toLowerCase().includes(query) ||
           (item.kategori || "").toLowerCase().includes(query) ||
           (item.unit || "").toLowerCase().includes(query) ||
-          (item.tindakanPic || "").toLowerCase().includes(query),
+          (item.tindakanPic || "").toLowerCase().includes(query) ||
+          (item.reference || "").toLowerCase().includes(query),
       )
     }
 
@@ -559,6 +564,18 @@ export default function SuratPage() {
     return Object.keys(errors).length === 0
   }
 
+  // Function to open add dialog with reference
+  const handleOpenAddDialog = (refBil?: number) => {
+    if (refBil) {
+      setReferenceBil(refBil)
+      resetForm(refBil)
+    } else {
+      setReferenceBil(null)
+      resetForm()
+    }
+    setIsAddDialogOpen(true)
+  }
+
   const handleAddSurat = async () => {
     // Validate form
     if (!validateForm()) {
@@ -590,7 +607,35 @@ export default function SuratPage() {
         throw new Error(`Error adding data: ${response.status} ${response.statusText}`)
       }
 
+      // If this is a response to another letter, update the original letter's reference field
+      if (referenceBil) {
+        const originalSurat = surat.find((item) => item.bil === referenceBil)
+        if (originalSurat) {
+          const updatedOriginalSurat = {
+            ...originalSurat,
+            reference: nextBil.toString(),
+          }
+
+          // Update the original surat with the new reference
+          const updateResponse = await fetch("/api/surat", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              rowIndex: Number.parseInt(originalSurat.id),
+              data: updatedOriginalSurat,
+            }),
+          })
+
+          if (!updateResponse.ok) {
+            console.error("Failed to update original surat reference")
+          }
+        }
+      }
+
       setIsAddDialogOpen(false)
+      setReferenceBil(null)
       resetForm()
       // Invalidate cache to force refresh
       setLastFetchTime(null)
@@ -688,6 +733,7 @@ export default function SuratPage() {
       tarikhSelesai: surat.tarikhSelesai ? formatDateToInput(surat.tarikhSelesai) : "",
       nota: surat.nota,
       komen: surat.komen || "",
+      reference: surat.reference || "",
     })
     setFormErrors({})
     setIsEditDialogOpen(true)
@@ -698,7 +744,9 @@ export default function SuratPage() {
     setIsDeleteDialogOpen(true)
   }
 
-  const resetForm = () => {
+  const resetForm = (refBil?: number) => {
+    const referenceValue = refBil !== undefined ? refBil.toString() : (referenceBil ? referenceBil.toString() : "")
+
     setFormData({
       bil: getNextBilValue(),
       daripadaKepada: "",
@@ -712,6 +760,7 @@ export default function SuratPage() {
       tarikhSelesai: "",
       nota: "",
       komen: "",
+      reference: referenceValue,
     })
     setFormErrors({})
     setCurrentSurat(null)
@@ -856,7 +905,12 @@ export default function SuratPage() {
     shareText += `DARIPADA: ${item.daripadaKepada}\n\n`
     shareText += `${item.perkara}\n\n`
     shareText += `${item.unit}\n`
-    shareText += `PIC: ${item.tindakanPic}\n\n`
+    shareText += `PIC: ${item.tindakanPic}\n`
+
+    if (item.reference) {
+      shareText += `Respon : ${item.reference}\n`
+    }
+    shareText += `\n`
 
     if (item.nota) {
       shareText += `Nota: ${item.nota}\n`
@@ -1230,13 +1284,13 @@ export default function SuratPage() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="col-tindakanPic"
-                          checked={columnVisibility.tindakanPic}
+                          id="col-reference"
+                          checked={columnVisibility.reference}
                           onCheckedChange={(checked) =>
-                            setColumnVisibility((prev) => ({ ...prev, tindakanPic: !!checked }))
+                            setColumnVisibility((prev) => ({ ...prev, reference: !!checked }))
                           }
                         />
-                        <Label htmlFor="col-tindakanPic">Tindakan PIC</Label>
+                        <Label htmlFor="col-reference">Reference</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1472,13 +1526,23 @@ export default function SuratPage() {
 
               {/* Add Button */}
               {!showSearchInput && canEditFull && (
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <Dialog
+                  open={isAddDialogOpen}
+                  onOpenChange={(open) => {
+                    setIsAddDialogOpen(open)
+                    if (!open) {
+                      // Reset reference when closing dialog
+                      setReferenceBil(null)
+                      resetForm()
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button
                       size="icon"
                       onClick={() => {
                         resetForm()
-                        setIsAddDialogOpen(true)
+                        handleOpenAddDialog()
                       }}
                       className="h-7 w-7 md:h-8 md:w-8"
                     >
@@ -1491,9 +1555,29 @@ export default function SuratPage() {
                       <DialogTitle className="text-base md:text-lg">Tambah Surat Baru</DialogTitle>
                       <DialogDescription className="text-xs md:text-sm">
                         Masukkan maklumat surat baru di bawah.
+                        {referenceBil && (
+                          <span className="block mt-1 text-blue-600 font-medium">
+                            Respon kepada Surat Bil: {referenceBil}
+                          </span>
+                        )}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-3 py-3 md:gap-4 md:py-4">
+                      {referenceBil && (
+                        <div className="space-y-1 md:space-y-2">
+                          <Label htmlFor="reference" className="text-xs md:text-sm">
+                            Reference (Bil Surat Asal)
+                          </Label>
+                          <Input
+                            id="reference"
+                            name="reference"
+                            value={formData.reference}
+                            readOnly
+                            disabled
+                            className="h-8 md:h-10 text-xs md:text-sm bg-muted"
+                          />
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="daripadaKepada" className="text-xs md:text-sm">
@@ -1788,10 +1872,10 @@ export default function SuratPage() {
                         </div>
                       </TableHead>
                     )}
-                    {columnVisibility.tindakanPic && (
-                      <TableHead className="w-[150px] cursor-pointer" onClick={() => handleSort("tindakanPic")}>
+                    {columnVisibility.reference && (
+                      <TableHead className="w-[150px] cursor-pointer" onClick={() => handleSort("reference")}>
                         <div className="flex items-center">
-                          Tindakan PIC
+                          Reference
                           <ArrowUpDown className="ml-1 h-4 w-4" />
                         </div>
                       </TableHead>
@@ -1833,18 +1917,29 @@ export default function SuratPage() {
                       >
                         {columnVisibility.bil && (
                           <TableCell className="py-2">
-                            <div className="flex items-center">
-                              {item.status === "SELESAI" && <CheckCircle className="h-4 w-4 text-green-500 mr-2" />}
-                              {item.status === "BATAL" && <XCircle className="h-4 w-4 text-red-500 mr-2" />}
-                              <span
-                                className="cursor-pointer hover:text-blue-600 hover:underline"
-                                onClick={() => {
-                                  setDetailSurat(item)
-                                  setIsDetailModalOpen(true)
-                                }}
-                              >
-                                #{item.bil}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              {item.status === "SELESAI" ? (
+                                <Badge
+                                  variant="default"
+                                  className="bg-green-500 hover:bg-green-600 cursor-pointer"
+                                  onClick={() => {
+                                    setDetailSurat(item)
+                                    setIsDetailModalOpen(true)
+                                  }}
+                                >
+                                  #{item.bil}
+                                </Badge>
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:text-blue-600 hover:underline font-medium"
+                                  onClick={() => {
+                                    setDetailSurat(item)
+                                    setIsDetailModalOpen(true)
+                                  }}
+                                >
+                                  #{item.bil}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                         )}
@@ -1945,8 +2040,26 @@ export default function SuratPage() {
                             </div>
                           </TableCell>
                         )}
-                        {columnVisibility.tindakanPic && (
-                          <TableCell className="py-2">{item.tindakanPic || "-"}</TableCell>
+                        {columnVisibility.reference && (
+                          <TableCell className="py-2">
+                            {item.reference ? (
+                              <Badge
+                                variant="outline"
+                                className="cursor-pointer hover:bg-accent"
+                                onClick={() => handleBilReferenceClick(item.reference)}
+                              >
+                                {item.reference}
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="cursor-pointer hover:bg-secondary/80"
+                                onClick={() => handleOpenAddDialog(item.bil)}
+                              >
+                                Respon
+                              </Badge>
+                            )}
+                          </TableCell>
                         )}
                         <TableCell className="text-right py-2">
                           <DropdownMenu>
@@ -2579,6 +2692,18 @@ export default function SuratPage() {
             <h3 className="text-sm font-medium mb-1">Tindakan PIC</h3>
             <p className="text-sm">{detailSurat.tindakanPic || "-"}</p>
           </div>
+          {detailSurat.reference && (
+            <div>
+              <h3 className="text-sm font-medium mb-1">Reference</h3>
+              <Badge
+                variant="outline"
+                className="cursor-pointer hover:bg-accent"
+                onClick={() => handleBilReferenceClick(detailSurat.reference)}
+              >
+                Respon : {detailSurat.reference}
+              </Badge>
+            </div>
+          )}
         </div>
 
         <div>

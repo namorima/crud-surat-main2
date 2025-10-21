@@ -12,4 +12,5 @@ export type Surat = {
   tarikhSelesai: string | null
   nota: string
   komen: string
+  reference: string // Column M - Bil surat yang dilink (untuk respon)
 }

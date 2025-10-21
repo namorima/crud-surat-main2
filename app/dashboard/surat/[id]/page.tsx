@@ -124,6 +124,12 @@ export default function SuratDetailPage() {
               <p className="text-sm font-medium text-muted-foreground">Tindakan PIC</p>
               <p>{surat.tindakanPic || "-"}</p>
             </div>
+            {surat.reference && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Reference</p>
+                <p>Respon : {surat.reference}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Tarikh Selesai</p>
               <p>{surat.tarikhSelesai || "-"}</p>
