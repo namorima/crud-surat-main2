@@ -47,6 +47,7 @@ import {
   Share2,
   Bell,
   MessageSquare,
+  Reply,
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -2769,8 +2770,8 @@ export default function SuratPage() {
     )}
 
     <DialogFooter className="flex flex-row justify-center gap-2">
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         onClick={() => setIsDetailModalOpen(false)}
         className="p-2 w-[30%] sm:w-auto"
         title="Tutup"
@@ -2778,6 +2779,20 @@ export default function SuratPage() {
         <X className="h-4 w-4" />
         <span className="hidden sm:inline">Tutup</span>
       </Button>
+      {detailSurat && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setIsDetailModalOpen(false)
+            handleOpenAddDialog(detailSurat.bil)
+          }}
+          className="p-2 w-[30%] sm:w-auto"
+          title="Respon"
+        >
+          <Reply className="h-4 w-4" />
+          <span className="hidden sm:inline">Respon</span>
+        </Button>
+      )}
       {canEditFull && detailSurat && (
         <Button
           onClick={() => {
