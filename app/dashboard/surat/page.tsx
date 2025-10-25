@@ -6,6 +6,7 @@ import type { FXNotification } from "@/types/fx-notification"
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { useAuth } from "@/lib/auth-provider"
 import type { Surat } from "@/types/surat"
+import type { Fail } from "@/types/fail"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -73,6 +74,50 @@ const UNIT_COLORS = {
   PEMASARAN: "#d4edbc", // light green
 }
 
+// FAIL part color mapping
+const FAIL_PART_COLORS = {
+  HASIL: "#fef3c7", // yellow-100
+  "PERTANIAN AM": "#d1fae5", // green-100
+  KONTRAK: "#fed7aa", // orange-100
+}
+
+// Helper function to format fail display text (for showing in UI - uses PECAHAN and PECAHAN KECIL)
+const formatFailDisplay = (fail: Fail): string => {
+  if (!fail.pecahan) return "-"
+  if (fail.pecahanKecil) {
+    return `${fail.pecahan} (${fail.pecahanKecil})`
+  }
+  return fail.pecahan
+}
+
+// Helper function to get fail value for storage (uses NO LOCKER and NO FAIL)
+const getFailValue = (fail: Fail): string => {
+  if (!fail.noLocker && !fail.noFail) return "-"
+  return `${fail.noLocker} ${fail.noFail}`.trim()
+}
+
+// Helper function to get full fail display from stored value (for detail view)
+// Format: "B1 5 - PENGHASILAN (ANGKUT)" where B1 5 is stored value, PENGHASILAN (ANGKUT) is display
+const getFullFailDisplay = (storedValue: string, failData: Fail[]): string => {
+  if (!storedValue || storedValue === "-") return "-"
+
+  // Find the fail object that matches the stored value
+  const matchingFail = failData.find((fail) => getFailValue(fail) === storedValue)
+
+  if (matchingFail) {
+    const displayPart = formatFailDisplay(matchingFail)
+    return `${storedValue} - ${displayPart}`
+  }
+
+  // If no match found, just return the stored value
+  return storedValue
+}
+
+// Helper function to get fail part color
+const getFailPartColor = (part: string): string => {
+  return FAIL_PART_COLORS[part as keyof typeof FAIL_PART_COLORS] || "#ffffff"
+}
+
 export default function SuratPage() {
   const { user } = useAuth()
   const [surat, setSurat] = useState<Surat[]>([])
@@ -97,6 +142,9 @@ export default function SuratPage() {
   const [daripadaKepadaSuggestions, setDaripadaKepadaSuggestions] = useState<string[]>([])
   const [units, setUnits] = useState<string[]>([])
   const [unitPicMap, setUnitPicMap] = useState<Record<string, string[]>>({})
+  const [failData, setFailData] = useState<Fail[]>([])
+  const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
+  const [selectedFailId, setSelectedFailId] = useState<string>("")
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -333,6 +381,41 @@ export default function SuratPage() {
     }
   }, [])
 
+  // Fetch FAIL data
+  const fetchFailData = useCallback(async () => {
+    try {
+      const response = await fetch("/api/fail")
+      if (!response.ok) {
+        throw new Error(`Error fetching FAIL data: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      setFailData(data || [])
+    } catch (error) {
+      console.error("Error fetching FAIL data:", error)
+    }
+  }, [])
+
+  // Filter FAIL data based on user's unit for PERLADANGAN
+  useEffect(() => {
+    if (!user || failData.length === 0) {
+      setFilteredFailData([])
+      return
+    }
+
+    // Filter fail data based on unit restriction
+    const filtered = failData.filter((fail) => {
+      // If fail.unit is PERLADANGAN, only show to users with PERLADANGAN role
+      if (fail.unit === "PERLADANGAN") {
+        return user.role === "PERLADANGAN"
+      }
+      // Otherwise, show to all users
+      return true
+    })
+
+    setFilteredFailData(filtered)
+  }, [failData, user])
+
   // Fetch DaripadaKepada suggestions
   const fetchDaripadaKepadaSuggestions = useCallback(async () => {
     try {
@@ -370,6 +453,7 @@ export default function SuratPage() {
   useEffect(() => {
     fetchWithCache()
     fetchUnitAndPicData()
+    fetchFailData()
     fetchDaripadaKepadaSuggestions()
     fetchFXNotifications()
 
@@ -738,6 +822,15 @@ export default function SuratPage() {
       komen: surat.komen || "",
       reference: surat.reference || "",
     })
+
+    // Find the fail object that matches the stored value
+    const matchingFail = filteredFailData.find((fail) => getFailValue(fail) === surat.fail)
+    if (matchingFail) {
+      setSelectedFailId(matchingFail.id)
+    } else {
+      setSelectedFailId("")
+    }
+
     setFormErrors({})
     setIsEditDialogOpen(true)
   }
@@ -767,6 +860,7 @@ export default function SuratPage() {
     })
     setFormErrors({})
     setCurrentSurat(null)
+    setSelectedFailId("")
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -790,7 +884,20 @@ export default function SuratPage() {
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    // Special handling for fail field
+    if (name === "fail") {
+      setSelectedFailId(value)
+      // Find the selected fail object and get its storage value
+      const selectedFail = filteredFailData.find((fail) => fail.id === value)
+      if (selectedFail) {
+        const storageValue = getFailValue(selectedFail)
+        setFormData((prev) => ({ ...prev, [name]: storageValue }))
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }))
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
 
     // Clear error for this field if it exists
     if (formErrors[name]) {
@@ -1697,13 +1804,31 @@ export default function SuratPage() {
                           <Label htmlFor="fail" className="text-xs md:text-sm">
                             Fail
                           </Label>
-                          <Input
-                            id="fail"
-                            name="fail"
-                            value={formData.fail}
-                            onChange={handleInputChange}
-                            className="h-8 md:h-10 text-xs md:text-sm"
-                          />
+                          <Select
+                            value={selectedFailId}
+                            onValueChange={(value) => handleSelectChange("fail", value)}
+                          >
+                            <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
+                              <SelectValue placeholder="Pilih fail" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filteredFailData.length > 0 ? (
+                                filteredFailData.map((fail) => (
+                                  <SelectItem
+                                    key={fail.id}
+                                    value={fail.id}
+                                    style={{
+                                      backgroundColor: getFailPartColor(fail.part),
+                                    }}
+                                  >
+                                    {formatFailDisplay(fail)}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="loading">Loading fails...</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="tindakanPic" className="text-xs md:text-sm">
@@ -2478,13 +2603,31 @@ export default function SuratPage() {
                 <Label htmlFor="fail-edit" className="text-xs md:text-sm">
                   Fail
                 </Label>
-                <Input
-                  id="fail-edit"
-                  name="fail"
-                  value={formData.fail}
-                  onChange={handleInputChange}
-                  className="h-8 md:h-10 text-xs md:text-sm"
-                />
+                <Select
+                  value={selectedFailId}
+                  onValueChange={(value) => handleSelectChange("fail", value)}
+                >
+                  <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
+                    <SelectValue placeholder="Pilih fail" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredFailData.length > 0 ? (
+                      filteredFailData.map((fail) => (
+                        <SelectItem
+                          key={fail.id}
+                          value={fail.id}
+                          style={{
+                            backgroundColor: getFailPartColor(fail.part),
+                          }}
+                        >
+                          {formatFailDisplay(fail)}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading">Loading fails...</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="tindakanPic-edit" className="text-xs md:text-sm">
@@ -2680,14 +2823,15 @@ export default function SuratPage() {
           </div>
         </div>
 
-        <div>
-          <h3 className="text-sm font-medium mb-1">Daripada/Kepada</h3>
-          <p className="text-sm">{detailSurat.daripadaKepada}</p>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium mb-1">Tarikh</h3>
-          <p className="text-sm">{detailSurat.tarikh}</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-sm font-medium mb-1">Daripada/Kepada</h3>
+            <p className="text-sm">{detailSurat.daripadaKepada}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium mb-1">Tarikh</h3>
+            <p className="text-sm">{detailSurat.tarikh}</p>
+          </div>
         </div>
 
         <div>
@@ -2712,9 +2856,12 @@ export default function SuratPage() {
             <h3 className="text-sm font-medium mb-1">Tindakan PIC</h3>
             <p className="text-sm">{detailSurat.tindakanPic || "-"}</p>
           </div>
-          {detailSurat.reference && (
-            <div>
-              <h3 className="text-sm font-medium mb-1">Reference</h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-sm font-medium mb-1">Reference</h3>
+            {detailSurat.reference ? (
               <Badge
                 variant="outline"
                 className="cursor-pointer hover:bg-accent"
@@ -2722,21 +2869,20 @@ export default function SuratPage() {
               >
                 Respon : {detailSurat.reference}
               </Badge>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium mb-1">Fail</h3>
-          <p className="text-sm">{detailSurat.fail || "-"}</p>
-        </div>
-
-        {detailSurat.status === "SELESAI" && (
+            ) : (
+              <p className="text-sm">-</p>
+            )}
+          </div>
           <div>
             <h3 className="text-sm font-medium mb-1">Tarikh Selesai</h3>
             <p className="text-sm">{detailSurat.tarikhSelesai || "-"}</p>
           </div>
-        )}
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium mb-1">Fail</h3>
+          <p className="text-sm">{getFullFailDisplay(detailSurat.fail || "", failData)}</p>
+        </div>
 
         {detailSurat.nota && (
           <div>
@@ -2773,7 +2919,7 @@ export default function SuratPage() {
       <Button
         variant="outline"
         onClick={() => setIsDetailModalOpen(false)}
-        className="p-2 w-[30%] sm:w-auto"
+        className="p-2 w-[30%] sm:w-auto bg-red-600 text-white hover:bg-red-700 hover:text-white border-red-600"
         title="Tutup"
       >
         <X className="h-4 w-4" />
@@ -2788,6 +2934,7 @@ export default function SuratPage() {
           }}
           className="p-2 w-[30%] sm:w-auto"
           title="Respon"
+          disabled={!!detailSurat.reference}
         >
           <Reply className="h-4 w-4" />
           <span className="hidden sm:inline">Respon</span>

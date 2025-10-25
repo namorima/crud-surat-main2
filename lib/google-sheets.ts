@@ -2,6 +2,7 @@ import { google } from "googleapis"
 import type { Surat } from "@/types/surat"
 import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
+import type { Fail } from "@/types/fail"
 
 // Initialize the Google Sheets API
 const initializeSheets = async () => {
@@ -709,5 +710,36 @@ export async function getUnitAndPicData() {
   } catch (error) {
     console.error("Error fetching unit and PIC data from Google Sheets:", error)
     throw new Error(`Failed to fetch unit and PIC data from Google Sheets: ${error.message}`)
+  }
+}
+
+// Get all data from the FAIL sheet
+export async function getAllFail(): Promise<Fail[]> {
+  try {
+    const sheets = await initializeSheets()
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "FAIL!A2:G",
+    })
+
+    const rows = response.data.values || []
+
+    // If no data is returned, return an empty array instead of null
+    if (!rows || rows.length === 0) {
+      return []
+    }
+
+    return rows.map((row, index) => ({
+      id: index.toString(),
+      part: row[0] || "",
+      noLocker: row[1] || "",
+      noFail: row[2] || "",
+      pecahan: row[3] || "",
+      pecahanKecil: row[4] || "",
+      unit: row[6] || "", // Column G (index 6)
+    }))
+  } catch (error) {
+    console.error("Error fetching FAIL data from Google Sheets:", error)
+    throw new Error(`Failed to fetch FAIL data from Google Sheets: ${error.message}`)
   }
 }
