@@ -83,10 +83,20 @@ const FAIL_PART_COLORS = {
 
 // Helper function to format fail display text (for showing in UI - uses PECAHAN and PECAHAN KECIL)
 const formatFailDisplay = (fail: Fail): string => {
+  // If PECAHAN is empty, use PECAHAN KECIL directly
+  if (!fail.pecahan && fail.pecahanKecil) {
+    return fail.pecahanKecil
+  }
+
+  // If PECAHAN is empty and PECAHAN KECIL is also empty, return "-"
   if (!fail.pecahan) return "-"
+
+  // If both PECAHAN and PECAHAN KECIL exist, show both
   if (fail.pecahanKecil) {
     return `${fail.pecahan} (${fail.pecahanKecil})`
   }
+
+  // If only PECAHAN exists, show PECAHAN only
   return fail.pecahan
 }
 
@@ -111,6 +121,16 @@ const getFullFailDisplay = (storedValue: string, failData: Fail[]): string => {
 
   // If no match found, just return the stored value
   return storedValue
+}
+
+// Helper function to get fail part from stored value
+const getFailPartFromStoredValue = (storedValue: string, failData: Fail[]): string => {
+  if (!storedValue || storedValue === "-") return ""
+
+  // Find the fail object that matches the stored value
+  const matchingFail = failData.find((fail) => getFailValue(fail) === storedValue)
+
+  return matchingFail ? matchingFail.part : ""
 }
 
 // Helper function to get fail part color
@@ -2881,7 +2901,21 @@ export default function SuratPage() {
 
         <div>
           <h3 className="text-sm font-medium mb-1">Fail</h3>
-          <p className="text-sm">{getFullFailDisplay(detailSurat.fail || "", failData)}</p>
+          {detailSurat.fail && detailSurat.fail !== "-" ? (
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                style={{
+                  backgroundColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
+                  borderColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
+                }}
+              >
+                {getFullFailDisplay(detailSurat.fail, failData)}
+              </Badge>
+            </div>
+          ) : (
+            <p className="text-sm">-</p>
+          )}
         </div>
 
         {detailSurat.nota && (
