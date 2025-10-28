@@ -8,17 +8,42 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"] },
-  { name: "Surat", href: "/dashboard/surat", icon: FileText, roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"] },
-  { name: "Bayaran", href: "/dashboard/bayaran", icon: CreditCard, roles: ["semua", "PERLADANGAN", "PENGURUS", "KEWANGAN"] },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+    roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
+  },
+  {
+    name: "Surat",
+    href: "/dashboard/surat",
+    icon: FileText,
+    roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
+  },
+  {
+    name: "Bayaran",
+    href: "/dashboard/bayaran",
+    icon: CreditCard,
+    roles: ["semua", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
+  },
   {
     name: "Statistik",
     href: "/dashboard/statistik",
     icon: BarChart3,
-    roles: ["semua", "admin", "PERLADANGAN", "PENGURUS"],
+    roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "PEMASARAN", "PERANCANG", "MSPO"],
   },
-  { name: "Pengguna", href: "/dashboard/pengguna", icon: Users, roles: ["semua", "admin"] },
-  { name: "Tetapan", href: "/dashboard/tetapan", icon: Settings, roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"] },
+  {
+    name: "Pengguna",
+    href: "/dashboard/pengguna",
+    icon: Users,
+    roles: ["semua", "admin"]
+  },
+  {
+    name: "Tetapan",
+    href: "/dashboard/tetapan",
+    icon: Settings,
+    roles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
+  },
 ]
 
 export function Sidebar() {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "@/components/dashboard/sidebar"
-import { Menu, Plus, Loader2, Edit, Trash2, MoreHorizontal } from "lucide-react"
+import { Menu, Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-provider"
@@ -61,6 +61,8 @@ export default function TetapanPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromSurat = searchParams.get("from") === "surat"
   const [loading, setLoading] = useState(false)
   const [failData, setFailData] = useState<Fail[]>([])
   const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
@@ -353,6 +355,12 @@ export default function TetapanPage() {
               </Sheet>
               <CardTitle className="text-base md:text-xl">Tetapan</CardTitle>
             </div>
+            {fromSurat && (
+              <Button variant="outline" size="sm" onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Kembali
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>

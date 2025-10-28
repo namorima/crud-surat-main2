@@ -1886,8 +1886,8 @@ export default function SuratPage() {
                                         <p className="text-sm mt-1">
                                           Sila ke{" "}
                                           <Link
-                                            href="/dashboard/tetapan"
-                                            className="text-primary hover:underline font-medium"
+                                            href="/dashboard/tetapan?from=surat"
+                                            className="text-red-600 hover:text-red-700 hover:underline font-bold"
                                           >
                                             Setup Fail
                                           </Link>{" "}
@@ -2746,8 +2746,8 @@ export default function SuratPage() {
                               <p className="text-sm mt-1">
                                 Sila ke{" "}
                                 <Link
-                                  href="/dashboard/tetapan"
-                                  className="text-primary hover:underline font-medium"
+                                  href="/dashboard/tetapan?from=surat"
+                                  className="text-red-600 hover:text-red-700 hover:underline font-bold"
                                 >
                                   Setup Fail
                                 </Link>{" "}
