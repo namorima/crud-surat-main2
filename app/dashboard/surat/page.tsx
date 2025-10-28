@@ -4,6 +4,7 @@ import type React from "react"
 import type { FXNotification } from "@/types/fx-notification"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-provider"
 import type { Surat } from "@/types/surat"
 import type { Fail } from "@/types/fail"
@@ -1879,7 +1880,23 @@ export default function SuratPage() {
                                 <CommandInput placeholder="Cari fail..." className="h-9" />
                                 <CommandList>
                                   <CommandEmpty>
-                                    {formData.unit ? "Tiada fail untuk unit ini" : "Pilih unit dahulu"}
+                                    {formData.unit ? (
+                                      <div className="text-center p-2">
+                                        <p className="text-sm text-muted-foreground">Tiada fail untuk unit ini.</p>
+                                        <p className="text-sm mt-1">
+                                          Sila ke{" "}
+                                          <Link
+                                            href="/dashboard/tetapan"
+                                            className="text-primary hover:underline font-medium"
+                                          >
+                                            Setup Fail
+                                          </Link>{" "}
+                                          untuk tambah pilihan fail.
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      "Pilih unit dahulu"
+                                    )}
                                   </CommandEmpty>
                                   <CommandGroup>
                                     {filteredFailData.map((fail) => (
@@ -2723,7 +2740,23 @@ export default function SuratPage() {
                       <CommandInput placeholder="Cari fail..." className="h-9" />
                       <CommandList>
                         <CommandEmpty>
-                          {formData.unit ? "Tiada fail untuk unit ini" : "Pilih unit dahulu"}
+                          {formData.unit ? (
+                            <div className="text-center p-2">
+                              <p className="text-sm text-muted-foreground">Tiada fail untuk unit ini.</p>
+                              <p className="text-sm mt-1">
+                                Sila ke{" "}
+                                <Link
+                                  href="/dashboard/tetapan"
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  Setup Fail
+                                </Link>{" "}
+                                untuk tambah pilihan fail.
+                              </p>
+                            </div>
+                          ) : (
+                            "Pilih unit dahulu"
+                          )}
                         </CommandEmpty>
                         <CommandGroup>
                           {filteredFailData.map((fail) => (

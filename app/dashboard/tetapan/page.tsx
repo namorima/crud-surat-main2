@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -59,6 +60,7 @@ const getFailPartColor = (part: string): string => {
 export default function TetapanPage() {
   const { toast } = useToast()
   const { user } = useAuth()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [failData, setFailData] = useState<Fail[]>([])
   const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
@@ -78,6 +80,18 @@ export default function TetapanPage() {
     pecahanKecil: "",
     unit: user?.role === "semua" ? "" : user?.role || "",
   })
+
+  // Access control: Block VIEW and PENERIMA types
+  useEffect(() => {
+    if (user && (user.type === "VIEW" || user.type === "PENERIMA")) {
+      toast({
+        title: "Akses Ditolak",
+        description: "Anda tidak mempunyai akses ke halaman Tetapan",
+        variant: "destructive",
+      })
+      router.push("/dashboard/surat")
+    }
+  }, [user, router, toast])
 
   // Fetch FAIL data
   useEffect(() => {

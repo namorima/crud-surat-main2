@@ -92,6 +92,7 @@ export async function getAllUsers(): Promise<User[]> {
         password: row[1] || "",
         name: row[2] || "",
         role: row[3] || "viewer",
+        type: row[4] || "", // Column E = TYPE (VIEW, PENERIMA, or empty)
       }))
   } catch (error) {
     console.error("Error fetching users from Google Sheets:", error)

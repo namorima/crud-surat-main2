@@ -3,4 +3,5 @@ export type User = {
   password: string
   name: string
   role: string // This will contain values like "semua", "PERANCANG", etc.
+  type?: string // This will contain values like "VIEW", "PENERIMA", or empty for normal users
 }
