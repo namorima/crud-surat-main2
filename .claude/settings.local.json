@@ -1,9 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dev)"
+      "Bash(pnpm dev)",
+      "Read(//c/Users/User/Documents/Software/VSCode-win32-x64-1.103.2/data/user-data/User/**)",
+      "Bash(npx:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true
 }

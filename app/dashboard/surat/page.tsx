@@ -49,11 +49,14 @@ import {
   Bell,
   MessageSquare,
   Reply,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -165,6 +168,7 @@ export default function SuratPage() {
   const [failData, setFailData] = useState<Fail[]>([])
   const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
   const [selectedFailId, setSelectedFailId] = useState<string>("")
+  const [failComboboxOpen, setFailComboboxOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -416,7 +420,7 @@ export default function SuratPage() {
     }
   }, [])
 
-  // Filter FAIL data based on user's unit for PERLADANGAN
+  // Filter FAIL data based on user's unit for PERLADANGAN and selected unit in form
   useEffect(() => {
     if (!user || failData.length === 0) {
       setFilteredFailData([])
@@ -424,7 +428,11 @@ export default function SuratPage() {
     }
 
     // Filter fail data based on unit restriction
-    const filtered = failData.filter((fail) => {
+    let filtered = failData.filter((fail) => {
+      // If user role is "semua", show all fails
+      if (user.role === "semua") {
+        return true
+      }
       // If fail.unit is PERLADANGAN, only show to users with PERLADANGAN role
       if (fail.unit === "PERLADANGAN") {
         return user.role === "PERLADANGAN"
@@ -433,8 +441,13 @@ export default function SuratPage() {
       return true
     })
 
+    // Further filter by selected unit in form (if unit is selected)
+    if (formData.unit) {
+      filtered = filtered.filter((fail) => fail.unit === formData.unit)
+    }
+
     setFilteredFailData(filtered)
-  }, [failData, user])
+  }, [failData, user, formData.unit])
 
   // Fetch DaripadaKepada suggestions
   const fetchDaripadaKepadaSuggestions = useCallback(async () => {
@@ -915,6 +928,10 @@ export default function SuratPage() {
       } else {
         setFormData((prev) => ({ ...prev, [name]: value }))
       }
+    } else if (name === "unit") {
+      // When unit changes, reset fail selection
+      setFormData((prev) => ({ ...prev, [name]: value, fail: "" }))
+      setSelectedFailId("")
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }))
     }
@@ -1824,31 +1841,78 @@ export default function SuratPage() {
                           <Label htmlFor="fail" className="text-xs md:text-sm">
                             Fail
                           </Label>
-                          <Select
-                            value={selectedFailId}
-                            onValueChange={(value) => handleSelectChange("fail", value)}
-                          >
-                            <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                              <SelectValue placeholder="Pilih fail" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredFailData.length > 0 ? (
-                                filteredFailData.map((fail) => (
-                                  <SelectItem
-                                    key={fail.id}
-                                    value={fail.id}
-                                    style={{
-                                      backgroundColor: getFailPartColor(fail.part),
-                                    }}
-                                  >
-                                    {formatFailDisplay(fail)}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="loading">Loading fails...</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                          <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={failComboboxOpen}
+                                className="h-8 md:h-10 w-full justify-between text-xs md:text-sm"
+                                disabled={!formData.unit}
+                              >
+                                {selectedFailId && filteredFailData.length > 0 ? (
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      style={{
+                                        backgroundColor: getFailPartColor(
+                                          filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
+                                        ),
+                                      }}
+                                    />
+                                    <span>
+                                      {formatFailDisplay(
+                                        filteredFailData.find((fail) => fail.id === selectedFailId) as Fail
+                                      )}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    {!formData.unit ? "Pilih unit dahulu" : "Pilih fail"}
+                                  </span>
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Cari fail..." className="h-9" />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    {formData.unit ? "Tiada fail untuk unit ini" : "Pilih unit dahulu"}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredFailData.map((fail) => (
+                                      <CommandItem
+                                        key={fail.id}
+                                        value={formatFailDisplay(fail)}
+                                        onSelect={() => {
+                                          handleSelectChange("fail", fail.id)
+                                          setFailComboboxOpen(false)
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            style={{
+                                              backgroundColor: getFailPartColor(fail.part),
+                                            }}
+                                          />
+                                          <span>{formatFailDisplay(fail)}</span>
+                                        </div>
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            selectedFailId === fail.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="tindakanPic" className="text-xs md:text-sm">
@@ -2623,31 +2687,76 @@ export default function SuratPage() {
                 <Label htmlFor="fail-edit" className="text-xs md:text-sm">
                   Fail
                 </Label>
-                <Select
-                  value={selectedFailId}
-                  onValueChange={(value) => handleSelectChange("fail", value)}
-                >
-                  <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                    <SelectValue placeholder="Pilih fail" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredFailData.length > 0 ? (
-                      filteredFailData.map((fail) => (
-                        <SelectItem
-                          key={fail.id}
-                          value={fail.id}
-                          style={{
-                            backgroundColor: getFailPartColor(fail.part),
-                          }}
-                        >
-                          {formatFailDisplay(fail)}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="loading">Loading fails...</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={failComboboxOpen}
+                      className="h-8 md:h-10 w-full justify-between text-xs md:text-sm"
+                      disabled={!formData.unit}
+                    >
+                      {selectedFailId && filteredFailData.length > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: getFailPartColor(
+                                filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
+                              ),
+                            }}
+                          />
+                          <span>
+                            {formatFailDisplay(filteredFailData.find((fail) => fail.id === selectedFailId) as Fail)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {!formData.unit ? "Pilih unit dahulu" : "Pilih fail"}
+                        </span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Cari fail..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>
+                          {formData.unit ? "Tiada fail untuk unit ini" : "Pilih unit dahulu"}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredFailData.map((fail) => (
+                            <CommandItem
+                              key={fail.id}
+                              value={formatFailDisplay(fail)}
+                              onSelect={() => {
+                                handleSelectChange("fail", fail.id)
+                                setFailComboboxOpen(false)
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{
+                                    backgroundColor: getFailPartColor(fail.part),
+                                  }}
+                                />
+                                <span>{formatFailDisplay(fail)}</span>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  selectedFailId === fail.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="tindakanPic-edit" className="text-xs md:text-sm">
