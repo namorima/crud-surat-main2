@@ -16,6 +16,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-provider"
 import type { Fail, FailPart } from "@/types/fail"
+import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
+import { ShareLinkForm } from "@/components/share/ShareLinkForm"
+import { ShareLinkTable } from "@/components/share/ShareLinkTable"
+import { toast as sonnerToast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -83,6 +87,11 @@ export default function TetapanPage() {
     unit: user?.role === "semua" ? "" : user?.role || "",
   })
 
+  // Share Link state
+  const [shareLinks, setShareLinks] = useState<ShareLink[]>([])
+  const [loadingShareLinks, setLoadingShareLinks] = useState(true)
+  const [isSubmittingShareLink, setIsSubmittingShareLink] = useState(false)
+
   // Access control: Block VIEW and PENERIMA types
   useEffect(() => {
     if (user && (user.type === "VIEW" || user.type === "PENERIMA")) {
@@ -118,6 +127,31 @@ export default function TetapanPage() {
 
     fetchFailData()
   }, [])
+
+  // Fetch share links (only for "semua" role)
+  useEffect(() => {
+    if (user?.role !== "semua") {
+      setLoadingShareLinks(false)
+      return
+    }
+
+    const fetchShareLinks = async () => {
+      try {
+        setLoadingShareLinks(true)
+        const response = await fetch("/api/share-link")
+        if (!response.ok) throw new Error("Failed to fetch share links")
+        const data = await response.json()
+        setShareLinks(data)
+      } catch (error) {
+        console.error("Error fetching share links:", error)
+        sonnerToast.error("Gagal memuatkan senarai pautan kongsi")
+      } finally {
+        setLoadingShareLinks(false)
+      }
+    }
+
+    fetchShareLinks()
+  }, [user])
 
   // Fetch units for dropdown
   useEffect(() => {
@@ -336,6 +370,76 @@ export default function TetapanPage() {
     }
   }
 
+  // Share Link functions
+  const handleCreateShareLink = async (
+    filter: ShareLinkFilter,
+    expiresAt?: string,
+    description?: string
+  ) => {
+    if (!user) return
+
+    try {
+      setIsSubmittingShareLink(true)
+      const response = await fetch("/api/share-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filterJson: JSON.stringify(filter),
+          createdBy: user.name,
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          description,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to create share link")
+
+      const { linkId } = await response.json()
+
+      // Refresh share links list
+      const fetchResponse = await fetch("/api/share-link")
+      if (fetchResponse.ok) {
+        const data = await fetchResponse.json()
+        setShareLinks(data)
+      }
+
+      sonnerToast.success("Pautan berjaya dijana!")
+
+      // Copy link to clipboard
+      const baseUrl = window.location.origin
+      const url = `${baseUrl}/share/${linkId}`
+      try {
+        await navigator.clipboard.writeText(url)
+        sonnerToast.success("Link telah disalin ke clipboard!")
+      } catch {
+        // Clipboard copy failed, but link was created successfully
+      }
+    } catch (error) {
+      console.error("Error creating share link:", error)
+      sonnerToast.error("Gagal menjana pautan")
+    } finally {
+      setIsSubmittingShareLink(false)
+    }
+  }
+
+  const handleDeleteShareLink = async (linkId: string) => {
+    try {
+      const response = await fetch(`/api/share-link/${linkId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error("Failed to delete share link")
+
+      // Update local state
+      setShareLinks((prev) => prev.filter((link) => link.linkId !== linkId))
+    } catch (error) {
+      console.error("Error deleting share link:", error)
+      throw error // Re-throw to let ShareLinkTable handle the error toast
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="card-hover transition-all duration-300 ease-in-out hover:shadow-md">
@@ -367,7 +471,7 @@ export default function TetapanPage() {
           <Tabs defaultValue="setup-fail">
             <TabsList>
               <TabsTrigger value="setup-fail">Setup Fail</TabsTrigger>
-              <TabsTrigger value="notifikasi">Notifikasi</TabsTrigger>
+              {user?.role === "semua" && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
               <TabsTrigger value="integrasi">Integrasi</TabsTrigger>
             </TabsList>
 
@@ -744,41 +848,34 @@ export default function TetapanPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="notifikasi" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tetapan Notifikasi</CardTitle>
-                  <CardDescription>Konfigurasi tetapan notifikasi untuk aplikasi.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications">Notifikasi Email</Label>
-                      <p className="text-sm text-muted-foreground">Terima notifikasi melalui email.</p>
-                    </div>
-                    <Switch id="email-notifications" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="status-updates">Kemaskini Status</Label>
-                      <p className="text-sm text-muted-foreground">Terima notifikasi apabila status surat berubah.</p>
-                    </div>
-                    <Switch id="status-updates" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="new-letters">Surat Baru</Label>
-                      <p className="text-sm text-muted-foreground">Terima notifikasi apabila surat baru ditambah.</p>
-                    </div>
-                    <Switch id="new-letters" />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSave} disabled={loading}>
-                    {loading ? "Menyimpan..." : "Simpan Tetapan"}
-                  </Button>
-                </CardFooter>
-              </Card>
+            <TabsContent value="pautan-kongsi" className="mt-4 space-y-4">
+              <div className="space-y-4">
+                <ShareLinkForm onSubmit={handleCreateShareLink} isSubmitting={isSubmittingShareLink} />
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Senarai Pautan Kongsi</CardTitle>
+                    <CardDescription>Pautan yang telah dijana untuk dikongsi kepada pihak luar</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingShareLinks ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="ml-2">Memuatkan...</span>
+                      </div>
+                    ) : (
+                      <ShareLinkTable
+                        shareLinks={shareLinks}
+                        onDelete={handleDeleteShareLink}
+                        baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
+                      />
+                    )}
+                  </CardContent>
+                  <CardFooter>
+                    <p className="text-sm text-muted-foreground">Jumlah: {shareLinks.length} pautan</p>
+                  </CardFooter>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="integrasi" className="mt-4 space-y-4">

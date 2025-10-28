@@ -3,6 +3,7 @@ import type { Surat } from "@/types/surat"
 import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
 import type { Fail } from "@/types/fail"
+import type { ShareLink } from "@/types/share-link"
 
 // Initialize the Google Sheets API
 const initializeSheets = async () => {
@@ -862,5 +863,168 @@ export async function deleteFail(id: string): Promise<void> {
   } catch (error) {
     console.error("Error deleting FAIL from Google Sheets:", error)
     throw new Error(`Failed to delete FAIL from Google Sheets: ${error.message}`)
+  }
+}
+
+// ===== SHARE LINK FUNCTIONS =====
+
+// Get all share links from SHARE_LINK sheet
+export async function getAllShareLinks(): Promise<ShareLink[]> {
+  try {
+    const sheets = await initializeSheets()
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "SHARE_LINK!A2:G",
+    })
+
+    const rows = response.data.values || []
+
+    if (!rows || rows.length === 0) {
+      return []
+    }
+
+    return rows.map((row) => ({
+      linkId: row[0] || "",
+      filterJson: row[1] || "{}",
+      createdBy: row[2] || "",
+      createdAt: row[3] || "",
+      expiresAt: row[4] || undefined,
+      description: row[5] || undefined,
+      accessCount: Number.parseInt(row[6]) || 0,
+    }))
+  } catch (error) {
+    console.error("Error fetching share links from Google Sheets:", error)
+    throw new Error(`Failed to fetch share links from Google Sheets: ${error.message}`)
+  }
+}
+
+// Get single share link by ID
+export async function getShareLinkById(linkId: string): Promise<ShareLink | null> {
+  try {
+    const allLinks = await getAllShareLinks()
+    const link = allLinks.find((l) => l.linkId === linkId)
+    return link || null
+  } catch (error) {
+    console.error("Error fetching share link by ID:", error)
+    throw new Error(`Failed to fetch share link by ID: ${error.message}`)
+  }
+}
+
+// Add new share link
+export async function addShareLink(
+  data: Omit<ShareLink, "linkId" | "accessCount">
+): Promise<string> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Generate unique link ID (12 character random string)
+    const linkId = crypto.randomUUID().replace(/-/g, "").substring(0, 12)
+
+    // Prepare row data
+    const rowData = [
+      linkId,
+      data.filterJson,
+      data.createdBy,
+      data.createdAt,
+      data.expiresAt || "",
+      data.description || "",
+      0, // Initial access count
+    ]
+
+    // Append to sheet
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "SHARE_LINK!A2:G",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [rowData],
+      },
+    })
+
+    return linkId
+  } catch (error) {
+    console.error("Error adding share link to Google Sheets:", error)
+    throw new Error(`Failed to add share link to Google Sheets: ${error.message}`)
+  }
+}
+
+// Delete share link
+export async function deleteShareLink(linkId: string): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Get all share links to find the row index
+    const allLinks = await getAllShareLinks()
+    const rowIndex = allLinks.findIndex((link) => link.linkId === linkId)
+
+    if (rowIndex === -1) {
+      throw new Error("Share link not found")
+    }
+
+    // Get sheet ID for SHARE_LINK sheet
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    })
+
+    const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === "SHARE_LINK")
+    if (!sheet?.properties?.sheetId) {
+      throw new Error("SHARE_LINK sheet not found")
+    }
+
+    const sheetId = sheet.properties.sheetId
+
+    // Delete the row
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: "ROWS",
+                startIndex: rowIndex + 1, // +1 because of header row
+                endIndex: rowIndex + 2,
+              },
+            },
+          },
+        ],
+      },
+    })
+  } catch (error) {
+    console.error("Error deleting share link from Google Sheets:", error)
+    throw new Error(`Failed to delete share link from Google Sheets: ${error.message}`)
+  }
+}
+
+// Increment access count for a share link
+export async function incrementShareLinkAccess(linkId: string): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Get all share links to find the row index and current count
+    const allLinks = await getAllShareLinks()
+    const linkIndex = allLinks.findIndex((link) => link.linkId === linkId)
+
+    if (linkIndex === -1) {
+      throw new Error("Share link not found")
+    }
+
+    const currentCount = allLinks[linkIndex].accessCount || 0
+    const newCount = currentCount + 1
+
+    // Update the access count (Column G)
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: `SHARE_LINK!G${linkIndex + 2}`, // +2 because of header and 0-index
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [[newCount]],
+      },
+    })
+  } catch (error) {
+    console.error("Error incrementing share link access count:", error)
+    throw new Error(`Failed to increment share link access count: ${error.message}`)
   }
 }
