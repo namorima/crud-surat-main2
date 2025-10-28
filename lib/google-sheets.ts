@@ -743,3 +743,123 @@ export async function getAllFail(): Promise<Fail[]> {
     throw new Error(`Failed to fetch FAIL data from Google Sheets: ${error.message}`)
   }
 }
+
+// Add a new Fail record
+export async function addFail(failData: Omit<Fail, "id">): Promise<Fail> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Prepare the row data
+    // FAIL sheet columns: A=PART, B=NO_LOCKER, C=NO_FAIL, D=PECAHAN, E=PECAHAN_KECIL, F=?, G=UNIT
+    const rowData = [
+      failData.part,
+      failData.noLocker || "",
+      failData.noFail,
+      failData.pecahan || "",
+      failData.pecahanKecil || "",
+      "", // Column F (empty)
+      failData.unit,
+    ]
+
+    // Append the new row
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "FAIL!A:G",
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [rowData],
+      },
+    })
+
+    // Get the new row to return with ID
+    const allFails = await getAllFail()
+    const newFail = allFails[allFails.length - 1]
+
+    return newFail
+  } catch (error) {
+    console.error("Error adding FAIL to Google Sheets:", error)
+    throw new Error(`Failed to add FAIL to Google Sheets: ${error.message}`)
+  }
+}
+
+// Update FAIL record
+export async function updateFail(id: string, failData: Omit<Fail, "id">): Promise<Fail> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Convert ID to row number (ID is 0-based index, but sheet starts at row 2 due to header)
+    const rowNumber = parseInt(id) + 2
+
+    // Prepare the row data
+    // FAIL sheet columns: A=PART, B=NO_LOCKER, C=NO_FAIL, D=PECAHAN, E=PECAHAN_KECIL, F=?, G=UNIT
+    const rowData = [
+      failData.part,
+      failData.noLocker || "",
+      failData.noFail,
+      failData.pecahan || "",
+      failData.pecahanKecil || "",
+      "", // Column F (empty)
+      failData.unit,
+    ]
+
+    // Update the row
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: `FAIL!A${rowNumber}:G${rowNumber}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [rowData],
+      },
+    })
+
+    // Return the updated fail with ID
+    return {
+      id,
+      ...failData,
+    }
+  } catch (error) {
+    console.error("Error updating FAIL in Google Sheets:", error)
+    throw new Error(`Failed to update FAIL in Google Sheets: ${error.message}`)
+  }
+}
+
+// Delete FAIL record
+export async function deleteFail(id: string): Promise<void> {
+  try {
+    const sheets = await initializeSheets()
+
+    // Get spreadsheet metadata to find the FAIL sheet ID
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    })
+
+    // Find the FAIL sheet ID
+    const sheetId =
+      spreadsheet.data.sheets?.find((sheet) => sheet.properties?.title === "FAIL")?.properties?.sheetId || 0
+
+    // Convert ID to row index (ID is 0-based index)
+    const rowIndex = parseInt(id)
+
+    // Delete the row using batchUpdate
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: "ROWS",
+                startIndex: rowIndex + 1, // +1 because of header row
+                endIndex: rowIndex + 2,
+              },
+            },
+          },
+        ],
+      },
+    })
+  } catch (error) {
+    console.error("Error deleting FAIL from Google Sheets:", error)
+    throw new Error(`Failed to delete FAIL from Google Sheets: ${error.message}`)
+  }
+}
