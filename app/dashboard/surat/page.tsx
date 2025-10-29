@@ -1726,6 +1726,7 @@ export default function SuratPage() {
                           />
                         </div>
                       )}
+                      {/* Row 1: Daripada/Kepada | Tarikh */}
                       <div className="grid grid-cols-2 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="daripadaKepada" className="text-xs md:text-sm">
@@ -1767,6 +1768,7 @@ export default function SuratPage() {
                           </div>
                         </div>
                       </div>
+                      {/* Row 2: Perkara (full width) */}
                       <div className="space-y-1 md:space-y-2">
                         <Label htmlFor="perkara" className="text-xs md:text-sm">
                           Perkara
@@ -1790,24 +1792,8 @@ export default function SuratPage() {
                           </datalist>
                         </div>
                       </div>
+                      {/* Row 3: Unit | Tindakan PIC */}
                       <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="kategori" className="text-xs md:text-sm">
-                            Kategori
-                          </Label>
-                          <Select
-                            value={formData.kategori}
-                            onValueChange={(value) => handleSelectChange("kategori", value)}
-                          >
-                            <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                              <SelectValue placeholder="Pilih kategori" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="MASUK">MASUK</SelectItem>
-                              <SelectItem value="KELUAR">KELUAR</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="unit" className="text-xs md:text-sm">
                             Unit <span className="text-red-500">*</span>
@@ -1836,9 +1822,57 @@ export default function SuratPage() {
                           </Select>
                           {formErrors.unit && <p className="text-red-500 text-xs mt-1">{formErrors.unit}</p>}
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
+                          <Label htmlFor="tindakanPic" className="text-xs md:text-sm">
+                            Tindakan PIC <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.tindakanPic}
+                            onValueChange={(value) => handleSelectChange("tindakanPic", value)}
+                            disabled={!formData.unit}
+                          >
+                            <SelectTrigger
+                              className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
+                            >
+                              <SelectValue placeholder="Pilih PIC" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
+                                unitPicMap[formData.unit].map((pic) => (
+                                  <SelectItem key={pic} value={pic || "unknown"}>
+                                    {pic || "Unknown"}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-pic">Tiada PIC</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {formErrors.tindakanPic && (
+                            <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Row 4: Kategori (small) | Fail (large) */}
+                      <div className="grid grid-cols-3 gap-3 md:gap-4">
+                        <div className="space-y-1 md:space-y-2">
+                          <Label htmlFor="kategori" className="text-xs md:text-sm">
+                            Kategori
+                          </Label>
+                          <Select
+                            value={formData.kategori}
+                            onValueChange={(value) => handleSelectChange("kategori", value)}
+                          >
+                            <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
+                              <SelectValue placeholder="Pilih kategori" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MASUK">MASUK</SelectItem>
+                              <SelectItem value="KELUAR">KELUAR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2 space-y-1 md:space-y-2">
                           <Label htmlFor="fail" className="text-xs md:text-sm">
                             Fail
                           </Label>
@@ -1931,37 +1965,8 @@ export default function SuratPage() {
                             </PopoverContent>
                           </Popover>
                         </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="tindakanPic" className="text-xs md:text-sm">
-                            Tindakan PIC <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.tindakanPic}
-                            onValueChange={(value) => handleSelectChange("tindakanPic", value)}
-                            disabled={!formData.unit}
-                          >
-                            <SelectTrigger
-                              className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
-                            >
-                              <SelectValue placeholder="Pilih PIC" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
-                                unitPicMap[formData.unit].map((pic) => (
-                                  <SelectItem key={pic} value={pic || "unknown"}>
-                                    {pic || "Unknown"}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="no-pic">Tiada PIC</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {formErrors.tindakanPic && (
-                            <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>
-                          )}
-                        </div>
                       </div>
+                      {/* Row 5: Status | Tarikh Selesai */}
                       <div className="grid grid-cols-2 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="status" className="text-xs md:text-sm">
@@ -2005,6 +2010,7 @@ export default function SuratPage() {
                           </div>
                         </div>
                       </div>
+                      {/* Row 6: Nota (full width) */}
                       <div className="space-y-1 md:space-y-2">
                         <Label htmlFor="nota" className="text-xs md:text-sm">
                           Nota
@@ -2591,6 +2597,7 @@ export default function SuratPage() {
             <DialogDescription className="text-xs md:text-sm">Kemaskini maklumat surat.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-3 md:gap-4 md:py-4">
+            {/* Row 1: Daripada/Kepada | Tarikh */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="daripadaKepada-edit" className="text-xs md:text-sm">
@@ -2632,6 +2639,7 @@ export default function SuratPage() {
                 </div>
               </div>
             </div>
+            {/* Row 2: Perkara (full width) */}
             <div className="space-y-1 md:space-y-2">
               <Label htmlFor="perkara-edit" className="text-xs md:text-sm">
                 Perkara
@@ -2655,21 +2663,8 @@ export default function SuratPage() {
                 </datalist>
               </div>
             </div>
+            {/* Row 3: Unit | Tindakan PIC */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="kategori-edit" className="text-xs md:text-sm">
-                  Kategori
-                </Label>
-                <Select value={formData.kategori} onValueChange={(value) => handleSelectChange("kategori", value)}>
-                  <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MASUK">MASUK</SelectItem>
-                    <SelectItem value="KELUAR">KELUAR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="unit-edit" className="text-xs md:text-sm">
                   Unit <span className="text-red-500">*</span>
@@ -2698,9 +2693,52 @@ export default function SuratPage() {
                 </Select>
                 {formErrors.unit && <p className="text-red-500 text-xs mt-1">{formErrors.unit}</p>}
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
+                <Label htmlFor="tindakanPic-edit" className="text-xs md:text-sm">
+                  Tindakan PIC <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.tindakanPic}
+                  onValueChange={(value) => handleSelectChange("tindakanPic", value)}
+                  disabled={!formData.unit}
+                >
+                  <SelectTrigger
+                    className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
+                  >
+                    <SelectValue placeholder="Pilih PIC" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
+                      unitPicMap[formData.unit].map((pic) => (
+                        <SelectItem key={pic} value={pic || "unknown"}>
+                          {pic || "Unknown"}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-pic">Tiada PIC</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {formErrors.tindakanPic && <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>}
+              </div>
+            </div>
+            {/* Row 4: Kategori (small) | Fail (large) */}
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <div className="space-y-1 md:space-y-2">
+                <Label htmlFor="kategori-edit" className="text-xs md:text-sm">
+                  Kategori
+                </Label>
+                <Select value={formData.kategori} onValueChange={(value) => handleSelectChange("kategori", value)}>
+                  <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MASUK">MASUK</SelectItem>
+                    <SelectItem value="KELUAR">KELUAR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-1 md:space-y-2">
                 <Label htmlFor="fail-edit" className="text-xs md:text-sm">
                   Fail
                 </Label>
@@ -2791,35 +2829,8 @@ export default function SuratPage() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="tindakanPic-edit" className="text-xs md:text-sm">
-                  Tindakan PIC <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.tindakanPic}
-                  onValueChange={(value) => handleSelectChange("tindakanPic", value)}
-                  disabled={!formData.unit}
-                >
-                  <SelectTrigger
-                    className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
-                  >
-                    <SelectValue placeholder="Pilih PIC" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
-                      unitPicMap[formData.unit].map((pic) => (
-                        <SelectItem key={pic} value={pic || "unknown"}>
-                          {pic || "Unknown"}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-pic">Tiada PIC</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {formErrors.tindakanPic && <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>}
-              </div>
             </div>
+            {/* Row 5: Status | Tarikh Selesai */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="status-edit" className="text-xs md:text-sm">
@@ -2863,6 +2874,7 @@ export default function SuratPage() {
                 </div>
               </div>
             </div>
+            {/* Row 6: Nota (full width) */}
             <div className="space-y-1 md:space-y-2">
               <Label htmlFor="nota-edit" className="text-xs md:text-sm">
                 Nota
