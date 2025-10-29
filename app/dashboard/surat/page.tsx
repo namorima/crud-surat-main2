@@ -1698,7 +1698,7 @@ export default function SuratPage() {
                       <span className="sr-only">Tambah Surat</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
+                  <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
                     <DialogHeader className="p-0 md:p-2">
                       <DialogTitle className="text-base md:text-lg">Tambah Surat Baru</DialogTitle>
                       <DialogDescription className="text-xs md:text-sm">
@@ -1726,8 +1726,8 @@ export default function SuratPage() {
                           />
                         </div>
                       )}
-                      {/* Row 1: Daripada/Kepada | Tarikh */}
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      {/* Row 1: Daripada/Kepada | Tarikh | Status | Tarikh Selesai */}
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="daripadaKepada" className="text-xs md:text-sm">
                             Daripada/Kepada
@@ -1753,7 +1753,7 @@ export default function SuratPage() {
                         </div>
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="tarikh" className="text-xs md:text-sm">
-                            Tarikh (DD/MM/YYYY)
+                            Tarikh
                           </Label>
                           <Input
                             id="tarikh"
@@ -1765,6 +1765,47 @@ export default function SuratPage() {
                           />
                           <div className="text-xs text-muted-foreground">
                             Format: {formatDateToDisplay(formData.tarikh) || "DD/MM/YYYY"}
+                          </div>
+                        </div>
+                        <div className="space-y-1 md:space-y-2">
+                          <Label htmlFor="status" className="text-xs md:text-sm">
+                            Status <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.status}
+                            onValueChange={(value) => handleSelectChange("status", value)}
+                            disabled={formData.kategori === "KELUAR"}
+                          >
+                            <SelectTrigger
+                              className={`h-8 md:h-10 text-xs md:text-sm text-left ${formErrors.status ? "border-red-500" : ""}`}
+                            >
+                              <SelectValue placeholder="Pilih status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
+                              <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
+                              <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
+                              <SelectItem value="SELESAI">SELESAI</SelectItem>
+                              <SelectItem value="BATAL">BATAL</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
+                        </div>
+                        <div className="space-y-1 md:space-y-2">
+                          <Label htmlFor="tarikhSelesai" className="text-xs md:text-sm">
+                            Tarikh Selesai
+                          </Label>
+                          <Input
+                            id="tarikhSelesai"
+                            name="tarikhSelesai"
+                            type="date"
+                            value={formData.tarikhSelesai}
+                            onChange={handleInputChange}
+                            disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
+                            className="h-8 md:h-10 text-xs md:text-sm"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
                           </div>
                         </div>
                       </div>
@@ -1792,8 +1833,8 @@ export default function SuratPage() {
                           </datalist>
                         </div>
                       </div>
-                      {/* Row 3: Unit | Tindakan PIC */}
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      {/* Row 3: Unit | Tindakan PIC | Kategori | Fail */}
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="unit" className="text-xs md:text-sm">
                             Unit <span className="text-red-500">*</span>
@@ -1852,9 +1893,6 @@ export default function SuratPage() {
                             <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>
                           )}
                         </div>
-                      </div>
-                      {/* Row 4: Kategori (small) | Fail (large) */}
-                      <div className="grid grid-cols-3 gap-3 md:gap-4">
                         <div className="space-y-1 md:space-y-2">
                           <Label htmlFor="kategori" className="text-xs md:text-sm">
                             Kategori
@@ -1872,7 +1910,7 @@ export default function SuratPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="col-span-2 space-y-1 md:space-y-2">
+                        <div className="space-y-1 md:space-y-2 md:col-span-2">
                           <Label htmlFor="fail" className="text-xs md:text-sm">
                             Fail
                           </Label>
@@ -1966,51 +2004,7 @@ export default function SuratPage() {
                           </Popover>
                         </div>
                       </div>
-                      {/* Row 5: Status | Tarikh Selesai */}
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="status" className="text-xs md:text-sm">
-                            Status <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.status}
-                            onValueChange={(value) => handleSelectChange("status", value)}
-                            disabled={formData.kategori === "KELUAR"}
-                          >
-                            <SelectTrigger
-                              className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.status ? "border-red-500" : ""}`}
-                            >
-                              <SelectValue placeholder="Pilih status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
-                              <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
-                              <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
-                              <SelectItem value="SELESAI">SELESAI</SelectItem>
-                              <SelectItem value="BATAL">BATAL</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="tarikhSelesai" className="text-xs md:text-sm">
-                            Tarikh Selesai (DD/MM/YYYY)
-                          </Label>
-                          <Input
-                            id="tarikhSelesai"
-                            name="tarikhSelesai"
-                            type="date"
-                            value={formData.tarikhSelesai}
-                            onChange={handleInputChange}
-                            disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
-                            className="h-8 md:h-10 text-xs md:text-sm"
-                          />
-                          <div className="text-xs text-muted-foreground">
-                            Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
-                          </div>
-                        </div>
-                      </div>
-                      {/* Row 6: Nota (full width) */}
+                      {/* Row 4: Nota (full width) */}
                       <div className="space-y-1 md:space-y-2">
                         <Label htmlFor="nota" className="text-xs md:text-sm">
                           Nota
@@ -2591,14 +2585,14 @@ export default function SuratPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
           <DialogHeader className="p-0 md:p-2">
             <DialogTitle className="text-base md:text-lg">Edit Surat</DialogTitle>
             <DialogDescription className="text-xs md:text-sm">Kemaskini maklumat surat.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-3 md:gap-4 md:py-4">
-            {/* Row 1: Daripada/Kepada | Tarikh */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
+            {/* Row 1: Daripada/Kepada | Tarikh | Status | Tarikh Selesai */}
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="daripadaKepada-edit" className="text-xs md:text-sm">
                   Daripada/Kepada
@@ -2624,7 +2618,7 @@ export default function SuratPage() {
               </div>
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="tarikh-edit" className="text-xs md:text-sm">
-                  Tarikh (DD/MM/YYYY)
+                  Tarikh
                 </Label>
                 <Input
                   id="tarikh-edit"
@@ -2636,6 +2630,47 @@ export default function SuratPage() {
                 />
                 <div className="text-xs text-muted-foreground">
                   Format: {formatDateToDisplay(formData.tarikh) || "DD/MM/YYYY"}
+                </div>
+              </div>
+              <div className="space-y-1 md:space-y-2">
+                <Label htmlFor="status-edit" className="text-xs md:text-sm">
+                  Status <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleSelectChange("status", value)}
+                  disabled={formData.kategori === "KELUAR"}
+                >
+                  <SelectTrigger
+                    className={`h-8 md:h-10 text-xs md:text-sm text-left ${formErrors.status ? "border-red-500" : ""}`}
+                  >
+                    <SelectValue placeholder="Pilih status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
+                    <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
+                    <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
+                    <SelectItem value="SELESAI">SELESAI</SelectItem>
+                    <SelectItem value="BATAL">BATAL</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
+              </div>
+              <div className="space-y-1 md:space-y-2">
+                <Label htmlFor="tarikhSelesai-edit" className="text-xs md:text-sm">
+                  Tarikh Selesai
+                </Label>
+                <Input
+                  id="tarikhSelesai-edit"
+                  name="tarikhSelesai"
+                  type="date"
+                  value={formData.tarikhSelesai}
+                  onChange={handleInputChange}
+                  disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
+                  className="h-8 md:h-10 text-xs md:text-sm"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
                 </div>
               </div>
             </div>
@@ -2663,8 +2698,8 @@ export default function SuratPage() {
                 </datalist>
               </div>
             </div>
-            {/* Row 3: Unit | Tindakan PIC */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
+            {/* Row 3: Unit | Tindakan PIC | Kategori | Fail */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="unit-edit" className="text-xs md:text-sm">
                   Unit <span className="text-red-500">*</span>
@@ -2721,9 +2756,6 @@ export default function SuratPage() {
                 </Select>
                 {formErrors.tindakanPic && <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>}
               </div>
-            </div>
-            {/* Row 4: Kategori (small) | Fail (large) */}
-            <div className="grid grid-cols-3 gap-3 md:gap-4">
               <div className="space-y-1 md:space-y-2">
                 <Label htmlFor="kategori-edit" className="text-xs md:text-sm">
                   Kategori
@@ -2738,7 +2770,7 @@ export default function SuratPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2 space-y-1 md:space-y-2">
+              <div className="space-y-1 md:space-y-2 md:col-span-2">
                 <Label htmlFor="fail-edit" className="text-xs md:text-sm">
                   Fail
                 </Label>
@@ -2830,51 +2862,7 @@ export default function SuratPage() {
                 </Popover>
               </div>
             </div>
-            {/* Row 5: Status | Tarikh Selesai */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="status-edit" className="text-xs md:text-sm">
-                  Status <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleSelectChange("status", value)}
-                  disabled={formData.kategori === "KELUAR"}
-                >
-                  <SelectTrigger
-                    className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.status ? "border-red-500" : ""}`}
-                  >
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
-                    <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
-                    <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
-                    <SelectItem value="SELESAI">SELESAI</SelectItem>
-                    <SelectItem value="BATAL">BATAL</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="tarikhSelesai-edit" className="text-xs md:text-sm">
-                  Tarikh Selesai (DD/MM/YYYY)
-                </Label>
-                <Input
-                  id="tarikhSelesai-edit"
-                  name="tarikhSelesai"
-                  type="date"
-                  value={formData.tarikhSelesai}
-                  onChange={handleInputChange}
-                  disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
-                  className="h-8 md:h-10 text-xs md:text-sm"
-                />
-                <div className="text-xs text-muted-foreground">
-                  Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
-                </div>
-              </div>
-            </div>
-            {/* Row 6: Nota (full width) */}
+            {/* Row 4: Nota (full width) */}
             <div className="space-y-1 md:space-y-2">
               <Label htmlFor="nota-edit" className="text-xs md:text-sm">
                 Nota
