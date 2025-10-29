@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pnpm dev)",
       "Read(//c/Users/User/Documents/Software/VSCode-win32-x64-1.103.2/data/user-data/User/**)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

@@ -91,6 +91,7 @@ export default function TetapanPage() {
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([])
   const [loadingShareLinks, setLoadingShareLinks] = useState(true)
   const [isSubmittingShareLink, setIsSubmittingShareLink] = useState(false)
+  const [isShareLinkDialogOpen, setIsShareLinkDialogOpen] = useState(false)
 
   // Access control: Block VIEW and PENERIMA types
   useEffect(() => {
@@ -416,6 +417,9 @@ export default function TetapanPage() {
       } catch {
         // Clipboard copy failed, but link was created successfully
       }
+
+      // Close dialog
+      setIsShareLinkDialogOpen(false)
     } catch (error) {
       console.error("Error creating share link:", error)
       sonnerToast.error("Gagal menjana pautan")
@@ -849,33 +853,48 @@ export default function TetapanPage() {
             </TabsContent>
 
             <TabsContent value="pautan-kongsi" className="mt-4 space-y-4">
-              <div className="space-y-4">
-                <ShareLinkForm onSubmit={handleCreateShareLink} isSubmitting={isSubmittingShareLink} />
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Senarai Pautan Kongsi</CardTitle>
-                    <CardDescription>Pautan yang telah dijana untuk dikongsi kepada pihak luar</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingShareLinks ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                        <span className="ml-2">Memuatkan...</span>
-                      </div>
-                    ) : (
-                      <ShareLinkTable
-                        shareLinks={shareLinks}
-                        onDelete={handleDeleteShareLink}
-                        baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
-                      />
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    <p className="text-sm text-muted-foreground">Jumlah: {shareLinks.length} pautan</p>
-                  </CardFooter>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Senarai Pautan Kongsi</CardTitle>
+                      <CardDescription>Pautan yang telah dijana untuk dikongsi kepada pihak luar</CardDescription>
+                    </div>
+                    <Dialog open={isShareLinkDialogOpen} onOpenChange={setIsShareLinkDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Cipta Pautan
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Cipta Pautan Kongsi Baru</DialogTitle>
+                          <DialogDescription>Pilih filter untuk data bayaran yang ingin dikongsi</DialogDescription>
+                        </DialogHeader>
+                        <ShareLinkForm onSubmit={handleCreateShareLink} isSubmitting={isSubmittingShareLink} />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingShareLinks ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="ml-2">Memuatkan...</span>
+                    </div>
+                  ) : (
+                    <ShareLinkTable
+                      shareLinks={shareLinks}
+                      onDelete={handleDeleteShareLink}
+                      baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
+                    />
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <p className="text-sm text-muted-foreground">Jumlah: {shareLinks.length} pautan</p>
+                </CardFooter>
+              </Card>
             </TabsContent>
 
             <TabsContent value="integrasi" className="mt-4 space-y-4">

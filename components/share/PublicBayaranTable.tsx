@@ -87,7 +87,10 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
                 <TableCell className="text-sm">{item.namaKontraktor || "-"}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(item.nilaiBayaran)}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant={item.statusBayaran === "SELESAI" ? "default" : "secondary"}
+                    className={`text-xs ${item.statusBayaran === "SELESAI" ? "bg-green-600 text-white hover:bg-green-700" : ""}`}
+                  >
                     {item.statusBayaran}
                   </Badge>
                 </TableCell>
@@ -111,7 +114,10 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
                 <span className="text-xs text-muted-foreground">{formatDate(item.tarikhTerima)}</span>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <Badge variant="secondary" className="text-xs">
+                <Badge
+                  variant={item.statusBayaran === "SELESAI" ? "default" : "secondary"}
+                  className={`text-xs ${item.statusBayaran === "SELESAI" ? "bg-green-600 text-white hover:bg-green-700" : ""}`}
+                >
                   {item.statusBayaran}
                 </Badge>
                 {item.noKontrak && (
