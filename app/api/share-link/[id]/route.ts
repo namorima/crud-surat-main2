@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getShareLinkById, deleteShareLink } from "@/lib/google-sheets"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     const shareLink = await getShareLinkById(id)
 
@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
@@ -50,7 +50,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     await deleteShareLink(id)
     return NextResponse.json({ success: true, message: "Share link deleted successfully" })

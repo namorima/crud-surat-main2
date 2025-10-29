@@ -91,7 +91,7 @@ GOOGLE_CLIENT_EMAIL="your_service_account_email"
 
 The application expects specific sheet structures:
 
-- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`, `STATUS`
+- Sheets must exist: `SURAT`, `REKOD BAYARAN`, `AUTH`, `UNIT`, `KONTRAK`, `AUDIT_BAYARAN`, `STATUS`, `SHARE_LINK`, `FAIL`
 - Column mappings are hardcoded in `lib/google-sheets.ts`
 - Service account needs Sheets API access
 - `KONTRAK` sheet structure: Column A=KAWASAN, B=NO KONTRAK, C=KATEGORI, D=NAMA KONTRAKTOR
@@ -102,6 +102,7 @@ The application expects specific sheet structures:
   - For recipients: E contains "PENERIMA", C contains recipient name, D contains unit
   - For view-only users: E contains "VIEW"
 - `FAIL` sheet structure: Stores file/fail data with unit associations (managed through Setup Fail page)
+- `SHARE_LINK` sheet structure: Column A=LINK_ID, B=FILTER_JSON, C=CREATED_BY, D=CREATED_AT, E=EXPIRES_AT, F=DESCRIPTION, G=ACCESS_COUNT
 
 ## Development Guidelines
 
@@ -118,6 +119,13 @@ The application expects specific sheet structures:
 - Use shadcn/ui components from `components/ui/`
 - TypeScript types are defined in `types/` directory
 - API routes follow Next.js App Router conventions in `app/api/`
+- **IMPORTANT**: Next.js 15 requires `params` in dynamic routes to be awaited. Always use:
+  ```typescript
+  export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    // ...
+  }
+  ```
 
 ### Authentication Integration
 
