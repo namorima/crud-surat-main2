@@ -404,13 +404,15 @@ export default function BayaranPage() {
         return itemDate >= from && itemDate <= to;
       });
     } else {
-      // Default filter for 2025 - show all 2025 records
+      // Default filter for current year and previous year - show 2025 and 2026 records
+      const currentYear = new Date().getFullYear();
+      const previousYear = currentYear - 1;
       filtered = filtered.filter((item) => {
         if (!item.tarikhTerima) return false;
         const dateParts = item.tarikhTerima.split("/");
         if (dateParts.length !== 3) return false;
-        const year = dateParts[2];
-        return year === "2025";
+        const year = parseInt(dateParts[2]);
+        return year === currentYear || year === previousYear;
       });
     }
 
