@@ -142,6 +142,7 @@ async function migrateBayaran(): Promise<MigrationStats> {
         }
 
         const { error } = await supabaseAdmin.from("bayaran").insert({
+          ids: parseInt(bayaran.id), // Original ID from Google Sheets
           daripada: bayaran.daripada,
           tarikh_terima: tarikhTerimaConverted,
           perkara: bayaran.perkara,

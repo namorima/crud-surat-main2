@@ -1,5 +1,6 @@
 export type Bayaran = {
   id: string
+  ids?: number  // Original numeric ID from Google Sheets
   daripada: string
   tarikhTerima: string
   perkara: string

@@ -171,6 +171,17 @@ export async function getDaripadaKepadaValues() {
 
 // ===== BAYARAN FUNCTIONS =====
 
+// Helper function to convert date from YYYY-MM-DD to DD/MM/YYYY
+function formatDateFromDB(dateString: string | null): string {
+  if (!dateString) return ""
+  try {
+    const [year, month, day] = dateString.split("-")
+    return `${day}/${month}/${year}`
+  } catch (error) {
+    return dateString || ""
+  }
+}
+
 export async function getAllBayaran(): Promise<Bayaran[]> {
   try {
     const { data, error } = await supabaseAdmin
@@ -183,22 +194,23 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
     return (
       data?.map((row) => ({
         id: row.id,
+        ids: row.ids,  // Original numeric ID from Google Sheets
         daripada: row.daripada,
-        tarikhTerima: row.tarikh_terima,
+        tarikhTerima: formatDateFromDB(row.tarikh_terima),
         perkara: row.perkara,
         nilaiBayaran: row.nilai_bayaran,
         bayaranKe: row.bayaran_ke || "",
         kategori: row.kategori || "",
         noKontrak: row.no_kontrak || "",
         namaKontraktor: row.nama_kontraktor || "",
-        tarikhMemoLadang: row.tarikh_memo_ladang || "",
+        tarikhMemoLadang: formatDateFromDB(row.tarikh_memo_ladang),
         statusLadang: row.status_ladang || "",
-        tarikhHantar: row.tarikh_hantar || "",
-        tarikhPpnP: row.tarikh_ppnp || "",
-        tarikhPn: row.tarikh_pn || "",
+        tarikhHantar: formatDateFromDB(row.tarikh_hantar),
+        tarikhPpnP: formatDateFromDB(row.tarikh_ppnp),
+        tarikhPn: formatDateFromDB(row.tarikh_pn),
         penerima: row.penerima || "",
         statusBayaran: row.status_bayaran || "",
-        tarikhBayar: row.tarikh_bayar || "",
+        tarikhBayar: formatDateFromDB(row.tarikh_bayar),
         nomborBaucer: row.nombor_baucer || "",
         notaKaki: row.nota_kaki || "",
       })) || []

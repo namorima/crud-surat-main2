@@ -216,7 +216,7 @@ export function BayaranTable({
                           setShowDetailDialog(true)
                         }}
                       >
-                        #{item.id}
+                        #{item.ids || item.id}
                       </Badge>
                     </TableCell>
                   )}
@@ -348,7 +348,7 @@ export function BayaranTable({
                       setShowDetailDialog(true)
                     }}
                   >
-                    #{item.id}
+                    #{item.ids || item.id}
                   </Badge>
                   <span className="font-medium text-sm">{item.daripada}</span>
                   <span className="text-xs text-muted-foreground">{item.tarikhTerima}</span>
