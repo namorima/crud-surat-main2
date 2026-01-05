@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllSurat } from "@/lib/google-sheets"
+import { getAllSurat } from "@/lib/supabase-db"
 
 export async function GET(request: NextRequest, { params }: { params: { bil: string } }) {
   try {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { updateFail, deleteFail } from "@/lib/google-sheets"
+import { updateFail, deleteFail } from "@/lib/supabase-db"
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {

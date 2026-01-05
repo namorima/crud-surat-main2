@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateBayaran, getAllBayaran, deleteBayaran } from "@/lib/google-sheets"
+import { updateBayaran, getAllBayaran, deleteBayaran } from "@/lib/supabase-db"
 import { BayaranSchema } from "@/types/bayaran-schema"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {

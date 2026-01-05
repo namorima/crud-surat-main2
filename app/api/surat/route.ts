@@ -1,13 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllSurat, addSurat, updateSurat, deleteSurat } from "@/lib/google-sheets"
+import { getAllSurat, addSurat, updateSurat, deleteSurat } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
     // Check if environment variables are set
-    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.error("Missing required environment variables for Google Sheets API")
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Missing required environment variables for Supabase")
       return NextResponse.json(
-        { error: "Server configuration error: Missing Google Sheets credentials" },
+        { error: "Server configuration error: Missing Supabase credentials" },
         { status: 500 },
       )
     }
@@ -19,7 +19,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching surat data:", error)
     return NextResponse.json(
-      { error: "Failed to fetch data from Google Sheets", details: error.message },
+      { error: "Failed to fetch data from Supabase", details: error.message },
       { status: 500 },
     )
   }

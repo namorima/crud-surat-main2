@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getUnitAndPicData } from "@/lib/google-sheets"
+import { getUnitAndPicData } from "@/lib/supabase-db"
 
 export async function GET() {
   try {

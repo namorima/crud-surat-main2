@@ -6,7 +6,7 @@ import {
   getPenerimaData,
   getStatusBayaranData,
   getAllBayaran,
-} from "@/lib/google-sheets"
+} from "@/lib/supabase-db"
 
 export async function GET() {
   try {

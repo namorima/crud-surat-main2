@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllBayaran, addBayaran } from "@/lib/google-sheets"
+import { getAllBayaran, addBayaran } from "@/lib/supabase-db"
 import { BayaranSchema } from "@/types/bayaran-schema"
 import { z } from "zod"
 
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     // Convert date format if needed (from YYYY-MM-DD to DD/MM/YYYY)
     const formattedData = {
       ...validatedData,
+      namaKontraktor: "", // Will be auto-populated by supabase-db from kontrak table
       tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
       tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
       tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",

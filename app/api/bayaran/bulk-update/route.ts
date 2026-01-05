@@ -1,6 +1,6 @@
 
 import { type NextRequest, NextResponse } from "next/server"
-import { bulkUpdateBayaranStatus } from "@/lib/google-sheets"
+import { bulkUpdateBayaranStatus } from "@/lib/supabase-db"
 import { BulkUpdateBayaranSchema } from "@/types/bayaran-schema"
 
 export async function POST(request: NextRequest) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllUsers } from "@/lib/google-sheets"
+import { getAllUsers } from "@/lib/supabase-db"
 
 export async function GET() {
   try {

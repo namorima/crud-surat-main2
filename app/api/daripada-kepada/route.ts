@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getDaripadaKepadaValues } from "@/lib/google-sheets"
+import { getDaripadaKepadaValues } from "@/lib/supabase-db"
 
 export async function GET() {
   try {

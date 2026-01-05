@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { incrementShareLinkAccess } from "@/lib/google-sheets"
+import { incrementShareLinkAccess } from "@/lib/supabase-db"
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

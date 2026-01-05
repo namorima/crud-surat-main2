@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllShareLinks, addShareLink } from "@/lib/google-sheets"
+import { getAllShareLinks, addShareLink } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
