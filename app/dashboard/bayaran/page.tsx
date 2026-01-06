@@ -94,8 +94,8 @@ export default function BayaranPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
 
-  // Sorting state - Default sort by ID descending (largest first)
-  const [sortField, setSortField] = useState<keyof Bayaran | null>("id");
+  // Sorting state - Default sort by IDS descending (largest first)
+  const [sortField, setSortField] = useState<keyof Bayaran | null>("ids");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Column visibility state
@@ -322,7 +322,7 @@ export default function BayaranPage() {
     if (searchQuery.startsWith("#")) {
       const idNumber = searchQuery.substring(1);
       if (idNumber && !isNaN(Number(idNumber))) {
-        const foundBayaran = bayaran.find((item) => item.id === idNumber);
+        const foundBayaran = bayaran.find((item) => item.ids === Number(idNumber));
         if (foundBayaran) {
           setSelectedBayaran(foundBayaran);
           setShowDetailDialog(true);
@@ -422,10 +422,10 @@ export default function BayaranPage() {
         const aValue = a[sortField] || "";
         const bValue = b[sortField] || "";
 
-        // Special handling for ID field to sort numerically
-        if (sortField === "id") {
-          const aNum = Number.parseInt(String(aValue)) || 0;
-          const bNum = Number.parseInt(String(bValue)) || 0;
+        // Special handling for IDS field to sort numerically
+        if (sortField === "ids") {
+          const aNum = Number(aValue) || 0;
+          const bNum = Number(bValue) || 0;
           return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
         }
 

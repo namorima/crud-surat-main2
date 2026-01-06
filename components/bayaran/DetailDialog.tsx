@@ -63,7 +63,7 @@ export function DetailDialog({
                   : "",
               )}
             >
-              #{selectedBayaran?.id}
+              #{selectedBayaran?.ids || selectedBayaran?.id}
             </Badge>
             Detail Rekod Bayaran
           </DialogTitle>

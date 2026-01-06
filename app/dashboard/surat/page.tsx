@@ -255,7 +255,7 @@ export default function SuratPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          rowIndex: Number.parseInt(currentSurat.id),
+          rowIndex: currentSurat.bil,
           data: updatedData,
         }),
       })
@@ -744,7 +744,7 @@ export default function SuratPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              rowIndex: Number.parseInt(originalSurat.id),
+              rowIndex: originalSurat.bil,
               data: updatedOriginalSurat,
             }),
           })
@@ -792,7 +792,7 @@ export default function SuratPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          rowIndex: Number.parseInt(currentSurat.id),
+          rowIndex: currentSurat.bil,
           data: formattedData,
         }),
       })
@@ -819,7 +819,7 @@ export default function SuratPage() {
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/surat?rowIndex=${currentSurat.id}`, {
+      const response = await fetch(`/api/surat?rowIndex=${currentSurat.bil}`, {
         method: "DELETE",
       })
 

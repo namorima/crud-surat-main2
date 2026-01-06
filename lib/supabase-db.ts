@@ -65,14 +65,17 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id">): Prom
   }
 }
 
-export async function updateSurat(rowIndex: number, surat: Omit<Surat, "id">): Promise<void> {
+export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): Promise<void> {
   try {
-    // Get all surat to find the one at the given index
-    const allSurat = await getAllSurat()
-    const targetSurat = allSurat[rowIndex]
+    // Find surat by bil number instead of array index
+    const { data: existingSurat, error: fetchError } = await supabaseAdmin
+      .from("surat")
+      .select("id")
+      .eq("bil", bilNumber)
+      .single()
 
-    if (!targetSurat) {
-      throw new Error(`Surat at index ${rowIndex} not found`)
+    if (fetchError || !existingSurat) {
+      throw new Error(`Surat with bil ${bilNumber} not found`)
     }
 
     const { error } = await supabaseAdmin
@@ -92,7 +95,7 @@ export async function updateSurat(rowIndex: number, surat: Omit<Surat, "id">): P
         komen: surat.komen || null,
         reference: surat.reference || null,
       })
-      .eq("id", targetSurat.id)
+      .eq("id", existingSurat.id)
 
     if (error) throw error
   } catch (error: any) {
@@ -101,17 +104,20 @@ export async function updateSurat(rowIndex: number, surat: Omit<Surat, "id">): P
   }
 }
 
-export async function deleteSurat(rowIndex: number): Promise<void> {
+export async function deleteSurat(bilNumber: number): Promise<void> {
   try {
-    // Get all surat to find the one at the given index
-    const allSurat = await getAllSurat()
-    const targetSurat = allSurat[rowIndex]
+    // Find surat by bil number instead of array index
+    const { data: existingSurat, error: fetchError } = await supabaseAdmin
+      .from("surat")
+      .select("id")
+      .eq("bil", bilNumber)
+      .single()
 
-    if (!targetSurat) {
-      throw new Error(`Surat at index ${rowIndex} not found`)
+    if (fetchError || !existingSurat) {
+      throw new Error(`Surat with bil ${bilNumber} not found`)
     }
 
-    const { error } = await supabaseAdmin.from("surat").delete().eq("id", targetSurat.id)
+    const { error } = await supabaseAdmin.from("surat").delete().eq("id", existingSurat.id)
 
     if (error) throw error
   } catch (error: any) {
@@ -223,6 +229,16 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
 
 export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
   try {
+    // Get next available ids number
+    const { data: maxIdsData } = await supabaseAdmin
+      .from("bayaran")
+      .select("ids")
+      .not("ids", "is", null) // Filter out NULL values
+      .order("ids", { ascending: false })
+      .limit(1)
+
+    const nextIds = (maxIdsData?.[0]?.ids || 0) + 1
+
     // Get contractor name from kontrak table
     let namaKontraktor = ""
     if (bayaran.noKontrak) {
@@ -239,6 +255,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
     const { data, error } = await supabaseAdmin
       .from("bayaran")
       .insert({
+        ids: nextIds, // Auto-increment numeric ID
         daripada: bayaran.daripada,
         tarikh_terima: bayaran.tarikhTerima,
         perkara: bayaran.perkara,
@@ -269,7 +286,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
         bayaranId: data.id,
         user: user,
         action: "CREATE",
-        details: `Rekod bayaran baru dicipta`,
+        details: `Rekod bayaran #${data.ids} dicipta`,
       })
     }
   } catch (error: any) {
