@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { hasPermission } from "@/lib/rbac"
 import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
 
@@ -95,6 +96,15 @@ export function BayaranHeader({
   columnVisibility,
   setColumnVisibility,
 }: BayaranHeaderProps) {
+  // Permission checks
+  const canCreate = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'create' })
+    : (user?.role === "semua" || user?.role === "PERLADANGAN")
+  
+  const canBulkEdit = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'edit' })
+    : (user?.role === "semua")
+  
   return (
     <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
       <div className="flex flex-row items-center justify-between">
@@ -349,7 +359,7 @@ export function BayaranHeader({
           )}
 
           {/* Add Button */}
-          {!showSearchInput && (user?.role === "semua" || user?.role === "PERLADANGAN") && (
+          {!showSearchInput && canCreate && (
             <Button
               variant="default"
               size="icon"
@@ -363,7 +373,7 @@ export function BayaranHeader({
           )}
 
           {/* Bulk Action Button */}
-          {selectedRows.length > 0 && user?.role === "semua" && (
+          {selectedRows.length > 0 && canBulkEdit && (
             <Button
               variant="outline"
               size="icon"

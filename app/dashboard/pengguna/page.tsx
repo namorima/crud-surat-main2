@@ -5,37 +5,128 @@ import { useAuth } from "@/lib/auth-provider"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import type { User } from "@/types/user"
+import type { Role } from "@/types/rbac"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "@/components/dashboard/sidebar"
-import { Menu } from "lucide-react"
+import { RoleManager } from "@/components/pengguna/RoleManager"
+import { UserForm } from "@/components/pengguna/UserForm"
+import { Menu, UserPlus, Edit, Trash2, Loader2 } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { hasPermission } from "@/lib/rbac"
 
-// This is a placeholder page for user management
-// In a real application, you would connect this to your backend
 export default function PenggunaPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-
-  // Sample users data
-  const [users, setUsers] = useState<User[]>([
-    { id: "1", name: "Admin User", email: "admin@example.com", role: "admin" },
-    { id: "2", name: "Regular User", email: "user@example.com", role: "user" },
-    { id: "3", name: "Viewer User", email: "viewer@example.com", role: "viewer" },
-  ])
+  const [users, setUsers] = useState<User[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
+  const [isUserFormOpen, setIsUserFormOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
   useEffect(() => {
-    // Check if user is admin
-    if (user?.role !== "admin") {
+    // Check if user has permission to view pengguna
+    const canViewPengguna = user?.permissions && user.permissions.length > 0
+      ? hasPermission(user.permissions, { resource: 'pengguna', action: 'view' })
+      : (user?.role === "semua" || user?.role === "admin")
+
+    if (!canViewPengguna) {
       router.push("/dashboard")
+      return
     }
+
+    fetchUsers()
+    fetchRoles()
     setLoading(false)
   }, [user, router])
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/auth")
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      console.error("Error fetching users:", error)
+    }
+  }
+
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch("/api/roles")
+      const data = await response.json()
+      setRoles(data)
+    } catch (error) {
+      console.error("Error fetching roles:", error)
+    }
+  }
+
+  const handleAddUser = () => {
+    setEditingUser(null)
+    setIsUserFormOpen(true)
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+    setIsUserFormOpen(true)
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Adakah anda pasti mahu memadam pengguna ini?")) return
+
+    try {
+      const response = await fetch(`/api/auth?id=${userId}`, {
+        method: "DELETE"
+      })
+
+      if (response.ok) {
+        await fetchUsers()
+      } else {
+        alert("Gagal memadam pengguna")
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      alert("Gagal memadam pengguna")
+    }
+  }
+
+  const getRoleName = (user: User): string => {
+    if (user.role_id) {
+      const role = roles.find(r => r.id === user.role_id)
+      return role?.display_name || user.role
+    }
+    return user.role
+  }
+
+  // Check permissions
+  const canManageRoles = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'pengguna', action: 'manage_roles' })
+    : (user?.role === "semua" || user?.role === "admin")
+
+  const canCreateUser = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'pengguna', action: 'create' })
+    : (user?.role === "semua" || user?.role === "admin")
+
+  const canEditUser = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'pengguna', action: 'edit' })
+    : (user?.role === "semua" || user?.role === "admin")
+
+  const canDeleteUser = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'pengguna', action: 'delete' })
+    : (user?.role === "semua" || user?.role === "admin")
 
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
   }
@@ -57,63 +148,103 @@ export default function PenggunaPage() {
                   <Sidebar />
                 </SheetContent>
               </Sheet>
-              <CardTitle className="text-base md:text-xl">Pengurusan Pengguna</CardTitle>
+              <CardTitle className="text-base md:text-xl">Pengurusan Pengguna & Role</CardTitle>
             </div>
-            <Button>Tambah Pengguna</Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="px-4 py-2 text-left">Nama</th>
-                  <th className="px-4 py-2 text-left">Email</th>
-                  <th className="px-4 py-2 text-left">Peranan</th>
-                  <th className="px-4 py-2 text-right">Tindakan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b">
-                    <td className="px-4 py-2">{user.name}</td>
-                    <td className="px-4 py-2">{user.email}</td>
-                    <td className="px-4 py-2">
-                      <div
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          user.role === "admin"
-                            ? "bg-purple-100 text-purple-800"
-                            : user.role === "user"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {user.role}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">
-                        Padam
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="users">Pengguna</TabsTrigger>
+              {canManageRoles && <TabsTrigger value="roles">Role & Permissions</TabsTrigger>}
+            </TabsList>
+
+            <TabsContent value="users" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  Jumlah pengguna: {users.length}
+                </p>
+                {canCreateUser && (
+                  <Button onClick={handleAddUser}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Tambah Pengguna
+                  </Button>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Tindakan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">{u.id}</TableCell>
+                        <TableCell>{u.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{getRoleName(u)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {u.type ? (
+                            <Badge variant="outline">{u.type}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          {canEditUser && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditUser(u)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteUser && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {canManageRoles && (
+              <TabsContent value="roles" className="space-y-4">
+                <RoleManager
+                  onRoleCreated={fetchRoles}
+                  onRoleUpdated={fetchRoles}
+                  onRoleDeleted={fetchRoles}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border p-4">
-        <h2 className="text-lg font-medium">Nota</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Ini adalah halaman contoh untuk pengurusan pengguna. Dalam aplikasi sebenar, anda perlu menghubungkan halaman
-          ini dengan backend untuk menguruskan pengguna.
-        </p>
-      </div>
+      <UserForm
+        open={isUserFormOpen}
+        onOpenChange={setIsUserFormOpen}
+        user={editingUser}
+        onSuccess={fetchUsers}
+      />
     </div>
   )
 }

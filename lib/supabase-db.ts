@@ -140,6 +140,7 @@ export async function getAllUsers(): Promise<User[]> {
         password: row.password,
         name: row.name,
         role: row.role,
+        role_id: row.role_id || undefined,
         type: row.type || "",
       })) || []
     )
@@ -148,6 +149,124 @@ export async function getAllUsers(): Promise<User[]> {
     throw new Error(`Failed to fetch users from Supabase: ${error.message}`)
   }
 }
+
+export async function createUser(userData: {
+  username: string
+  password: string
+  name: string
+  role_id: string
+  type?: string
+}): Promise<User> {
+  try {
+    // Get role name from role_id for backward compatibility
+    const { data: roleData } = await supabaseAdmin
+      .from("roles")
+      .select("name")
+      .eq("id", userData.role_id)
+      .single()
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .insert({
+        username: userData.username,
+        password: userData.password,
+        name: userData.name,
+        role: roleData?.name || "viewer", // Fallback for legacy role field
+        role_id: userData.role_id,
+        type: userData.type || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.username,
+      password: data.password,
+      name: data.name,
+      role: data.role,
+      role_id: data.role_id,
+      type: data.type || "",
+    }
+  } catch (error: any) {
+    console.error("Error creating user in Supabase:", error)
+    throw new Error(`Failed to create user in Supabase: ${error.message}`)
+  }
+}
+
+export async function updateUser(
+  username: string,
+  userData: {
+    password?: string
+    name?: string
+    role_id?: string
+    type?: string
+  }
+): Promise<User> {
+  try {
+    const updateData: any = {}
+
+    if (userData.name !== undefined) {
+      updateData.name = userData.name
+    }
+
+    if (userData.password !== undefined) {
+      updateData.password = userData.password
+    }
+
+    if (userData.role_id !== undefined) {
+      updateData.role_id = userData.role_id
+
+      // Update legacy role field for backward compatibility
+      const { data: roleData } = await supabaseAdmin
+        .from("roles")
+        .select("name")
+        .eq("id", userData.role_id)
+        .single()
+
+      if (roleData) {
+        updateData.role = roleData.name
+      }
+    }
+
+    if (userData.type !== undefined) {
+      updateData.type = userData.type || null
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .update(updateData)
+      .eq("username", username)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.username,
+      password: data.password,
+      name: data.name,
+      role: data.role,
+      role_id: data.role_id,
+      type: data.type || "",
+    }
+  } catch (error: any) {
+    console.error("Error updating user in Supabase:", error)
+    throw new Error(`Failed to update user in Supabase: ${error.message}`)
+  }
+}
+
+export async function deleteUser(username: string): Promise<void> {
+  try {
+    const { error } = await supabaseAdmin.from("users").delete().eq("username", username)
+
+    if (error) throw error
+  } catch (error: any) {
+    console.error("Error deleting user from Supabase:", error)
+    throw new Error(`Failed to delete user from Supabase: ${error.message}`)
+  }
+}
+
 
 // ===== DARIPADA/KEPADA VALUES =====
 

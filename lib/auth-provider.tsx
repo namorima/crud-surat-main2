@@ -10,6 +10,7 @@ type AuthContextType = {
   user: User | null
   login: (id: string, password: string) => Promise<void>
   logout: () => void
+  refreshPermissions: () => Promise<void>
   loading: boolean
 }
 
@@ -22,18 +23,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check if user is logged in
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser))
-        } catch (e) {
-          console.error("Error parsing user from localStorage:", e)
-          localStorage.removeItem("user")
+    const loadUser = async () => {
+      if (typeof window !== "undefined") {
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser)
+            
+            // If user has role_id but no permissions, fetch them
+            if (parsedUser.role_id && !parsedUser.permissions) {
+              try {
+                const permResponse = await fetch(`/api/auth/permissions?userId=${parsedUser.id}`)
+                if (permResponse.ok) {
+                  const permissions = await permResponse.json()
+                  parsedUser.permissions = permissions
+                  // Update localStorage with permissions
+                  localStorage.setItem("user", JSON.stringify(parsedUser))
+                }
+              } catch (permError) {
+                console.error("Error fetching permissions on load:", permError)
+              }
+            }
+            
+            setUser(parsedUser)
+          } catch (e) {
+            console.error("Error parsing user from localStorage:", e)
+            localStorage.removeItem("user")
+          }
         }
       }
+      setLoading(false)
     }
-    setLoading(false)
+    
+    loadUser()
   }, [])
 
   const login = async (id: string, password: string) => {
@@ -47,9 +69,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const foundUser = users.find((u: User) => u.id === id && u.password === password)
 
       if (foundUser) {
+        // Fetch user permissions if they have a role_id
+        if (foundUser.role_id) {
+          try {
+            const permResponse = await fetch(`/api/auth/permissions?userId=${foundUser.id}`)
+            if (permResponse.ok) {
+              const permissions = await permResponse.json()
+              foundUser.permissions = permissions
+            }
+          } catch (permError) {
+            console.error("Error fetching permissions:", permError)
+            // Continue with login even if permissions fetch fails
+            foundUser.permissions = []
+          }
+        }
+
         setUser(foundUser)
         localStorage.setItem("user", JSON.stringify(foundUser))
-        if (foundUser.role === "KEWANGAN") {
+        
+        // Redirect based on permissions or legacy role
+        // Check if user has bayaran:view permission
+        const hasBayaranView = foundUser.permissions?.some(
+          (p: { resource: string; action: string }) => p.resource === 'bayaran' && p.action === 'view'
+        )
+        
+        // Fallback to legacy role check if no permissions
+        if (hasBayaranView || (!foundUser.permissions?.length && foundUser.role === "KEWANGAN")) {
           router.push("/dashboard/bayaran")
         } else {
           router.push("/dashboard/surat")
@@ -71,7 +116,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login")
   }
 
-  return <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>
+  const refreshPermissions = async () => {
+    if (!user || !user.role_id) {
+      console.warn("Cannot refresh permissions: user not logged in or no role_id")
+      return
+    }
+
+    try {
+      const permResponse = await fetch(`/api/auth/permissions?userId=${user.id}`)
+      if (permResponse.ok) {
+        const permissions = await permResponse.json()
+        const updatedUser = { ...user, permissions }
+        setUser(updatedUser)
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        console.log("Permissions refreshed successfully")
+      } else {
+        console.error("Failed to refresh permissions: API returned error")
+      }
+    } catch (error) {
+      console.error("Error refreshing permissions:", error)
+    }
+  }
+
+  return <AuthContext.Provider value={{ user, login, logout, refreshPermissions, loading }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {

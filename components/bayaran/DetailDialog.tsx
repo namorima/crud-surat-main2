@@ -10,6 +10,7 @@ import { Edit, Share2, X, Trash2, DollarSign, Send, FilePen, FilePenLineIcon as 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
+import { hasPermission } from "@/lib/rbac"
 
 interface DetailDialogProps {
   showDetailDialog: boolean
@@ -50,6 +51,15 @@ export function DetailDialog({
   extractPenerimaWithUnit,
   renderNotaKakiWithLinks,
 }: DetailDialogProps) {
+  // Permission checks
+  const canEdit = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'edit' })
+    : (user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && selectedBayaran?.statusBayaran === "KEWANGAN"))
+  
+  const canDelete = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'delete' })
+    : (user?.role === "semua")
+  
   return (
     <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -394,7 +404,7 @@ export function DetailDialog({
         )}
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <div className="flex flex-row gap-2 w-full sm:w-auto justify-between sm:justify-start">
-            {(user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && selectedBayaran?.statusBayaran === "KEWANGAN")) && (
+            {canEdit && (
               <Button
                 variant="outline"
                 onClick={() => selectedBayaran && handleEdit(selectedBayaran)}
@@ -426,7 +436,7 @@ export function DetailDialog({
               <span className="hidden sm:inline mr-2">Tutup</span>
               <X className="h-4 w-4 sm:hidden" />
             </Button>
-            {user?.role === "semua" && (
+            {canDelete && (
               <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="flex-1 sm:flex-none">

@@ -6,6 +6,7 @@ import type { FXNotification } from "@/types/fx-notification"
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-provider"
+import { hasPermission } from "@/lib/rbac"
 import type { Surat } from "@/types/surat"
 import type { Fail } from "@/types/fail"
 import { Button } from "@/components/ui/button"
@@ -226,11 +227,29 @@ export default function SuratPage() {
   const [referenceBil, setReferenceBil] = useState<number | null>(null)
 
   // Check user permissions
-  const canEdit = user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit
-  const canDelete = user?.role === "semua"
-  const canViewAll = user?.role === "semua" || user?.role === "PENGURUS"
-  const canComment = user?.role === "PENGURUS"
-  const canEditFull = user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit
+  const canEdit = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'edit' })
+    : (user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit)
+  
+  const canDelete = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'delete' })
+    : (user?.role === "semua")
+  
+  const canViewAll = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'view' })
+    : (user?.role === "semua" || user?.role === "PENGURUS")
+  
+  const canComment = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'edit' })
+    : (user?.role === "PENGURUS")
+  
+  const canEditFull = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'edit' })
+    : (user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit)
+  
+  const canCreate = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'surat', action: 'create' })
+    : true // Legacy: all users can create
 
   // Add these state variables after the existing state declarations
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false)
@@ -1673,7 +1692,7 @@ export default function SuratPage() {
               )}
 
               {/* Add Button */}
-              {!showSearchInput && canEditFull && (
+              {!showSearchInput && canCreate && (
                 <Dialog
                   open={isAddDialogOpen}
                   onOpenChange={(open) => {

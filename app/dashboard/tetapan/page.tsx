@@ -15,6 +15,7 @@ import { Menu, Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lu
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-provider"
+import { hasPermission } from "@/lib/rbac"
 import type { Fail, FailPart } from "@/types/fail"
 import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
 import { ShareLinkForm } from "@/components/share/ShareLinkForm"
@@ -78,13 +79,23 @@ export default function TetapanPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [currentFail, setCurrentFail] = useState<Fail | null>(null)
   const [units, setUnits] = useState<string[]>([])
+  
+  // Permission checks
+  const canEditTetapan = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'tetapan', action: 'edit' })
+    : (user?.role === "semua")
+  
+  const canViewAll = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'tetapan', action: 'view' })
+    : (user?.role === "semua")
+  
   const [formData, setFormData] = useState({
     part: "",
     noLocker: "",
     noFail: "",
     pecahan: "",
     pecahanKecil: "",
-    unit: user?.role === "semua" ? "" : user?.role || "",
+    unit: canViewAll ? "" : user?.role || "",
   })
 
   // Share Link state
@@ -129,9 +140,9 @@ export default function TetapanPage() {
     fetchFailData()
   }, [])
 
-  // Fetch share links (only for "semua" role)
+  // Fetch share links (only for users with permission)
   useEffect(() => {
-    if (user?.role !== "semua") {
+    if (!canViewAll) {
       setLoadingShareLinks(false)
       return
     }
@@ -167,7 +178,7 @@ export default function TetapanPage() {
       }
     }
 
-    if (user?.role === "semua") {
+    if (canViewAll) {
       fetchUnits()
     }
   }, [user])
@@ -179,8 +190,8 @@ export default function TetapanPage() {
       return
     }
 
-    // If user role is "semua", show all fails
-    if (user.role === "semua") {
+    // If user can view all, show all fails
+    if (canViewAll) {
       setFilteredFailData(failData)
       return
     }
@@ -219,7 +230,7 @@ export default function TetapanPage() {
       noFail: "",
       pecahan: "",
       pecahanKecil: "",
-      unit: user?.role === "semua" ? "" : user?.role || "",
+      unit: canViewAll ? "" : user?.role || "",
     })
   }
 
@@ -475,7 +486,7 @@ export default function TetapanPage() {
           <Tabs defaultValue="setup-fail">
             <TabsList>
               <TabsTrigger value="setup-fail">Setup Fail</TabsTrigger>
-              {user?.role === "semua" && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
+              {canViewAll && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
               <TabsTrigger value="integrasi">Integrasi</TabsTrigger>
             </TabsList>
 
@@ -486,7 +497,7 @@ export default function TetapanPage() {
                     <div>
                       <CardTitle>Setup Fail</CardTitle>
                       <CardDescription>
-                        Senarai fail {user?.role === "semua" ? "semua unit" : `untuk unit ${user?.role}`}
+                        Senarai fail {canViewAll ? "semua unit" : `untuk unit ${user?.role}`}
                       </CardDescription>
                     </div>
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -569,7 +580,7 @@ export default function TetapanPage() {
                             <Label htmlFor="unit">
                               Unit <span className="text-red-500">*</span>
                             </Label>
-                            {user?.role === "semua" ? (
+                            {canViewAll ? (
                               <Select value={formData.unit} onValueChange={(value) => handleSelectChange("unit", value)}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Pilih unit" />
@@ -683,7 +694,7 @@ export default function TetapanPage() {
                             <Label htmlFor="edit-unit">
                               Unit <span className="text-red-500">*</span>
                             </Label>
-                            {user?.role === "semua" ? (
+                            {canEditTetapan ? (
                               <>
                                 <Select
                                   value={formData.unit}
@@ -785,7 +796,7 @@ export default function TetapanPage() {
                             <TableHead>Pecahan</TableHead>
                             <TableHead>Pecahan Kecil</TableHead>
                             <TableHead>Unit</TableHead>
-                            {user?.role === "semua" && <TableHead className="w-[80px]">Tindakan</TableHead>}
+                            {canEditTetapan && <TableHead className="w-[80px]">Tindakan</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -810,7 +821,7 @@ export default function TetapanPage() {
                               <TableCell>
                                 <Badge variant="secondary">{fail.unit}</Badge>
                               </TableCell>
-                              {user?.role === "semua" && (
+                              {canEditTetapan && (
                                 <TableCell>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
