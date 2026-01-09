@@ -12,6 +12,7 @@ import type { Role } from "@/types/rbac"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { RoleManager } from "@/components/pengguna/RoleManager"
+import { UnitPicManager } from "@/components/pengguna/UnitPicManager"
 import { UserForm } from "@/components/pengguna/UserForm"
 import { Menu, UserPlus, Edit, Trash2, Loader2 } from "lucide-react"
 import {
@@ -37,7 +38,7 @@ export default function PenggunaPage() {
     // Check if user has permission to view pengguna
     const canViewPengguna = user?.permissions && user.permissions.length > 0
       ? hasPermission(user.permissions, { resource: 'pengguna', action: 'view' })
-      : (user?.role === "semua" || user?.role === "admin")
+      : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
     if (!canViewPengguna) {
       router.push("/dashboard")
@@ -109,19 +110,19 @@ export default function PenggunaPage() {
   // Check permissions
   const canManageRoles = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'pengguna', action: 'manage_roles' })
-    : (user?.role === "semua" || user?.role === "admin")
+    : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
   const canCreateUser = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'pengguna', action: 'create' })
-    : (user?.role === "semua" || user?.role === "admin")
+    : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
   const canEditUser = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'pengguna', action: 'edit' })
-    : (user?.role === "semua" || user?.role === "admin")
+    : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
   const canDeleteUser = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'pengguna', action: 'delete' })
-    : (user?.role === "semua" || user?.role === "admin")
+    : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
   if (loading) {
     return (
@@ -154,9 +155,10 @@ export default function PenggunaPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="users">Pengguna</TabsTrigger>
               {canManageRoles && <TabsTrigger value="roles">Role & Permissions</TabsTrigger>}
+              {canManageRoles && <TabsTrigger value="unit-pic">UNIT PIC</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="users" className="space-y-4">
@@ -233,6 +235,12 @@ export default function PenggunaPage() {
                   onRoleUpdated={fetchRoles}
                   onRoleDeleted={fetchRoles}
                 />
+              </TabsContent>
+            )}
+
+            {canManageRoles && (
+              <TabsContent value="unit-pic" className="space-y-4">
+                <UnitPicManager />
               </TabsContent>
             )}
           </Tabs>

@@ -178,6 +178,25 @@ export default function SuratPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [detailSurat, setDetailSurat] = useState<Surat | null>(null)
 
+
+  // Filtered units based on user role (Hybrid Approach)
+  const filteredUnits = useMemo(() => {
+    if (!user) return []
+    
+    // Admin and PENGURUS can see all units
+    if (user.role === "semua" || user.role === "PENGURUS") {
+      return units
+    }
+    
+    // Other users can only see their own unit (case-insensitive matching)
+    const matchingUnit = units.find(unit => unit.toLowerCase() === user.role.toLowerCase())
+    if (matchingUnit) {
+      return [matchingUnit]
+    }
+    
+    return []
+  }, [units, user])
+
   // FX Notifications state
   const [fxNotifications, setFxNotifications] = useState<FXNotification[]>([])
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
@@ -896,13 +915,23 @@ export default function SuratPage() {
   const resetForm = (refBil?: number) => {
     const referenceValue = refBil !== undefined ? refBil.toString() : (referenceBil ? referenceBil.toString() : "")
 
+    // Auto-set unit based on user role for non-admin users (case-insensitive matching)
+    let defaultUnit = ""
+    if (user?.role && user.role !== "semua" && user.role !== "PENGURUS") {
+      // Find matching unit with case-insensitive comparison
+      const matchingUnit = units.find(unit => unit.toLowerCase() === user.role.toLowerCase())
+      if (matchingUnit) {
+        defaultUnit = matchingUnit
+      }
+    }
+
     setFormData({
       bil: getNextBilValue(),
       daripadaKepada: "",
       tarikh: formatDateToInput(getCurrentDateFormatted()),
       perkara: "",
       kategori: "MASUK",
-      unit: user?.role !== "semua" && user?.role !== "PENGURUS" ? user?.role : "",
+      unit: defaultUnit,
       fail: "",
       tindakanPic: "",
       status: "BELUM PROSES",
@@ -1861,7 +1890,6 @@ export default function SuratPage() {
                           <Select
                             value={formData.unit}
                             onValueChange={(value) => handleSelectChange("unit", value)}
-                            disabled={user?.role !== "semua" && user?.role !== "PENGURUS"}
                           >
                             <SelectTrigger
                               className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.unit ? "border-red-500" : ""}`}
@@ -1869,8 +1897,8 @@ export default function SuratPage() {
                               <SelectValue placeholder="Pilih unit" />
                             </SelectTrigger>
                             <SelectContent>
-                              {units.length > 0 ? (
-                                units.map((unit) => (
+                              {filteredUnits.length > 0 ? (
+                                filteredUnits.map((unit) => (
                                   <SelectItem key={unit} value={unit || "unknown"}>
                                     {unit || "Unknown"}
                                   </SelectItem>

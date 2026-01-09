@@ -247,16 +247,35 @@ export async function deleteRole(roleId: string): Promise<void> {
 }
 
 /**
- * Get user permissions by user ID
+ * Get user permissions by user ID or username
  */
-export async function getUserPermissions(userId: string): Promise<Permission[]> {
+export async function getUserPermissions(userIdOrUsername: string): Promise<Permission[]> {
   try {
-    // First get user's role_id
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', userId)
-      .single()
+    // Try to determine if input is UUID or username
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrUsername)
+    
+    // Get user's role_id - try by id first if UUID, otherwise by username
+    let user
+    let userError
+    
+    if (isUUID) {
+      const result = await supabase
+        .from('users')
+        .select('role_id')
+        .eq('id', userIdOrUsername)
+        .single()
+      user = result.data
+      userError = result.error
+    } else {
+      // Lookup by username
+      const result = await supabase
+        .from('users')
+        .select('role_id')
+        .eq('username', userIdOrUsername)
+        .single()
+      user = result.data
+      userError = result.error
+    }
 
     if (userError || !user?.role_id) {
       console.error('Error fetching user or no role_id:', userError)

@@ -42,8 +42,11 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
   })
 
   useEffect(() => {
-    fetchRoles()
-  }, [])
+    // Fetch roles when dialog opens
+    if (open) {
+      fetchRoles()
+    }
+  }, [open])
 
   useEffect(() => {
     if (user) {

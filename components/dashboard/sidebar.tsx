@@ -25,42 +25,42 @@ const navigation: NavigationItem[] = [
     href: "/dashboard",
     icon: Home,
     requiredPermission: { resource: 'dashboard', action: 'view' },
-    legacyRoles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
   },
   {
     name: "Surat",
     href: "/dashboard/surat",
     icon: FileText,
     requiredPermission: { resource: 'surat', action: 'view' },
-    legacyRoles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
   {
     name: "Bayaran",
     href: "/dashboard/bayaran",
     icon: CreditCard,
     requiredPermission: { resource: 'bayaran', action: 'view' },
-    legacyRoles: ["semua", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
+    legacyRoles: ["semua", "Super Admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
   },
   {
     name: "Statistik",
     href: "/dashboard/statistik",
     icon: BarChart3,
     requiredPermission: { resource: 'statistik', action: 'view' },
-    legacyRoles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "PEMASARAN", "PERANCANG", "MSPO"],
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "PEMASARAN", "PERANCANG", "MSPO"],
   },
   {
     name: "Pengguna",
     href: "/dashboard/pengguna",
     icon: Users,
     requiredPermission: { resource: 'pengguna', action: 'view' },
-    legacyRoles: ["semua", "admin"]
+    legacyRoles: ["semua", "Super Admin", "admin"]
   },
   {
     name: "Tetapan",
     href: "/dashboard/tetapan",
     icon: Settings,
     requiredPermission: { resource: 'tetapan', action: 'view' },
-    legacyRoles: ["semua", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
 ]
 

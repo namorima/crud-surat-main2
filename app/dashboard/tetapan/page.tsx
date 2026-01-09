@@ -83,11 +83,22 @@ export default function TetapanPage() {
   // Permission checks
   const canEditTetapan = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'tetapan', action: 'edit' })
-    : (user?.role === "semua")
+    : (user?.role === "semua" || user?.role === "Super Admin")
   
+  // Check if user can view all units
+  // If user has permissions, check RBAC. Otherwise, check legacy role.
   const canViewAll = user?.permissions && user.permissions.length > 0
-    ? hasPermission(user.permissions, { resource: 'tetapan', action: 'view' })
-    : (user?.role === "semua")
+    ? hasPermission(user.permissions, { resource: 'tetapan', action: 'manage_all_units' })
+    : (user?.role === "semua" || user?.role === "Super Admin")
+  
+  console.log('=== PERMISSION CHECK DEBUG ===')
+  console.log('User role:', user?.role)
+  console.log('Has permissions?', user?.permissions && user.permissions.length > 0)
+  console.log('Permissions array:', user?.permissions)
+  console.log('canViewAll result:', canViewAll)
+  
+  // Get user's unit - use role as unit for non-admin users
+  const userUnit = user?.role || ""
   
   const [formData, setFormData] = useState({
     part: "",
@@ -95,7 +106,7 @@ export default function TetapanPage() {
     noFail: "",
     pecahan: "",
     pecahanKecil: "",
-    unit: canViewAll ? "" : user?.role || "",
+    unit: canViewAll ? "" : userUnit,
   })
 
   // Share Link state
@@ -185,6 +196,13 @@ export default function TetapanPage() {
 
   // Filter FAIL data based on user's unit
   useEffect(() => {
+    console.log('=== FAIL FILTERING DEBUG ===')
+    console.log('User:', user)
+    console.log('User Role:', user?.role)
+    console.log('canViewAll:', canViewAll)
+    console.log('userUnit:', userUnit)
+    console.log('Total failData:', failData.length)
+    
     if (!user || failData.length === 0) {
       setFilteredFailData([])
       return
@@ -192,14 +210,18 @@ export default function TetapanPage() {
 
     // If user can view all, show all fails
     if (canViewAll) {
+      console.log('✅ Showing ALL fails (canViewAll = true)')
       setFilteredFailData(failData)
       return
     }
 
-    // Otherwise, filter by user's unit/role
-    const filtered = failData.filter((fail) => fail.unit === user.role)
+    // Otherwise, filter by user's unit
+    // For non-admin users, only show fails from their unit
+    console.log('⚠️ Filtering by unit:', userUnit)
+    const filtered = failData.filter((fail) => fail.unit === userUnit)
+    console.log('Filtered fails:', filtered.length)
     setFilteredFailData(filtered)
-  }, [failData, user])
+  }, [failData, user, canViewAll, userUnit])
 
   const handleSave = () => {
     setLoading(true)
@@ -230,7 +252,7 @@ export default function TetapanPage() {
       noFail: "",
       pecahan: "",
       pecahanKecil: "",
-      unit: canViewAll ? "" : user?.role || "",
+      unit: canViewAll ? "" : userUnit,
     })
   }
 
@@ -694,7 +716,7 @@ export default function TetapanPage() {
                             <Label htmlFor="edit-unit">
                               Unit <span className="text-red-500">*</span>
                             </Label>
-                            {canEditTetapan ? (
+                            {canViewAll ? (
                               <>
                                 <Select
                                   value={formData.unit}

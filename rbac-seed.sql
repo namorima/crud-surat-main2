@@ -32,6 +32,7 @@ INSERT INTO permissions (resource, action, display_name, description) VALUES
 -- Tetapan permissions
 ('tetapan', 'view', 'Lihat Tetapan', 'Boleh melihat tetapan'),
 ('tetapan', 'edit', 'Edit Tetapan', 'Boleh mengedit tetapan'),
+('tetapan', 'manage_all_units', 'Urus Semua Unit', 'Boleh melihat dan mengurus fail dari semua unit'),
 
 -- Dashboard permissions
 ('dashboard', 'view', 'Lihat Dashboard', 'Boleh melihat dashboard utama')
