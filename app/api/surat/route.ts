@@ -16,10 +16,10 @@ export async function GET() {
 
     // Ensure we're returning an array even if the API returns null or undefined
     return NextResponse.json(Array.isArray(data) ? data : [])
-  } catch (error) {
-    console.error("Error fetching surat data:", error)
+  } catch (error: any) {
+    console.error("Error fetching data:", error)
     return NextResponse.json(
-      { error: "Failed to fetch data from Supabase", details: error.message },
+      { error: "Failed to fetch data from Supabase", details: error?.message || String(error) },
       { status: 500 },
     )
   }
@@ -34,15 +34,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unit, Tindakan PIC, and Status are required fields" }, { status: 400 })
     }
 
-    // Get all existing data to determine the next row index
-    const existingData = await getAllSurat()
-    const rowIndex = existingData.length > 0 ? existingData.length : 0
-
-    await addSurat(rowIndex, body)
-    return NextResponse.json({ success: true })
-  } catch (error) {
+    // addSurat will now return the database-generated BIL
+    // No need to calculate next BIL manually - database sequence handles it
+    const generatedBil = await addSurat(0, body) // rowIndex not used anymore
+    
+    return NextResponse.json({ success: true, bil: generatedBil })
+  } catch (error: any) {
     console.error("Error adding surat:", error)
-    return NextResponse.json({ error: "Failed to add data", details: error.message }, { status: 500 })
+    return NextResponse.json({ error: "Failed to add data", details: error?.message || String(error) }, { status: 500 })
   }
 }
 
@@ -58,25 +57,36 @@ export async function PUT(request: NextRequest) {
 
     await updateSurat(rowIndex, data)
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating surat:", error)
-    return NextResponse.json({ error: "Failed to update data", details: error.message }, { status: 500 })
+    return NextResponse.json({ error: "Failed to update data", details: error?.message || String(error) }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const rowIndex = Number.parseInt(searchParams.get("rowIndex") || "0", 10)
+    const rowIndexParam = searchParams.get("rowIndex")
+    
+    console.log("DELETE request received")
+    console.log("rowIndex param:", rowIndexParam)
+    
+    const rowIndex = Number.parseInt(rowIndexParam || "0", 10)
+    
+    console.log("Parsed rowIndex:", rowIndex)
 
     if (isNaN(rowIndex)) {
+      console.error("Invalid rowIndex - NaN")
       return NextResponse.json({ error: "Invalid row index" }, { status: 400 })
     }
 
+    console.log("Calling deleteSurat with bil:", rowIndex)
     await deleteSurat(rowIndex)
+    console.log("deleteSurat completed successfully")
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting surat:", error)
-    return NextResponse.json({ error: "Failed to delete data", details: error.message }, { status: 500 })
+    console.error("Error stack:", error?.stack)
+    return NextResponse.json({ error: "Failed to delete data", details: error?.message || String(error) }, { status: 500 })
   }
 }

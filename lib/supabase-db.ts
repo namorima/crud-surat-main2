@@ -7,6 +7,46 @@ import type { ShareLink } from "@/types/share-link"
 
 // ===== SURAT FUNCTIONS =====
 
+// Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD for database storage
+function formatDateToDB(dateString: string | null): string | null {
+  if (!dateString) return null
+  try {
+    // If already in YYYY-MM-DD format, return as is
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString
+    }
+    // If in DD/MM/YYYY format, convert to YYYY-MM-DD
+    if (dateString.includes("/")) {
+      const [day, month, year] = dateString.split("/")
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+    }
+    return dateString
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return null
+  }
+}
+
+// Helper function to convert date from YYYY-MM-DD to DD/MM/YYYY for display
+function formatDateFromDB(dateString: string | null): string {
+  if (!dateString) return ""
+  try {
+    // If already in DD/MM/YYYY format, return as is
+    if (dateString.includes("/")) {
+      return dateString
+    }
+    // If in YYYY-MM-DD format, convert to DD/MM/YYYY
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split("-")
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`
+    }
+    return dateString
+  } catch (error) {
+    console.error("Error formatting date from DB:", error)
+    return dateString || ""
+  }
+}
+
 export async function getAllSurat(): Promise<Surat[]> {
   try {
     const { data, error } = await supabaseAdmin
@@ -21,14 +61,14 @@ export async function getAllSurat(): Promise<Surat[]> {
         id: row.id,
         bil: row.bil,
         daripadaKepada: row.daripada_kepada,
-        tarikh: row.tarikh,
+        tarikh: formatDateFromDB(row.tarikh),
         perkara: row.perkara,
         kategori: row.kategori,
         unit: row.unit,
         fail: row.fail || "",
         tindakanPic: row.tindakan_pic || "",
         status: row.status as "BELUM PROSES" | "HOLD / KIV" | "DALAM TINDAKAN" | "SELESAI" | "BATAL",
-        tarikhSelesai: row.tarikh_selesai || null,
+        tarikhSelesai: formatDateFromDB(row.tarikh_selesai),
         nota: row.nota || "",
         komen: row.komen || "",
         reference: row.reference || "",
@@ -40,25 +80,31 @@ export async function getAllSurat(): Promise<Surat[]> {
   }
 }
 
-export async function addSurat(rowIndex: number, surat: Omit<Surat, "id">): Promise<void> {
+export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil">): Promise<number> {
   try {
-    const { error } = await supabaseAdmin.from("surat").insert({
-      bil: surat.bil,
+    // Let database auto-generate BIL using sequence
+    // Don't pass bil in insert - it will use DEFAULT nextval('surat_bil_seq')
+    const { data, error } = await supabaseAdmin.from("surat").insert({
       daripada_kepada: surat.daripadaKepada,
-      tarikh: surat.tarikh,
+      tarikh: formatDateToDB(surat.tarikh),
       perkara: surat.perkara,
       kategori: surat.kategori,
       unit: surat.unit,
       fail: surat.fail || null,
       tindakan_pic: surat.tindakanPic || null,
       status: surat.status,
-      tarikh_selesai: surat.tarikhSelesai || null,
+      tarikh_selesai: formatDateToDB(surat.tarikhSelesai),
       nota: surat.nota || null,
       komen: surat.komen || null,
       reference: surat.reference || null,
     })
+    .select('bil')
+    .single()
 
     if (error) throw error
+    
+    // Return the generated BIL
+    return data.bil
   } catch (error: any) {
     console.error("Error adding surat to Supabase:", error)
     throw new Error(`Failed to add surat to Supabase: ${error.message}`)
@@ -83,14 +129,14 @@ export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): 
       .update({
         bil: surat.bil,
         daripada_kepada: surat.daripadaKepada,
-        tarikh: surat.tarikh,
+        tarikh: formatDateToDB(surat.tarikh),
         perkara: surat.perkara,
         kategori: surat.kategori,
         unit: surat.unit,
         fail: surat.fail || null,
         tindakan_pic: surat.tindakanPic || null,
         status: surat.status,
-        tarikh_selesai: surat.tarikhSelesai || null,
+        tarikh_selesai: formatDateToDB(surat.tarikhSelesai),
         nota: surat.nota || null,
         komen: surat.komen || null,
         reference: surat.reference || null,
@@ -106,23 +152,38 @@ export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): 
 
 export async function deleteSurat(bilNumber: number): Promise<void> {
   try {
-    // Find surat by bil number instead of array index
+    console.log(`Attempting to delete surat with bil: ${bilNumber}`)
+    
+    // Use maybeSingle() instead of single() to handle potential duplicates
     const { data: existingSurat, error: fetchError } = await supabaseAdmin
       .from("surat")
       .select("id")
       .eq("bil", bilNumber)
-      .single()
+      .maybeSingle()
 
-    if (fetchError || !existingSurat) {
+    if (fetchError) {
+      console.error(`Error fetching surat with bil ${bilNumber}:`, fetchError)
+      throw new Error(`Error finding surat with bil ${bilNumber}: ${fetchError.message || JSON.stringify(fetchError)}`)
+    }
+
+    if (!existingSurat) {
       throw new Error(`Surat with bil ${bilNumber} not found`)
     }
 
+    console.log(`Found surat with id: ${existingSurat.id}, proceeding with deletion`)
+
     const { error } = await supabaseAdmin.from("surat").delete().eq("id", existingSurat.id)
 
-    if (error) throw error
+    if (error) {
+      console.error(`Error deleting surat with id ${existingSurat.id}:`, error)
+      throw error
+    }
+
+    console.log(`Successfully deleted surat with bil ${bilNumber}`)
   } catch (error: any) {
     console.error("Error deleting surat from Supabase:", error)
-    throw new Error(`Failed to delete surat from Supabase: ${error.message}`)
+    const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error))
+    throw new Error(`Failed to delete surat from Supabase: ${errorMessage}`)
   }
 }
 
@@ -295,17 +356,6 @@ export async function getDaripadaKepadaValues() {
 }
 
 // ===== BAYARAN FUNCTIONS =====
-
-// Helper function to convert date from YYYY-MM-DD to DD/MM/YYYY
-function formatDateFromDB(dateString: string | null): string {
-  if (!dateString) return ""
-  try {
-    const [year, month, day] = dateString.split("-")
-    return `${day}/${month}/${year}`
-  } catch (error) {
-    return dateString || ""
-  }
-}
 
 export async function getAllBayaran(): Promise<Bayaran[]> {
   try {
