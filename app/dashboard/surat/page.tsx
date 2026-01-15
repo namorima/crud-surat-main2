@@ -594,7 +594,9 @@ export default function SuratPage() {
 
     // Filter by user role/unit if not admin or pengurus
     if (user && user.role !== "semua" && user.role !== "PENGURUS") {
-      filtered = filtered.filter((item) => item.unit === user.role)
+      filtered = filtered.filter((item) => 
+        item.unit.toLowerCase().trim() === user.role.toLowerCase().trim()
+      )
     }
 
     // Apply search filter
