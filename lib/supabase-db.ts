@@ -464,16 +464,8 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
   }
 }
 
-export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
+export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
   try {
-    // Get all bayaran to find the one at the given index
-    const allBayaran = await getAllBayaran()
-    const targetBayaran = allBayaran[rowIndex]
-
-    if (!targetBayaran) {
-      throw new Error(`Bayaran at index ${rowIndex} not found`)
-    }
-
     // Get contractor name from kontrak table
     let namaKontraktor = ""
     if (bayaran.noKontrak) {
@@ -491,30 +483,30 @@ export async function updateBayaran(rowIndex: number, bayaran: Omit<Bayaran, "id
       .from("bayaran")
       .update({
         daripada: bayaran.daripada,
-        tarikh_terima: bayaran.tarikhTerima,
+        tarikh_terima: formatDateToDB(bayaran.tarikhTerima),
         perkara: bayaran.perkara,
         nilai_bayaran: bayaran.nilaiBayaran,
         bayaran_ke: bayaran.bayaranKe || null,
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
         nama_kontraktor: namaKontraktor || null,
-        tarikh_memo_ladang: bayaran.tarikhMemoLadang || null,
+        tarikh_memo_ladang: formatDateToDB(bayaran.tarikhMemoLadang),
         status_ladang: bayaran.statusLadang || null,
-        tarikh_hantar: bayaran.tarikhHantar || null,
-        tarikh_ppnp: bayaran.tarikhPpnP || null,
-        tarikh_pn: bayaran.tarikhPn || null,
+        tarikh_hantar: formatDateToDB(bayaran.tarikhHantar),
+        tarikh_ppnp: formatDateToDB(bayaran.tarikhPpnP),
+        tarikh_pn: formatDateToDB(bayaran.tarikhPn),
         penerima: bayaran.penerima || null,
         status_bayaran: bayaran.statusBayaran || null,
-        tarikh_bayar: bayaran.tarikhBayar || null,
+        tarikh_bayar: formatDateToDB(bayaran.tarikhBayar),
         nombor_baucer: bayaran.nomborBaucer || null,
         nota_kaki: bayaran.notaKaki || null,
       })
-      .eq("id", targetBayaran.id)
+      .eq("id", id)
 
     if (error) throw error
 
     await addAuditLog({
-      bayaranId: targetBayaran.id,
+      bayaranId: id,
       user: user,
       action: "UPDATE",
       details: `Rekod bayaran dikemaskini`,
@@ -622,19 +614,29 @@ export async function getPenerimaData() {
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("name, type")
+      .select(`
+        name, 
+        type,
+        role_id,
+        roles (
+          name
+        )
+      `)
       .eq("type", "PENERIMA")
       .order("name")
 
     if (error) throw error
 
     return (
-      data?.map((row) => ({
-        unit: "", // Not available in users table
-        name: row.name,
-        display: row.name,
-        defaultStatus: "",
-      })) || []
+      data?.map((row: any) => {
+        const roleName = row.roles?.name || row.type || ""
+        return {
+          unit: roleName,
+          name: row.name,
+          display: `${row.name} (${roleName})`,
+          defaultStatus: "",
+        }
+      }) || []
     )
   } catch (error: any) {
     console.error("Error fetching penerima data from Supabase:", error)

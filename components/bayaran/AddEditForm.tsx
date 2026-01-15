@@ -82,7 +82,7 @@ export function AddEditForm({
     <Dialog open={showAddDialog || showEditDialog} onOpenChange={isEdit ? setShowEditDialog : setShowAddDialog}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? `Edit Rekod Bayaran #${editingBayaran?.id}` : "Tambah Rekod Bayaran"}</DialogTitle>
+          <DialogTitle>{isEdit ? `Edit Rekod Bayaran #${editingBayaran?.ids || editingBayaran?.id}` : "Tambah Rekod Bayaran"}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column */}
@@ -446,7 +446,9 @@ export function AddEditForm({
                           className="w-full justify-between bg-transparent"
                           disabled={user?.role === "KEWANGAN" && isEdit}
                         >
-                          {formData.penerima || "Pilih nama penerima..."}
+                          {formData.penerima 
+                            ? filteredPenerimaData.find(item => item.name === formData.penerima)?.display || formData.penerima
+                            : "Pilih nama penerima..."}
                           <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -475,8 +477,7 @@ export function AddEditForm({
                                   }}
                                 >
                                   <div className="flex flex-col">
-                                    <span className="font-medium">{item.name}</span>
-                                    <span className="text-xs text-muted-foreground">({item.unit})</span>
+                                    <span className="font-medium">{item.display}</span>
                                     {item.defaultStatus && (
                                       <span className="text-xs text-blue-600">Default: {item.defaultStatus}</span>
                                     )}

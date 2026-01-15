@@ -24,18 +24,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Validate input using Zod
     const validatedData = BayaranSchema.parse(bayaranData)
 
-    // Get current data to find the row index
-    const allBayaran = await getAllBayaran()
-    const rowIndex = allBayaran.findIndex((item) => item.id === id)
-
-    if (rowIndex === -1) {
-      return NextResponse.json({ error: "Bayaran record not found" }, { status: 404 })
-    }
-
     // Convert date format if needed (from YYYY-MM-DD to DD/MM/YYYY)
     const formattedData = {
       ...validatedData,
-      id: id, // Keep the original ID
+      namaKontraktor: "", // Will be auto-populated by updateBayaran from kontrak table
       tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
       tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
       tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",
@@ -44,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       tarikhPn: validatedData.tarikhPn ? formatDateForSheet(validatedData.tarikhPn) : "",
     }
 
-    await updateBayaran(rowIndex, formattedData, user || "Unknown")
+    await updateBayaran(id, formattedData, user || "Unknown")
     return NextResponse.json({ success: true, message: "Bayaran record updated successfully" })
   } catch (error) {
     if (error instanceof z.ZodError) {
