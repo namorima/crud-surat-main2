@@ -72,13 +72,10 @@ export function Sidebar() {
 
   // Filter navigation based on user permissions or legacy role
   const filteredNavigation = navigation.filter((item) => {
-    // Block VIEW and PENERIMA types from accessing Surat and Tetapan
-    if (user?.type && (user.type === "VIEW" || user.type === "PENERIMA")) {
-      if (item.name === "Surat" || item.name === "Tetapan") {
-        return false
-      }
-    }
-
+    // REMOVED: Blanket block for VIEW and PENERIMA types
+    // Now allowing RBAC permission check to determine access for these user types
+    // Previously blocked these users unconditionally from Surat and Tetapan
+    
     // Check RBAC permissions first
     if (user?.permissions && user.permissions.length > 0) {
       return hasPermission(user.permissions, item.requiredPermission)

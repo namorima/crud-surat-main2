@@ -97,7 +97,7 @@ export function AddEditForm({
                     role="combobox"
                     aria-expanded={showDaripadaDropdown}
                     className="w-full justify-between bg-transparent"
-                    disabled={user?.role === "KEWANGAN" && isEdit}
+                    disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                   >
                     {formData.daripada || "Pilih atau taip nama/organisasi..."}
                     <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -109,7 +109,7 @@ export function AddEditForm({
                       placeholder="Cari atau taip nama..."
                       value={formData.daripada}
                       onValueChange={handleDaripadaChange}
-                      disabled={user?.role === "KEWANGAN" && isEdit}
+                      disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                     <CommandList>
                       <CommandEmpty>
@@ -122,7 +122,7 @@ export function AddEditForm({
                               setShowDaripadaDropdown(false)
                             }}
                             className="w-full"
-                            disabled={user?.role === "KEWANGAN" && isEdit}
+                            disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                           >
                             Gunakan "{formData.daripada}"
                           </Button>
@@ -155,7 +155,7 @@ export function AddEditForm({
                 type="date"
                 value={formData.tarikhTerima}
                 onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhTerima: e.target.value }))}
-                disabled={user?.role === "KEWANGAN" && isEdit}
+                disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
               />
             </div>
 
@@ -166,7 +166,7 @@ export function AddEditForm({
                 value={formData.perkara}
                 onChange={(e) => setFormData((prev: any) => ({ ...prev, perkara: e.target.value }))}
                 rows={3}
-                disabled={user?.role === "KEWANGAN" && isEdit}
+                disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
               />
             </div>
 
@@ -180,7 +180,7 @@ export function AddEditForm({
                   value={formatCurrencyInput(formData.nilaiBayaran)}
                   onChange={handleCurrencyInputChange}
                   placeholder="0.00"
-                  disabled={user?.role === "KEWANGAN" && isEdit}
+                  disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                 />
               </div>
               <div className="flex-[0.3]">
@@ -189,7 +189,7 @@ export function AddEditForm({
                   id="bayaranKe"
                   value={formData.bayaranKe}
                   onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
-                  disabled={user?.role === "KEWANGAN" && isEdit}
+                  disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                 />
               </div>
             </div>
@@ -201,7 +201,7 @@ export function AddEditForm({
                 <Select
                   value={formData.noKontrak}
                   onValueChange={handleKontrakChange}
-                  disabled={!formData.daripada || (user?.role === "KEWANGAN" && isEdit)}
+                  disabled={!formData.daripada || ((user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih no kontrak" />
@@ -220,7 +220,7 @@ export function AddEditForm({
                 <Select
                   value={formData.kategori}
                   onValueChange={(value) => setFormData((prev: any) => ({ ...prev, kategori: value }))}
-                  disabled={!formData.daripada || !formData.noKontrak || (user?.role === "KEWANGAN" && isEdit)}
+                  disabled={!formData.daripada || !formData.noKontrak || ((user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih kategori" />
@@ -255,7 +255,7 @@ export function AddEditForm({
               <Select
                 value={formData.noKontrak}
                 onValueChange={handleKontrakChange}
-                disabled={!formData.daripada || (user?.role === "KEWANGAN" && isEdit)}
+                disabled={!formData.daripada || ((user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih no kontrak" />
@@ -275,7 +275,7 @@ export function AddEditForm({
               <Select
                 value={formData.kategori}
                 onValueChange={(value) => setFormData((prev: any) => ({ ...prev, kategori: value }))}
-                disabled={!formData.daripada || !formData.noKontrak || (user?.role === "KEWANGAN" && isEdit)}
+                disabled={!formData.daripada || !formData.noKontrak || ((user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kategori" />
@@ -312,7 +312,7 @@ export function AddEditForm({
               <Select
                 value={formData.statusLadang}
                 onValueChange={(value) => setFormData((prev: any) => ({ ...prev, statusLadang: value }))}
-                disabled={user?.role === "KEWANGAN" && isEdit}
+                disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih status ladang" />
@@ -356,7 +356,7 @@ export function AddEditForm({
                     }),
                   }))
                 }
-                disabled={user?.role === "KEWANGAN" && isEdit}
+                disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
               />
             </div>
 
@@ -371,7 +371,7 @@ export function AddEditForm({
                       type="date"
                       value={formData.tarikhPpnP}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhPpnP: e.target.value }))}
-                      disabled={user?.role === "KEWANGAN" && isEdit}
+                      disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
                   <div className="flex-1">
@@ -380,7 +380,7 @@ export function AddEditForm({
                       type="date"
                       value={formData.tarikhPn}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhPn: e.target.value }))}
-                      disabled={user?.role === "KEWANGAN" && isEdit}
+                      disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
                 </div>
@@ -403,7 +403,7 @@ export function AddEditForm({
                         }),
                       }))
                     }
-                    disabled={user?.role === "KEWANGAN" && isEdit}
+                    disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                   />
                 </div>
               </>
@@ -432,7 +432,7 @@ export function AddEditForm({
                           }),
                         }))
                       }
-                      disabled={user?.role === "KEWANGAN" && isEdit}
+                      disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
                   <div className="flex-1">
@@ -444,7 +444,7 @@ export function AddEditForm({
                           role="combobox"
                           aria-expanded={showPenerimaDropdown}
                           className="w-full justify-between bg-transparent"
-                          disabled={user?.role === "KEWANGAN" && isEdit}
+                          disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                         >
                           {formData.penerima 
                             ? filteredPenerimaData.find(item => item.name === formData.penerima)?.display || formData.penerima
@@ -458,7 +458,7 @@ export function AddEditForm({
                             placeholder="Cari nama penerima..."
                             value={formData.penerima}
                             onValueChange={handlePenerimaChange}
-                            disabled={user?.role === "KEWANGAN" && isEdit}
+                            disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                           />
                           <CommandList>
                             <CommandEmpty>Tiada hasil dijumpai.</CommandEmpty>
@@ -560,7 +560,7 @@ export function AddEditForm({
                 className="min-h-[80px]"
                 value={formData.notaKaki}
                 onChange={(e) => setFormData((prev: any) => ({ ...prev, notaKaki: e.target.value }))}
-                disabled={user?.role === "KEWANGAN" && isEdit}
+                disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
               />
             </div>
           </div>
