@@ -11,6 +11,9 @@ import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicat
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
+// Force dynamic rendering to avoid build errors with useSearchParams
+export const dynamic = 'force-dynamic'
+
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
