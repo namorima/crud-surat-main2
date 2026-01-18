@@ -8,15 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-
-// Force dynamic rendering to avoid build errors with useSearchParams
-export const dynamic = 'force-dynamic'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -28,13 +24,16 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     // Get token from URL hash (Supabase sends it in hash)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const accessToken = hashParams.get('access_token')
-    
-    if (accessToken) {
-      setToken(accessToken)
-    } else {
-      setError("Link reset password tidak sah atau telah tamat tempoh.")
+    // Using window.location directly to avoid useSearchParams build issues
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      
+      if (accessToken) {
+        setToken(accessToken)
+      } else {
+        setError("Link reset password tidak sah atau telah tamat tempoh.")
+      }
     }
   }, [])
 
