@@ -64,6 +64,11 @@ export default function LoginPage() {
                 required
               />
             </div>
+            <div className="flex items-center justify-end">
+              <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                Lupa Kata Laluan?
+              </a>
+            </div>
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Sedang Masuk..." : "Log Masuk"}
             </Button>

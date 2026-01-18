@@ -14,7 +14,7 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { RoleManager } from "@/components/pengguna/RoleManager"
 import { UnitPicManager } from "@/components/pengguna/UnitPicManager"
 import { UserForm } from "@/components/pengguna/UserForm"
-import { Menu, UserPlus, Edit, Trash2, Loader2 } from "lucide-react"
+import { Menu, UserPlus, Edit, Trash2, Loader2, RotateCcw } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -96,6 +96,29 @@ export default function PenggunaPage() {
     } catch (error) {
       console.error("Error deleting user:", error)
       alert("Gagal memadam pengguna")
+    }
+  }
+
+  const handleResetPassword = async (userId: string, username: string) => {
+    if (!confirm(`Reset password untuk ${username}? Password akan dikembalikan ke username dan pengguna akan dipaksa tukar password pada login seterusnya.`)) return
+
+    try {
+      const response = await fetch(`/api/auth/reset-password-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      })
+
+      if (response.ok) {
+        alert(`Password untuk ${username} telah direset. Pengguna akan dipaksa tukar password pada login seterusnya.`)
+        await fetchUsers()
+      } else {
+        const error = await response.json()
+        alert(`Gagal reset password: ${error.error || "Unknown error"}`)
+      }
+    } catch (error) {
+      console.error("Error resetting password:", error)
+      alert("Gagal reset password")
     }
   }
 
@@ -208,6 +231,16 @@ export default function PenggunaPage() {
                               onClick={() => handleEditUser(u)}
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canEditUser && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResetPassword(u.id, u.name)}
+                              title="Reset Password"
+                            >
+                              <RotateCcw className="h-4 w-4" />
                             </Button>
                           )}
                           {canDeleteUser && (

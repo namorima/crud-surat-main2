@@ -61,46 +61,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (id: string, password: string) => {
     setLoading(true)
     try {
-      // Fetch users from the API
-      const response = await fetch("/api/auth")
-      const users = await response.json()
+      // Call server-side login API to verify password (handles bcrypt & migration)
+      const loginResponse = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, password })
+      })
 
-      // Find the user with matching ID and password
-      const foundUser = users.find((u: User) => u.id === id && u.password === password)
+      if (!loginResponse.ok) {
+        const error = await loginResponse.json()
+        throw new Error(error.error || "Invalid credentials")
+      }
 
-      if (foundUser) {
-        // Fetch user permissions if they have a role_id
-        if (foundUser.role_id) {
-          try {
-            const permResponse = await fetch(`/api/auth/permissions?userId=${foundUser.id}`)
-            if (permResponse.ok) {
-              const permissions = await permResponse.json()
-              foundUser.permissions = permissions
-            }
-          } catch (permError) {
-            console.error("Error fetching permissions:", permError)
-            // Continue with login even if permissions fetch fails
-            foundUser.permissions = []
+      const foundUser = await loginResponse.json()
+
+      // Fetch user permissions if they have a role_id
+      if (foundUser.role_id) {
+        try {
+          const permResponse = await fetch(`/api/auth/permissions?userId=${foundUser.id}`)
+          if (permResponse.ok) {
+            const permissions = await permResponse.json()
+            foundUser.permissions = permissions
           }
+        } catch (permError) {
+          console.error("Error fetching permissions:", permError)
+          foundUser.permissions = []
         }
+      }
 
-        setUser(foundUser)
-        localStorage.setItem("user", JSON.stringify(foundUser))
-        
-        // Redirect based on permissions or legacy role
-        // Check if user has bayaran:view permission
-        const hasBayaranView = foundUser.permissions?.some(
-          (p: { resource: string; action: string }) => p.resource === 'bayaran' && p.action === 'view'
-        )
-        
-        // Fallback to legacy role check if no permissions
-        if (hasBayaranView || (!foundUser.permissions?.length && foundUser.role === "KEWANGAN")) {
-          router.push("/dashboard/bayaran")
-        } else {
-          router.push("/dashboard/surat")
-        }
+      setUser(foundUser)
+      localStorage.setItem("user", JSON.stringify(foundUser))
+      
+      // Check if user must change password (first-time login or forced reset)
+      if (foundUser.must_change_password) {
+        router.push("/change-password")
+        return
+      }
+      
+      // Redirect based on permissions or legacy role
+      const hasBayaranView = foundUser.permissions?.some(
+        (p: { resource: string; action: string }) => p.resource === 'bayaran' && p.action === 'view'
+      )
+      
+      if (hasBayaranView || (!foundUser.permissions?.length && foundUser.role === "KEWANGAN")) {
+        router.push("/dashboard/bayaran")
       } else {
-        throw new Error("Invalid credentials")
+        router.push("/dashboard/surat")
       }
     } catch (error) {
       console.error("Login failed:", error)

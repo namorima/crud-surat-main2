@@ -70,6 +70,10 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'viewer',
   type TEXT,
+  email TEXT,
+  is_password_changed BOOLEAN DEFAULT false,
+  must_change_password BOOLEAN DEFAULT true,
+  last_password_change TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

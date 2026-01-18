@@ -4,6 +4,7 @@ import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
 import type { Fail } from "@/types/fail"
 import type { ShareLink } from "@/types/share-link"
+import { hashPassword, isHashedPassword } from "./password"
 
 // ===== SURAT FUNCTIONS =====
 
@@ -198,11 +199,16 @@ export async function getAllUsers(): Promise<User[]> {
     return (
       data?.map((row) => ({
         id: row.username,
+        username: row.username,
         password: row.password,
         name: row.name,
         role: row.role,
         role_id: row.role_id || undefined,
         type: row.type || "",
+        email: row.email || undefined,
+        is_password_changed: row.is_password_changed || false,
+        must_change_password: row.must_change_password || false,
+        last_password_change: row.last_password_change || undefined,
       })) || []
     )
   } catch (error: any) {
@@ -226,15 +232,23 @@ export async function createUser(userData: {
       .eq("id", userData.role_id)
       .single()
 
+    // Hash password before storing
+    const plainPassword = userData.password || userData.username
+    const hashedPassword = await hashPassword(plainPassword)
+
     const { data, error } = await supabaseAdmin
       .from("users")
       .insert({
         username: userData.username,
-        password: userData.password,
+        password: hashedPassword, // Store hashed password
         name: userData.name,
         role: roleData?.name || "viewer", // Fallback for legacy role field
         role_id: userData.role_id,
         type: userData.type || null,
+        email: null, // Will be set when user changes password
+        is_password_changed: false,
+        must_change_password: true, // Force password change on first login
+        last_password_change: null,
       })
       .select()
       .single()
@@ -243,11 +257,16 @@ export async function createUser(userData: {
 
     return {
       id: data.username,
+      username: data.username,
       password: data.password,
       name: data.name,
       role: data.role,
       role_id: data.role_id,
       type: data.type || "",
+      email: data.email || undefined,
+      is_password_changed: data.is_password_changed || false,
+      must_change_password: data.must_change_password || false,
+      last_password_change: data.last_password_change || undefined,
     }
   } catch (error: any) {
     console.error("Error creating user in Supabase:", error)
@@ -272,7 +291,10 @@ export async function updateUser(
     }
 
     if (userData.password !== undefined) {
-      updateData.password = userData.password
+      // Only hash if not already hashed
+      updateData.password = isHashedPassword(userData.password)
+        ? userData.password
+        : await hashPassword(userData.password)
     }
 
     if (userData.role_id !== undefined) {
@@ -305,11 +327,16 @@ export async function updateUser(
 
     return {
       id: data.username,
+      username: data.username,
       password: data.password,
       name: data.name,
       role: data.role,
       role_id: data.role_id,
       type: data.type || "",
+      email: data.email || undefined,
+      is_password_changed: data.is_password_changed || false,
+      must_change_password: data.must_change_password || false,
+      last_password_change: data.last_password_change || undefined,
     }
   } catch (error: any) {
     console.error("Error updating user in Supabase:", error)
