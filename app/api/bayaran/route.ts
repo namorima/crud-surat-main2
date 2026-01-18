@@ -14,39 +14,86 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  let body: any
+  
   try {
-    const body = await request.json()
+    // Step 1: Parse JSON
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      console.error("JSON Parse Error:", jsonError)
+      return NextResponse.json({ 
+        error: "Invalid JSON in request body",
+        details: jsonError instanceof Error ? jsonError.message : String(jsonError)
+      }, { status: 400 })
+    }
+    
+    console.log("=== POST /api/bayaran ===")
+    console.log("Body keys:", Object.keys(body))
+    
     const { user, ...bayaranData } = body
 
-    // Validate input using Zod
-    const validatedData = BayaranSchema.parse(bayaranData)
+    // Step 2: Validate with Zod
+    let validatedData: any
+    try {
+      validatedData = BayaranSchema.parse(bayaranData)
+    } catch (zodError) {
+      if (zodError instanceof z.ZodError) {
+        console.error("Validation Error:", zodError.errors)
+        return NextResponse.json({ 
+          error: "Validation failed", 
+          details: zodError.errors 
+        }, { status: 400 })
+      }
+      throw zodError
+    }
 
-    // Convert date format if needed (from YYYY-MM-DD to DD/MM/YYYY)
+    // Step 3: Pass data directly (dates already in YYYY-MM-DD format)
     const formattedData = {
       ...validatedData,
-      namaKontraktor: "", // Will be auto-populated by supabase-db from kontrak table
-      tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
-      tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
-      tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",
-      tarikhBayar: validatedData.tarikhBayar ? formatDateForSheet(validatedData.tarikhBayar) : "",
-      tarikhPpnP: validatedData.tarikhPpnP ? formatDateForSheet(validatedData.tarikhPpnP) : "",
-      tarikhPn: validatedData.tarikhPn ? formatDateForSheet(validatedData.tarikhPn) : "",
+      namaKontraktor: "", // Will be auto-populated by supabase-db
     }
 
-    await addBayaran(formattedData, user || "Unknown")
-    return NextResponse.json({ success: true, message: "Bayaran record added successfully" })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+    // Step 4: Add to database
+    try {
+      await addBayaran(formattedData, user || "Unknown")
+    } catch (dbError) {
+      console.error("Database Error:", dbError)
+      return NextResponse.json({ 
+        error: "Database operation failed",
+        details: dbError instanceof Error ? dbError.message : String(dbError)
+      }, { status: 500 })
     }
-    console.error("Error in POST /api/bayaran:", error)
-    return NextResponse.json({ error: "Failed to add bayaran record" }, { status: 500 })
+    
+    return NextResponse.json({ success: true, message: "Bayaran record added successfully" })
+    
+  } catch (error) {
+    console.error("=== Unexpected Error ===")
+    console.error("Error:", error)
+    console.error("Type:", error?.constructor?.name)
+    console.error("Message:", error instanceof Error ? error.message : String(error))
+    console.error("Stack:", error instanceof Error ? error.stack : "N/A")
+    
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : String(error),
+      type: error?.constructor?.name || "Unknown"
+    }, { status: 500 })
   }
 }
 
 // Helper function to format date from YYYY-MM-DD to DD/MM/YYYY
 function formatDateForSheet(dateString: string): string {
   if (!dateString) return ""
-  const [year, month, day] = dateString.split("-")
-  return `${day}/${month}/${year}`
+  try {
+    const [year, month, day] = dateString.split("-")
+    if (!year || !month || !day) {
+      console.warn("Invalid date format:", dateString)
+      return ""
+    }
+    return `${day}/${month}/${year}`
+  } catch (error) {
+    console.error("Date formatting error:", error, "for date:", dateString)
+    return ""
+  }
 }
