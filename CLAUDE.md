@@ -138,8 +138,8 @@ Located in `types/` directory:
 3. **Legacy Role Access Matrix**
    - `semua`, `Super Admin`, `admin` - Full access to all pages
    - `KEWANGAN` - Bayaran page only
-   - `PERLADANGAN`, `PENGURUS` - Dashboard, Surat, Bayaran, Statistik, Tetapan
-   - `PEMASARAN`, `PERANCANG`, `MSPO` - Surat, Statistik, Tetapan (NO Dashboard, NO Bayaran)
+   - `PERLADANGAN`, `PENGURUS` - Dashboard, Surat, Bayaran, Tetapan
+   - `PEMASARAN`, `PERANCANG`, `MSPO` - Dashboard (Surat analysis only), Surat, Tetapan (NO Bayaran)
    - `VIEW` type users - Filtered access based on RBAC permissions
    - `PENERIMA` type users - Filtered access based on RBAC permissions
 
@@ -147,7 +147,7 @@ Located in `types/` directory:
    - Dashboard: `{ resource: 'dashboard', action: 'view' }`
    - Surat: `{ resource: 'surat', action: 'view' }`
    - Bayaran: `{ resource: 'bayaran', action: 'view' }`
-   - Statistik: `{ resource: 'statistik', action: 'view' }`
+   - Dashboard also opens for `{ resource: 'statistik', action: 'view' }` (Statistik was merged into Dashboard; `/dashboard/statistik` redirects)
    - Pengguna: `{ resource: 'pengguna', action: 'view' }`
    - Tetapan: `{ resource: 'tetapan', action: 'view' }`
 
@@ -206,7 +206,7 @@ Located in `types/` directory:
 - **Forms**: React Hook Form with Zod validation ([types/bayaran-schema.ts](types/bayaran-schema.ts))
 - **State Management**: React Context for authentication
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
-- **Charts**: Recharts for statistics ([app/dashboard/statistik/page.tsx](app/dashboard/statistik/page.tsx))
+- **Charts**: Recharts + HTML bar lists on the Dashboard ([components/dashboard/charts.tsx](components/dashboard/charts.tsx)); chart colours are `--viz-*` tokens in [app/globals.css](app/globals.css)
 - **Notifications**: Sonner toast notifications ([hooks/use-toast.ts](hooks/use-toast.ts))
 
 ## Environment Setup
@@ -562,9 +562,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 ### Dashboard Pages
 
-1. **Main Dashboard** ([app/dashboard/page.tsx](app/dashboard/page.tsx))
-   - Overview statistics
-   - Quick access to recent letters and payments
+1. **Main Dashboard** ([app/dashboard/page.tsx](app/dashboard/page.tsx)) - Dashboard and Statistik in one page
+   - Bayaran / Surat toggle (each shown only with that page's permission) and a period filter (12 bulan, tahun ini, semua)
+   - Bayaran: KPIs, monthly paid vs unpaid value, process funnel, unpaid ageing, value by kawasan/kategori/kontraktor, unpaid by penerima, status
+   - Surat: KPIs, monthly masuk vs keluar, status, open-letter ageing, open letters by PIC, by unit
+   - Aggregations are pure functions in [lib/dashboard-stats.ts](lib/dashboard-stats.ts)
 
 2. **Surat (Letters)** ([app/dashboard/surat/page.tsx](app/dashboard/surat/page.tsx))
    - Full CRUD operations
@@ -578,18 +580,13 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - Audit trail
    - Export functionality
 
-4. **Statistik (Statistics)** ([app/dashboard/statistik/page.tsx](app/dashboard/statistik/page.tsx))
-   - Charts and graphs
-   - Data visualization
-   - Reporting
-
-5. **Pengguna (Users)** ([app/dashboard/pengguna/page.tsx](app/dashboard/pengguna/page.tsx))
+4. **Pengguna (Users)** ([app/dashboard/pengguna/page.tsx](app/dashboard/pengguna/page.tsx))
    - User management
    - Role assignment
    - Permission management
    - PIC mapping
 
-6. **Tetapan (Settings)** ([app/dashboard/tetapan/page.tsx](app/dashboard/tetapan/page.tsx))
+5. **Tetapan (Settings)** ([app/dashboard/tetapan/page.tsx](app/dashboard/tetapan/page.tsx))
    - Status configuration
    - Unit PIC management
    - Fail/file setup
