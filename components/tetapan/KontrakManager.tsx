@@ -8,6 +8,7 @@ import type { Kontrak, KontrakInput } from "@/types/kontrak"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Dialog,
@@ -41,6 +42,7 @@ const EMPTY: KontrakInput = {
   tarikhMula: "",
   tarikhAkhir: "",
   jenisKerja: "",
+  kerja: "",
 }
 
 /** Radix Select cannot hold "", so an unset optional field uses this value. */
@@ -110,7 +112,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     const q = query.trim().toLowerCase()
     if (!q) return items
     return items.filter((item) =>
-      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.jenisKerja, String(item.tahunKontrak ?? "")].some(
+      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? "")].some(
         (value) => value.toLowerCase().includes(q),
       ),
     )
@@ -132,11 +134,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       tarikhMula: item.tarikhMula,
       tarikhAkhir: item.tarikhAkhir,
       jenisKerja: item.jenisKerja,
+      kerja: item.kerja,
     })
     setFormOpen(true)
   }
 
-  const setField = (field: keyof KontrakInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (field: keyof KontrakInput) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
   const save = async (e: React.FormEvent) => {
@@ -227,7 +230,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari kawasan, no kontrak, kontraktor, jenis kerja atau tahun…"
+            placeholder="Cari no kontrak, kerja, kontraktor, kawasan atau tahun…"
             className="pl-8"
             aria-label="Cari kontrak"
           />
@@ -244,19 +247,24 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </p>
         ) : (
           <>
-            {/* Tablet and desktop */}
-            <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
+            {/* Desktop only: with the sidebar, the table needs ~1000px */}
+            <div className="hidden overflow-hidden rounded-2xl border border-border-table xl:block">
               <div className="max-h-[60dvh] overflow-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
-                      <th>Kawasan</th>
-                      <th>No Kontrak</th>
+                      <th>
+                        No Kontrak
+                        <span className="block text-caption-1-regular">Kawasan</span>
+                      </th>
+                      <th className="min-w-[200px]">Kerja</th>
                       <th>Kategori</th>
                       <th>Nama Kontraktor</th>
                       <th>Jenis Kerja</th>
-                      <th>Tempoh</th>
-                      <th>Tahun</th>
+                      <th>
+                        Tempoh
+                        <span className="block text-caption-1-regular">Tahun</span>
+                      </th>
                       {canEdit && (
                         <th className="w-[56px]">
                           <span className="sr-only">Tindakan</span>
@@ -267,8 +275,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                   <tbody>
                     {filtered.map((item) => (
                       <tr key={item.id} className="hover:bg-background-secondary-default">
-                        <td className="text-text-secondary">{item.kawasan}</td>
-                        <td className="text-body-semibold">{item.noKontrak}</td>
+                        <td>
+                          <span className="block text-body-semibold">{item.noKontrak}</span>
+                          <span className="block text-caption-1-regular text-text-tertiary">{item.kawasan}</span>
+                        </td>
+                        <td className="max-w-[320px]">
+                          {item.kerja ? (
+                            <span className="line-clamp-2" title={item.kerja}>
+                              {item.kerja}
+                            </span>
+                          ) : (
+                            <span className="text-text-tertiary">-</span>
+                          )}
+                        </td>
                         <td>
                           {item.kategori ? (
                             <Chip variant="caption" color={bayaranKategoriChip(item.kategori)}>
@@ -282,8 +301,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                         <td className="text-text-secondary">{item.jenisKerja || <span className="text-text-tertiary">-</span>}</td>
                         <td className="whitespace-nowrap text-text-secondary">
                           <Tempoh item={item} />
+                          {item.tahunKontrak && (
+                            <span className="block text-caption-1-regular text-text-tertiary">Tahun {item.tahunKontrak}</span>
+                          )}
                         </td>
-                        <td className="tabular-nums">{item.tahunKontrak ?? <span className="text-text-tertiary">-</span>}</td>
                         {canEdit && (
                           <td className="text-end">
                             <RowActions
@@ -301,8 +322,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
               </div>
             </div>
 
-            {/* Phones */}
-            <ul className="flex flex-col gap-2 md:hidden">
+            {/* Phones and iPads */}
+            <ul className="grid gap-2 md:grid-cols-2 xl:hidden">
               {filtered.map((item) => (
                 <li key={item.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -315,6 +336,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       )}
                     </div>
                     <span className="truncate text-body-medium text-text-primary">{item.namaKontraktor || "-"}</span>
+                    {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
                       {[item.kawasan, item.jenisKerja].filter(Boolean).join(" · ")}
                     </span>
@@ -393,6 +415,17 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="kontrak-kerja">Kerja</Label>
+              <Textarea
+                id="kontrak-kerja"
+                rows={2}
+                value={form.kerja}
+                onChange={setField("kerja")}
+                placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
+                className="min-h-[60px]"
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="kontrak-nama">Nama Kontraktor</Label>

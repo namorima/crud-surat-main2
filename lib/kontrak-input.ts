@@ -21,6 +21,8 @@ export function parseKontrakInput(body: any): KontrakInput | string {
     tarikhMula: text(body?.tarikhMula),
     tarikhAkhir: text(body?.tarikhAkhir),
     jenisKerja: text(body?.jenisKerja).toUpperCase(),
+    // Free text: kept as typed rather than upper-cased.
+    kerja: text(body?.kerja).replace(/\s+/g, " "),
   }
   if (!input.kawasan || !input.noKontrak) return "Kawasan dan No Kontrak wajib diisi"
   // Kategori is picked from KONTRAK_KATEGORI in the form; older rows may hold

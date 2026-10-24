@@ -6,10 +6,13 @@ export function kontrakErrorResponse(error: any, fallback: string) {
   if (message.includes("sudah wujud")) {
     return NextResponse.json({ error: message }, { status: 409 })
   }
-  // Columns from add-kontrak-fields.sql missing (migration not run yet).
-  if (/(tarikh_mula|tarikh_akhir|jenis_kerja|tahun_kontrak)/.test(message)) {
+  // Columns from add-kontrak-fields.sql / add-kontrak-kerja.sql missing (migration not run yet).
+  if (/(tarikh_mula|tarikh_akhir|jenis_kerja|tahun_kontrak|column [^ ]*kerja)/.test(message)) {
     return NextResponse.json(
-      { error: "Lajur baharu kontrak belum wujud. Jalankan add-kontrak-fields.sql dalam Supabase.", details: message },
+      {
+        error: "Lajur baharu kontrak belum wujud. Jalankan add-kontrak-fields.sql dan add-kontrak-kerja.sql dalam Supabase.",
+        details: message,
+      },
       { status: 500 },
     )
   }

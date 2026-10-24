@@ -11,6 +11,8 @@ export interface Kontrak {
   /** Year of tarikhMula, kept by the database (generated column) */
   tahunKontrak: number | null
   jenisKerja: string
+  /** Name of the work, e.g. "Kerja Mengangkut BTS Di Ladang ..." */
+  kerja: string
 }
 
 export type KontrakInput = Omit<Kontrak, "id" | "tahunKontrak">
