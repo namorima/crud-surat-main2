@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
               <Alert className="border-green-500 bg-green-50">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <AlertDescription className="text-green-700">
-                  Email untuk reset kata laluan telah dihantar! Sila semak inbox email anda dan ikut arahan untuk reset kata laluan.
+                  Jika email itu berdaftar, pautan reset kata laluan telah dihantar. Sila semak inbox anda. Pautan sah selama 1 jam.
                 </AlertDescription>
               </Alert>
               <div className="text-center text-sm text-text-secondary">
@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
                     disabled={loading}
                   />
                   <p className="text-xs text-text-secondary">
-                    Masukkan email yang didaftarkan dengan akaun anda.
+                    Masukkan email yang didaftarkan dengan akaun anda. Jika akaun anda belum ada email, hubungi pentadbir.
                   </p>
                 </div>
 

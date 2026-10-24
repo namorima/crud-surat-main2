@@ -24,14 +24,13 @@ export default function ResetPasswordPage() {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get token from URL hash (Supabase sends it in hash)
-    // Using window.location directly to avoid useSearchParams build issues
+    // The emailed link carries the token in the fragment (#token=...)
     if (typeof window !== 'undefined') {
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const accessToken = hashParams.get('access_token')
-      
-      if (accessToken) {
-        setToken(accessToken)
+      const resetToken = hashParams.get('token')
+
+      if (resetToken) {
+        setToken(resetToken)
       } else {
         setError("Link reset password tidak sah atau telah tamat tempoh.")
       }

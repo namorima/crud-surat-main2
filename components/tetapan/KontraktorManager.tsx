@@ -195,7 +195,7 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
           <>
             {/* Tablet landscape and desktop */}
             <div className="hidden overflow-hidden rounded-2xl border border-border-table lg:block">
-              <div className="max-h-[60dvh] overflow-auto">
+              <div className="relative max-h-[60dvh] overflow-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
