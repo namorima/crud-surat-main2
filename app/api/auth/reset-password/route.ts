@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { hashPassword } from "@/lib/password"
+import { PASSWORD_RESET_ENABLED, RESET_DISABLED_MESSAGE } from "@/lib/password-reset-flag"
 import { consumeResetToken, validateNewPassword } from "@/lib/password-reset"
 
 export async function POST(request: Request) {
+  if (!PASSWORD_RESET_ENABLED) {
+    return NextResponse.json({ error: RESET_DISABLED_MESSAGE }, { status: 410 })
+  }
   try {
     const { token, newPassword } = await request.json()
 
