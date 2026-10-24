@@ -944,7 +944,7 @@ export default function BayaranPage() {
       const statusIcon = isCancelled ? "⛔" : sharingBayaran.tarikhBayar ? "✅" : "🕑";
       const checkIcon = isCancelled ? "⛔" : "✅";
 
-      const message = `📌*REKOD BAYARAN #${sharingBayaran.id}*
+      const message = `📌*REKOD BAYARAN #${sharingBayaran.ids ?? sharingBayaran.id}*
       _${sharingBayaran.statusBayaran.toUpperCase()}_ ${statusIcon}
 
 ${
@@ -983,6 +983,7 @@ ${
 *${sharingBayaran.perkara.toUpperCase()}*
 > KE : _${sharingBayaran.bayaranKe}_ *|* _${sharingBayaran.noKontrak}_
 > _${formatCurrency(sharingBayaran.nilaiBayaran)}_
+> *Kontrak* : ${sharingBayaran.namaKontraktor || "-"}
 > *Nota Kaki:* _${sharingBayaran.notaKaki}_
 
 Detail: ${directLink}
