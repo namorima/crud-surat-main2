@@ -67,7 +67,6 @@ export default function TetapanPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromSurat = searchParams.get("from") === "surat"
-  const [loading, setLoading] = useState(false)
   const [failData, setFailData] = useState<Fail[]>([])
   const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
   const [loadingFail, setLoadingFail] = useState(true)
@@ -221,19 +220,6 @@ export default function TetapanPage() {
     console.log('Filtered fails:', filtered.length)
     setFilteredFailData(filtered)
   }, [failData, user, canViewAll, userUnit])
-
-  const handleSave = () => {
-    setLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      toast({
-        title: "Tetapan disimpan",
-        description: "Tetapan anda telah berjaya disimpan.",
-      })
-    }, 1000)
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -498,7 +484,6 @@ export default function TetapanPage() {
             <TabsList>
               <TabsTrigger value="setup-fail">Setup Fail</TabsTrigger>
               {canViewAll && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
-              <TabsTrigger value="integrasi">Integrasi</TabsTrigger>
             </TabsList>
 
             <TabsContent value="setup-fail" className="mt-4 space-y-4">
@@ -916,34 +901,6 @@ export default function TetapanPage() {
                 </CardContent>
                 <CardFooter>
                   <p className="text-sm text-muted-foreground">Jumlah: {shareLinks.length} pautan</p>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="integrasi" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tetapan Integrasi</CardTitle>
-                  <CardDescription>Konfigurasi integrasi dengan perkhidmatan luar.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="google-api-key">Google API Key</Label>
-                    <Input id="google-api-key" type="password" placeholder="Masukkan Google API Key" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="google-client-email">Google Client Email</Label>
-                    <Input id="google-client-email" placeholder="Masukkan Google Client Email" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="google-private-key">Google Private Key</Label>
-                    <Input id="google-private-key" type="password" placeholder="Masukkan Google Private Key" />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSave} disabled={loading}>
-                    {loading ? "Menyimpan..." : "Simpan Tetapan"}
-                  </Button>
                 </CardFooter>
               </Card>
             </TabsContent>
