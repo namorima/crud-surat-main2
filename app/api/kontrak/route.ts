@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAllKontrak, addKontrak } from "@/lib/supabase-db"
 import { parseKontrakInput } from "@/lib/kontrak-input"
+import { kontrakErrorResponse } from "@/lib/kontrak-api"
 
 export async function GET() {
   try {
@@ -8,7 +9,7 @@ export async function GET() {
     return NextResponse.json(data)
   } catch (error: any) {
     console.error("Error fetching kontrak:", error)
-    return NextResponse.json({ error: "Failed to fetch kontrak", details: error.message }, { status: 500 })
+    return kontrakErrorResponse(error, "Failed to fetch kontrak")
   }
 }
 
@@ -22,10 +23,6 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: 201 })
   } catch (error: any) {
     console.error("Error adding kontrak:", error)
-    const duplicate = String(error.message).includes("sudah wujud")
-    return NextResponse.json(
-      { error: duplicate ? error.message : "Failed to add kontrak", details: error.message },
-      { status: duplicate ? 409 : 500 },
-    )
+    return kontrakErrorResponse(error, "Failed to add kontrak")
   }
 }

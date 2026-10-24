@@ -743,6 +743,22 @@ function mapKontrakRow(row: any): Kontrak {
     noKontrak: row.no_kontrak || "",
     kategori: row.kategori || "",
     namaKontraktor: row.nama_kontraktor || "",
+    tarikhMula: row.tarikh_mula || "",
+    tarikhAkhir: row.tarikh_akhir || "",
+    tahunKontrak: row.tahun_kontrak ?? null,
+    jenisKerja: row.jenis_kerja || "",
+  }
+}
+
+function kontrakToRow(input: KontrakInput) {
+  return {
+    kawasan: input.kawasan,
+    no_kontrak: input.noKontrak,
+    kategori: input.kategori || null,
+    nama_kontraktor: input.namaKontraktor || null,
+    tarikh_mula: input.tarikhMula || null,
+    tarikh_akhir: input.tarikhAkhir || null,
+    jenis_kerja: input.jenisKerja || null,
   }
 }
 
@@ -806,12 +822,7 @@ export async function addKontrak(input: KontrakInput): Promise<{ kontrak: Kontra
     await assertKontrakUnique(input)
     const { data, error } = await supabaseAdmin
       .from("kontrak")
-      .insert({
-        kawasan: input.kawasan,
-        no_kontrak: input.noKontrak,
-        kategori: input.kategori || null,
-        nama_kontraktor: input.namaKontraktor || null,
-      })
+      .insert(kontrakToRow(input))
       .select()
       .single()
 
@@ -832,12 +843,7 @@ export async function updateKontrak(
     await assertKontrakUnique(input, id)
     const { data, error } = await supabaseAdmin
       .from("kontrak")
-      .update({
-        kawasan: input.kawasan,
-        no_kontrak: input.noKontrak,
-        kategori: input.kategori || null,
-        nama_kontraktor: input.namaKontraktor || null,
-      })
+      .update(kontrakToRow(input))
       .eq("id", id)
       .select()
       .single()

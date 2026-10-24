@@ -28,10 +28,38 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Chip } from "@/components/base/badges/chip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RowActions } from "@/components/dashboard/row-actions"
 import { bayaranKategoriChip } from "@/lib/ui-status"
+import { JENIS_KERJA, KONTRAK_KATEGORI, tahunFromTarikh } from "@/lib/kontrak-input"
 
-const EMPTY: KontrakInput = { kawasan: "", noKontrak: "", kategori: "", namaKontraktor: "" }
+const EMPTY: KontrakInput = {
+  kawasan: "",
+  noKontrak: "",
+  kategori: "",
+  namaKontraktor: "",
+  tarikhMula: "",
+  tarikhAkhir: "",
+  jenisKerja: "",
+}
+
+/** Radix Select cannot hold "", so an unset optional field uses this value. */
+const NONE = "__none"
+
+/** YYYY-MM-DD → DD/MM/YYYY for display. */
+function formatTarikh(value: string) {
+  const [year, month, day] = value.split("-")
+  return value && day ? `${day}/${month}/${year}` : ""
+}
+
+function Tempoh({ item }: { item: Kontrak }) {
+  if (!item.tarikhMula && !item.tarikhAkhir) return <span className="text-text-tertiary">-</span>
+  return (
+    <span className="tabular-nums">
+      {formatTarikh(item.tarikhMula) || "?"} – {formatTarikh(item.tarikhAkhir) || "?"}
+    </span>
+  )
+}
 
 async function readError(response: Response, fallback: string) {
   try {
@@ -72,13 +100,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   }, [])
 
   const kawasanOptions = useMemo(() => [...new Set(items.map((item) => item.kawasan).filter(Boolean))].sort(), [items])
-  const kategoriOptions = useMemo(() => [...new Set(items.map((item) => item.kategori).filter(Boolean))].sort(), [items])
+  // The fixed list, plus an older value on the row being edited so it is not silently dropped.
+  const kategoriOptions = useMemo(
+    () => (form.kategori && !(KONTRAK_KATEGORI as readonly string[]).includes(form.kategori) ? [...KONTRAK_KATEGORI, form.kategori] : [...KONTRAK_KATEGORI]),
+    [form.kategori],
+  )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return items
     return items.filter((item) =>
-      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor].some((value) => value.toLowerCase().includes(q)),
+      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.jenisKerja, String(item.tahunKontrak ?? "")].some(
+        (value) => value.toLowerCase().includes(q),
+      ),
     )
   }, [items, query])
 
@@ -90,7 +124,15 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
   const openEdit = (item: Kontrak) => {
     setEditing(item)
-    setForm({ kawasan: item.kawasan, noKontrak: item.noKontrak, kategori: item.kategori, namaKontraktor: item.namaKontraktor })
+    setForm({
+      kawasan: item.kawasan,
+      noKontrak: item.noKontrak,
+      kategori: item.kategori,
+      namaKontraktor: item.namaKontraktor,
+      tarikhMula: item.tarikhMula,
+      tarikhAkhir: item.tarikhAkhir,
+      jenisKerja: item.jenisKerja,
+    })
     setFormOpen(true)
   }
 
@@ -101,6 +143,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     e.preventDefault()
     if (!form.kawasan.trim() || !form.noKontrak.trim()) {
       toast.error("Kawasan dan No Kontrak wajib diisi")
+      return
+    }
+    if (form.tarikhMula && form.tarikhAkhir && form.tarikhAkhir < form.tarikhMula) {
+      toast.error("Tarikh Akhir tidak boleh sebelum Tarikh Mula")
       return
     }
     setSaving(true)
@@ -181,7 +227,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari kawasan, no kontrak atau kontraktor…"
+            placeholder="Cari kawasan, no kontrak, kontraktor, jenis kerja atau tahun…"
             className="pl-8"
             aria-label="Cari kontrak"
           />
@@ -208,6 +254,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       <th>No Kontrak</th>
                       <th>Kategori</th>
                       <th>Nama Kontraktor</th>
+                      <th>Jenis Kerja</th>
+                      <th>Tempoh</th>
+                      <th>Tahun</th>
                       {canEdit && (
                         <th className="w-[56px]">
                           <span className="sr-only">Tindakan</span>
@@ -230,6 +279,11 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           )}
                         </td>
                         <td>{item.namaKontraktor || <span className="text-text-tertiary">-</span>}</td>
+                        <td className="text-text-secondary">{item.jenisKerja || <span className="text-text-tertiary">-</span>}</td>
+                        <td className="whitespace-nowrap text-text-secondary">
+                          <Tempoh item={item} />
+                        </td>
+                        <td className="tabular-nums">{item.tahunKontrak ?? <span className="text-text-tertiary">-</span>}</td>
                         {canEdit && (
                           <td className="text-end">
                             <RowActions
@@ -261,7 +315,15 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       )}
                     </div>
                     <span className="truncate text-body-medium text-text-primary">{item.namaKontraktor || "-"}</span>
-                    <span className="truncate text-caption-1-regular text-text-tertiary">{item.kawasan}</span>
+                    <span className="truncate text-caption-1-regular text-text-tertiary">
+                      {[item.kawasan, item.jenisKerja].filter(Boolean).join(" · ")}
+                    </span>
+                    {(item.tarikhMula || item.tarikhAkhir) && (
+                      <span className="text-caption-1-regular text-text-secondary">
+                        <Tempoh item={item} />
+                        {item.tahunKontrak && <span className="text-text-tertiary"> · Tahun {item.tahunKontrak}</span>}
+                      </span>
+                    )}
                   </div>
                   {canEdit && (
                     <RowActions
@@ -314,17 +376,74 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="kontrak-kategori">Kategori</Label>
-                <Input id="kontrak-kategori" list="kontrak-kategori-options" value={form.kategori} onChange={setField("kategori")} />
-                <datalist id="kontrak-kategori-options">
-                  {kategoriOptions.map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
+                <Select
+                  value={form.kategori || NONE}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, kategori: value === NONE ? "" : value }))}
+                >
+                  <SelectTrigger id="kontrak-kategori">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Tiada</SelectItem>
+                    {kategoriOptions.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="kontrak-nama">Nama Kontraktor</Label>
               <Input id="kontrak-nama" value={form.namaKontraktor} onChange={setField("namaKontraktor")} placeholder="Contoh: ABC SDN BHD" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="kontrak-jenis">Jenis Kerja</Label>
+              <Select
+                value={form.jenisKerja || NONE}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, jenisKerja: value === NONE ? "" : value }))}
+              >
+                <SelectTrigger id="kontrak-jenis">
+                  <SelectValue placeholder="Pilih jenis kerja" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Tiada</SelectItem>
+                  {JENIS_KERJA.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto]">
+              <div className="grid gap-1.5">
+                <Label htmlFor="kontrak-mula">Tarikh Mula</Label>
+                <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="kontrak-akhir">Tarikh Akhir</Label>
+                <Input
+                  id="kontrak-akhir"
+                  type="date"
+                  min={form.tarikhMula || undefined}
+                  value={form.tarikhAkhir}
+                  onChange={setField("tarikhAkhir")}
+                />
+              </div>
+              <div className="col-span-2 grid gap-1.5 sm:col-span-1">
+                <Label htmlFor="kontrak-tahun">Tahun Kontrak</Label>
+                <Input
+                  id="kontrak-tahun"
+                  value={tahunFromTarikh(form.tarikhMula) ?? ""}
+                  placeholder="Auto"
+                  readOnly
+                  tabIndex={-1}
+                  className="sm:w-24"
+                  title="Diambil daripada Tarikh Mula"
+                />
+              </div>
             </div>
             <DialogFooter className="pt-1">
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
