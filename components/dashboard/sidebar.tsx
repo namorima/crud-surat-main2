@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/lib/auth-provider"
 import {
-  RiBarChartBoxLine,
   RiBankCardLine,
   RiCloseLine,
   RiHome5Line,
@@ -30,6 +29,8 @@ type NavigationItem = {
   href: string
   icon: IconComponent
   requiredPermission: PermissionCheck
+  /** Also shown when the user has any of these (e.g. Dashboard absorbed Statistik). */
+  alsoPermissions?: PermissionCheck[]
   legacyRoles?: string[] // For backward compatibility
 }
 
@@ -39,7 +40,9 @@ const navigation: NavigationItem[] = [
     href: "/dashboard",
     icon: RiHome5Line,
     requiredPermission: { resource: 'dashboard', action: 'view' },
-    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
+    // Statistik was merged into Dashboard; its viewers keep access
+    alsoPermissions: [{ resource: 'statistik', action: 'view' }],
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
   {
     name: "Surat",
@@ -54,13 +57,6 @@ const navigation: NavigationItem[] = [
     icon: RiBankCardLine,
     requiredPermission: { resource: 'bayaran', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
-  },
-  {
-    name: "Statistik",
-    href: "/dashboard/statistik",
-    icon: RiBarChartBoxLine,
-    requiredPermission: { resource: 'statistik', action: 'view' },
-    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "PEMASARAN", "PERANCANG", "MSPO"],
   },
   {
     name: "Pengguna",
@@ -92,7 +88,9 @@ export function useNavigation(): NavigationItem[] {
 
     // Check RBAC permissions first
     if (user?.permissions && user.permissions.length > 0) {
-      return hasPermission(user.permissions, item.requiredPermission)
+      return [item.requiredPermission, ...(item.alsoPermissions ?? [])].some((check) =>
+        hasPermission(user.permissions!, check)
+      )
     }
 
     // Fallback to legacy role check for backward compatibility

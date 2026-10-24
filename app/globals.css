@@ -280,3 +280,28 @@
     font-size: 16px;
   }
 }
+
+/*
+ * Dashboard chart colours (validated with the dataviz palette checker against
+ * the card surface: #ffffff light, neutral-800 dark). --viz-1/2 are the two
+ * categorical series; --viz-ord-1..4 an ordinal ramp, least → most severe.
+ * Dark mode reverses the ramp so the most severe step is the most prominent.
+ */
+:root {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-ord-1: #86b6ef;
+  --viz-ord-2: #5598e7;
+  --viz-ord-3: #256abf;
+  --viz-ord-4: #184f95;
+  --viz-track: color-mix(in srgb, var(--color-neutral-200) 70%, transparent);
+}
+.dark {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-ord-1: #1c5cab;
+  --viz-ord-2: #2a78d6;
+  --viz-ord-3: #5598e7;
+  --viz-ord-4: #9ec5f4;
+  --viz-track: color-mix(in srgb, var(--color-neutral-700) 70%, transparent);
+}
