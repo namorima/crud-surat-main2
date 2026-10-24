@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthMark, AuthScreen, authCardClass } from "@/components/auth/AuthScreen"
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator"
@@ -95,15 +96,16 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Reset Kata Laluan</CardTitle>
+    <AuthScreen>
+      <Card className={authCardClass}>
+        <CardHeader className="space-y-1.5 p-0 pb-6">
+          <div className="mb-3.5"><AuthMark /></div>
+          <CardTitle className="text-title-2-medium text-text-primary">Reset Kata Laluan</CardTitle>
           <CardDescription>
             Masukkan kata laluan baru anda untuk akaun anda.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {success ? (
             <div className="space-y-4">
               <Alert className="border-green-500 bg-green-50">
@@ -129,7 +131,7 @@ export default function ResetPasswordPage() {
 
               {!token ? (
                 <div className="text-center">
-                  <p className="mb-4 text-sm text-gray-600">
+                  <p className="mb-4 text-sm text-text-secondary">
                     Link reset password tidak sah atau telah tamat tempoh.
                   </p>
                   <Link href="/forgot-password">
@@ -156,7 +158,7 @@ export default function ResetPasswordPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-icon-secondary hover:text-foreground-icon-primary"
                         tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -180,22 +182,22 @@ export default function ResetPasswordPage() {
                   </div>
 
                   {/* Password Requirements */}
-                  <div className="space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
-                    <p className="font-medium text-gray-700">Keperluan Kata Laluan:</p>
+                  <div className="space-y-2 rounded-md border border-border-button-default bg-background-secondary-default p-3 text-sm">
+                    <p className="font-medium text-text-secondary">Keperluan Kata Laluan:</p>
                     <ul className="space-y-1">
-                      <li className={passwordValidation.minLength ? "text-green-600" : "text-gray-600"}>
+                      <li className={passwordValidation.minLength ? "text-green-600" : "text-text-secondary"}>
                         {passwordValidation.minLength ? "✓" : "○"} Minimum 8 aksara
                       </li>
-                      <li className={passwordValidation.hasUpperCase ? "text-green-600" : "text-gray-600"}>
+                      <li className={passwordValidation.hasUpperCase ? "text-green-600" : "text-text-secondary"}>
                         {passwordValidation.hasUpperCase ? "✓" : "○"} Mengandungi huruf besar
                       </li>
-                      <li className={passwordValidation.hasLowerCase ? "text-green-600" : "text-gray-600"}>
+                      <li className={passwordValidation.hasLowerCase ? "text-green-600" : "text-text-secondary"}>
                         {passwordValidation.hasLowerCase ? "✓" : "○"} Mengandungi huruf kecil
                       </li>
-                      <li className={passwordValidation.hasNumber ? "text-green-600" : "text-gray-600"}>
+                      <li className={passwordValidation.hasNumber ? "text-green-600" : "text-text-secondary"}>
                         {passwordValidation.hasNumber ? "✓" : "○"} Mengandungi nombor
                       </li>
-                      <li className={passwordValidation.passwordsMatch ? "text-green-600" : "text-gray-600"}>
+                      <li className={passwordValidation.passwordsMatch ? "text-green-600" : "text-text-secondary"}>
                         {passwordValidation.passwordsMatch ? "✓" : "○"} Kata laluan sepadan
                       </li>
                     </ul>
@@ -206,7 +208,7 @@ export default function ResetPasswordPage() {
                   </Button>
 
                   <div className="text-center">
-                    <Link href="/login" className="text-sm text-blue-600 hover:underline">
+                    <Link href="/login" className="text-sm text-accent-600 hover:underline dark:text-accent-400">
                       Kembali ke Log Masuk
                     </Link>
                   </div>
@@ -216,6 +218,6 @@ export default function ResetPasswordPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AuthScreen>
   )
 }

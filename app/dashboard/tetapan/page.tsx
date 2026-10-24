@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/dashboard/sidebar"
-import { Menu, Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lucide-react"
+import { NavTrigger } from "@/components/dashboard/app-shell"
+import { Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-provider"
@@ -20,6 +19,8 @@ import type { Fail, FailPart } from "@/types/fail"
 import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
 import { ShareLinkForm } from "@/components/share/ShareLinkForm"
 import { ShareLinkTable } from "@/components/share/ShareLinkTable"
+import { KontrakManager } from "@/components/tetapan/KontrakManager"
+import { KontraktorManager } from "@/components/tetapan/KontraktorManager"
 import { toast as sonnerToast } from "sonner"
 import {
   Dialog,
@@ -68,7 +69,6 @@ export default function TetapanPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromSurat = searchParams.get("from") === "surat"
-  const [loading, setLoading] = useState(false)
   const [failData, setFailData] = useState<Fail[]>([])
   const [filteredFailData, setFilteredFailData] = useState<Fail[]>([])
   const [loadingFail, setLoadingFail] = useState(true)
@@ -222,19 +222,6 @@ export default function TetapanPage() {
     console.log('Filtered fails:', filtered.length)
     setFilteredFailData(filtered)
   }, [failData, user, canViewAll, userUnit])
-
-  const handleSave = () => {
-    setLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      toast({
-        title: "Tetapan disimpan",
-        description: "Tetapan anda telah berjaya disimpan.",
-      })
-    }, 1000)
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -483,17 +470,7 @@ export default function TetapanPage() {
         <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+              <NavTrigger />
               <CardTitle className="text-base md:text-xl">Tetapan</CardTitle>
             </div>
             {fromSurat && (
@@ -509,7 +486,8 @@ export default function TetapanPage() {
             <TabsList>
               <TabsTrigger value="setup-fail">Setup Fail</TabsTrigger>
               {canViewAll && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
-              <TabsTrigger value="integrasi">Integrasi</TabsTrigger>
+              {canViewAll && <TabsTrigger value="kontrak">Kontrak</TabsTrigger>}
+              {canViewAll && <TabsTrigger value="kontraktor">Kontraktor</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="setup-fail" className="mt-4 space-y-4">
@@ -828,6 +806,7 @@ export default function TetapanPage() {
                               <TableCell>
                                 <Badge
                                   variant="outline"
+                                  className="text-neutral-900"
                                   style={{
                                     backgroundColor: getFailPartColor(fail.part),
                                     borderColor: getFailPartColor(fail.part),
@@ -930,33 +909,17 @@ export default function TetapanPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="integrasi" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tetapan Integrasi</CardTitle>
-                  <CardDescription>Konfigurasi integrasi dengan perkhidmatan luar.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="google-api-key">Google API Key</Label>
-                    <Input id="google-api-key" type="password" placeholder="Masukkan Google API Key" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="google-client-email">Google Client Email</Label>
-                    <Input id="google-client-email" placeholder="Masukkan Google Client Email" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="google-private-key">Google Private Key</Label>
-                    <Input id="google-private-key" type="password" placeholder="Masukkan Google Private Key" />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSave} disabled={loading}>
-                    {loading ? "Menyimpan..." : "Simpan Tetapan"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
+            {canViewAll && (
+              <TabsContent value="kontrak" className="mt-4 space-y-4">
+                <KontrakManager canEdit={Boolean(canEditTetapan)} />
+              </TabsContent>
+            )}
+
+            {canViewAll && (
+              <TabsContent value="kontraktor" className="mt-4 space-y-4">
+                <KontraktorManager canEdit={Boolean(canEditTetapan)} />
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

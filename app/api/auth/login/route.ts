@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { comparePassword, isHashedPassword, hashPassword } from "@/lib/password"
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session"
 
 export async function POST(request: Request) {
   try {
@@ -65,9 +66,7 @@ export async function POST(request: Request) {
     }
 
     // Return user data (excluding sensitive password)
-    const { password: _, ...userWithoutPassword } = user
-    
-    return NextResponse.json({
+    const response = NextResponse.json({
       id: user.username,
       username: user.username,
       name: user.name,
@@ -79,6 +78,13 @@ export async function POST(request: Request) {
       must_change_password: user.must_change_password || false,
       last_password_change: user.last_password_change || undefined,
     })
+    // Every other /api route requires this cookie (middleware.ts).
+    response.cookies.set(
+      SESSION_COOKIE,
+      await createSessionToken({ uid: user.username, role: user.role, roleId: user.role_id }),
+      sessionCookieOptions,
+    )
+    return response
   } catch (error: any) {
     console.error("Error during login:", error)
     return NextResponse.json(

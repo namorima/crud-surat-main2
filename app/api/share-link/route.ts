@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { getAllShareLinks, addShareLink } from "@/lib/supabase-db"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "tetapan", action: "manage_all_units" }, ["semua", "Super Admin"])
+  if (guard.denied) return guard.denied
   try {
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
@@ -24,6 +27,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const guard = await requirePermission(request, { resource: "tetapan", action: "manage_all_units" }, ["semua", "Super Admin"])
+  if (guard.denied) return guard.denied
   try {
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {

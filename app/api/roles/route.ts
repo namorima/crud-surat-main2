@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requirePermission } from "@/lib/server-auth"
 import {
   getRoles,
   getRoleWithPermissions,
@@ -12,6 +13,8 @@ import type { CreateRoleInput, UpdateRoleInput } from '@/types/rbac'
 // GET /api/roles - Get all roles
 // GET /api/roles?id=xxx - Get specific role with permissions
 export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "view" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const roleId = searchParams.get('id')
@@ -44,6 +47,8 @@ export async function GET(request: Request) {
 
 // POST /api/roles - Create new role
 export async function POST(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "manage_roles" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const body = await request.json()
     
@@ -80,6 +85,8 @@ export async function POST(request: Request) {
 
 // PATCH /api/roles - Update role
 export async function PATCH(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "manage_roles" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const body = await request.json()
     
@@ -127,6 +134,8 @@ export async function PATCH(request: Request) {
 
 // DELETE /api/roles?id=xxx - Delete role
 export async function DELETE(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "manage_roles" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const roleId = searchParams.get('id')

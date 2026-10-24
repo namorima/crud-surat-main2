@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, CheckCircle2, Mail } from "lucide-react"
+import { AuthMark, AuthScreen, authCardClass } from "@/components/auth/AuthScreen"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
@@ -49,18 +50,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Mail className="h-6 w-6" />
-            <CardTitle className="text-2xl font-bold">Lupa Kata Laluan</CardTitle>
-          </div>
+    <AuthScreen>
+      <Card className={authCardClass}>
+        <CardHeader className="space-y-1.5 p-0 pb-6">
+          <div className="mb-3.5"><AuthMark /></div>
+          <CardTitle className="text-title-2-medium text-text-primary">Lupa Kata Laluan</CardTitle>
           <CardDescription>
             Masukkan alamat email anda dan kami akan hantar pautan untuk reset kata laluan.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {success ? (
             <div className="space-y-4">
               <Alert className="border-green-500 bg-green-50">
@@ -69,7 +68,7 @@ export default function ForgotPasswordPage() {
                   Email untuk reset kata laluan telah dihantar! Sila semak inbox email anda dan ikut arahan untuk reset kata laluan.
                 </AlertDescription>
               </Alert>
-              <div className="text-center text-sm text-gray-600">
+              <div className="text-center text-sm text-text-secondary">
                 Tidak terima email? Semak folder spam atau cuba lagi dalam beberapa minit.
               </div>
               <Link href="/login">
@@ -99,7 +98,7 @@ export default function ForgotPasswordPage() {
                     required
                     disabled={loading}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-secondary">
                     Masukkan email yang didaftarkan dengan akaun anda.
                   </p>
                 </div>
@@ -109,7 +108,7 @@ export default function ForgotPasswordPage() {
                 </Button>
 
                 <div className="text-center">
-                  <Link href="/login" className="text-sm text-blue-600 hover:underline">
+                  <Link href="/login" className="text-sm text-accent-600 hover:underline dark:text-accent-400">
                     Kembali ke Log Masuk
                   </Link>
                 </div>
@@ -118,6 +117,6 @@ export default function ForgotPasswordPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AuthScreen>
   )
 }

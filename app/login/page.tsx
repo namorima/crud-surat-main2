@@ -4,12 +4,11 @@ import type React from "react"
 
 import { useState } from "react"
 import { useAuth } from "@/lib/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RiErrorWarningLine, RiLockLine, RiUser3Line } from "@remixicon/react"
+import { Button } from "@/components/base/buttons/button"
+import { Input } from "@/components/base/input/input"
+import { LinkButton } from "@/components/base/buttons/link-button"
+import { AuthMark, AuthScreen, authCardClass } from "@/components/auth/AuthScreen"
 
 export default function LoginPage() {
   const [id, setId] = useState("")
@@ -29,52 +28,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">CRUD Surat</CardTitle>
-          <CardDescription>Masukkan ID dan kata laluan untuk akses sistem</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="id">ID</Label>
-              <Input
-                id="id"
-                type="text"
-                placeholder="Masukkan ID Staf"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Kata Laluan</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center justify-end">
-              <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                Lupa Kata Laluan?
-              </a>
-            </div>
-            <Button className="w-full" type="submit" disabled={loading}>
-              {loading ? "Sedang Masuk..." : "Log Masuk"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthScreen>
+      <div className={authCardClass}>
+        <div className="mb-5">
+          <AuthMark />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-title-2-medium text-text-primary">CRUD Surat</h1>
+          <p className="text-body-regular text-text-secondary">Masukkan ID dan kata laluan untuk akses sistem</p>
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="mt-5 flex items-start gap-2 rounded-2lg bg-notification-error-background p-3 text-body-regular text-notification-error-foreground"
+          >
+            <RiErrorWarningLine className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <Input
+            name="id"
+            label="ID"
+            placeholder="Masukkan ID Staf"
+            autoComplete="username"
+            leadingIcon={RiUser3Line}
+            value={id}
+            onChange={setId}
+            isRequired
+          />
+          <Input
+            name="password"
+            type="password"
+            label="Kata Laluan"
+            placeholder="Masukkan kata laluan"
+            autoComplete="current-password"
+            leadingIcon={RiLockLine}
+            value={password}
+            onChange={setPassword}
+            isRequired
+          />
+          <div className="flex items-center justify-end">
+            <LinkButton href="/forgot-password">Lupa Kata Laluan?</LinkButton>
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Sedang Masuk..." : "Log Masuk"}
+          </Button>
+        </form>
+      </div>
+    </AuthScreen>
   )
 }

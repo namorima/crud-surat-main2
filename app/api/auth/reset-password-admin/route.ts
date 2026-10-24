@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { hashPassword } from "@/lib/password"
 
 export async function POST(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "edit" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const body = await request.json()
     const { userId } = body

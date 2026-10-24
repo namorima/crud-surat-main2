@@ -23,29 +23,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Plus,
-  MoreHorizontal,
   Edit,
-  Trash,
   AlertCircle,
-  ArrowUpDown,
   Settings,
   Search,
   X,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   SlidersHorizontal,
   CheckCircle,
-  XCircle,
   ArrowDown,
   ArrowUp,
-  ArrowDownUp,
-  Menu,
   Loader2,
   Share2,
   Bell,
@@ -63,8 +54,8 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/dashboard/sidebar"
+import { NavTrigger } from "@/components/dashboard/app-shell"
+import { SuratList } from "@/components/surat/SuratList"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 
 // Number of items per page
@@ -1201,83 +1192,20 @@ export default function SuratPage() {
         <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+              <NavTrigger />
               <CardTitle className="text-base md:text-xl">Surat</CardTitle>
             </div>
             <div className="flex items-center gap-1 flex-wrap justify-end">
-              {/* Mobile toolbar */}
-              <div className="flex md:hidden items-center gap-1">
-                {/* Sort Button */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-7 w-7">
-                      <ArrowDownUp className="h-3 w-3" />
-                      <span className="sr-only">Sort</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0" align="end">
-                    <div className="p-2 space-y-2">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("bil")
-                          setSortDirection("desc")
-                        }}
-                      >
-                        <ArrowDown className="mr-2 h-3 w-3" />
-                        Bil (Besar ke Kecil)
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("bil")
-                          setSortDirection("asc")
-                        }}
-                      >
-                        <ArrowUp className="mr-2 h-3 w-3" />
-                        Bil (Kecil ke Besar)
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("tarikh")
-                          setSortDirection("desc")
-                        }}
-                      >
-                        <ArrowDown className="mr-2 h-3 w-3" />
-                        Tarikh (Terbaru)
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
               {/* Clear Filter Button - Only shows when filters are applied */}
               {(statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all" || dateFilter) && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={clearAllFilters}
-                  className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-7 w-7 md:h-8 md:w-8"
+                  className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-8 w-8"
                   title="Clear all filters"
                 >
-                  <X className="h-3 w-3 md:h-4 md:w-4" />
+                  <X className="h-4 w-4" />
                   <span className="sr-only">Clear Filters</span>
                 </Button>
               )}
@@ -1301,7 +1229,7 @@ export default function SuratPage() {
                       setShowSearchInput(false)
                     }}
                   >
-                    <X className="h-3 w-3 md:h-4 md:w-4" />
+                    <X className="h-4 w-4" />
                     <span className="sr-only">Clear Search</span>
                   </Button>
                 </form>
@@ -1312,9 +1240,9 @@ export default function SuratPage() {
                   onClick={() => {
                     setShowSearchInput(true)
                   }}
-                  className="transition-all duration-200 hover:scale-105 h-7 w-7 md:h-8 md:w-8"
+                  className="transition-all duration-200 hover:scale-105 h-8 w-8"
                 >
-                  <Search className="h-3 w-3 md:h-4 md:w-4" />
+                  <Search className="h-4 w-4" />
                   <span className="sr-only">Search</span>
                 </Button>
               )}
@@ -1323,12 +1251,13 @@ export default function SuratPage() {
               {!showSearchInput && (
                 <Popover>
                   <PopoverTrigger asChild>
+                    {/* Phones pick the date from the Tarikh tab in the filter popover instead. */}
                     <Button
                       variant="outline"
                       size="icon"
-                      className={cn(dateFilter && "text-primary", "h-7 w-7 md:h-8 md:w-8")}
+                      className={cn(dateFilter && "text-primary", "hidden h-8 w-8 md:inline-flex")}
                     >
-                      <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                      <Calendar className="h-4 w-4" />
                       <span className="sr-only">Filter Tarikh</span>
                     </Button>
                   </PopoverTrigger>
@@ -1347,19 +1276,22 @@ export default function SuratPage() {
                       size="icon"
                       className={cn(
                         (statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all") && "text-primary",
-                        "h-7 w-7 md:h-8 md:w-8",
+                        "h-8 w-8",
                       )}
                     >
-                      <SlidersHorizontal className="h-3 w-3 md:h-4 md:w-4" />
+                      <SlidersHorizontal className="h-4 w-4" />
                       <span className="sr-only">Filters</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="end">
                     <Tabs defaultValue="status" className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="m-2 mb-0 grid w-[calc(100%-1rem)] grid-cols-4 md:grid-cols-3">
                         <TabsTrigger value="status">Status</TabsTrigger>
                         <TabsTrigger value="unit">Unit</TabsTrigger>
                         <TabsTrigger value="kategori">Kategori</TabsTrigger>
+                        <TabsTrigger value="tarikh" className="md:hidden">
+                          Tarikh
+                        </TabsTrigger>
                       </TabsList>
                       <TabsContent value="status" className="p-4 space-y-4">
                         <div className="space-y-2">
@@ -1412,6 +1344,9 @@ export default function SuratPage() {
                           </Select>
                         </div>
                       </TabsContent>
+                      <TabsContent value="tarikh" className="flex justify-center p-2 md:hidden">
+                        <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateFilter} />
+                      </TabsContent>
                     </Tabs>
                     <div className="flex items-center justify-between p-4 border-t">
                       <Button
@@ -1438,13 +1373,13 @@ export default function SuratPage() {
               {!showSearchInput && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-7 w-7 md:h-8 md:w-8">
-                      <Settings className="h-3 w-3 md:h-4 w-4" />
-                      <span className="sr-only">Column Settings</span>
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Settings className="h-4 w-4" />
+                      <span className="sr-only">Paparan &amp; Isih</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[200px] p-0" align="end">
-                    <div className="p-2 text-sm font-medium">Toggle Columns</div>
+                    <div className="p-2 text-body-medium text-text-secondary">Lajur</div>
                     <div className="p-2 space-y-2">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1504,7 +1439,7 @@ export default function SuratPage() {
 
                     {/* Sort options */}
                     <div className="border-t pt-2 pb-2 px-2">
-                      <div className="text-sm font-medium mb-2">Sort By</div>
+                      <div className="mb-2 text-body-medium text-text-secondary">Isih</div>
                       <div className="space-y-2">
                         <Button
                           variant="outline"
@@ -1556,12 +1491,12 @@ export default function SuratPage() {
                       variant="outline"
                       size="icon"
                       className={cn(
-                        "relative h-7 w-7 md:h-8 md:w-8",
+                        "relative h-8 w-8",
                         notificationCount > 0 && "text-red-500 border-red-200",
                       )}
                       onClick={fetchFXNotifications}
                     >
-                      <Bell className="h-3 w-3 md:h-4 md:w-4" />
+                      <Bell className="h-4 w-4" />
                       {notificationCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
                           {notificationCount > 99 ? "99+" : notificationCount}
@@ -1629,7 +1564,7 @@ export default function SuratPage() {
                                             backgroundColor: getUnitColor(item.unit),
                                             borderColor: getUnitColor(item.unit),
                                           }}
-                                          className="text-xs block w-fit"
+                                          className="text-xs block w-fit text-neutral-900"
                                         >
                                           {item.unit}
                                         </Badge>
@@ -1681,7 +1616,7 @@ export default function SuratPage() {
                                           backgroundColor: getUnitColor(item.unit),
                                           borderColor: getUnitColor(item.unit),
                                         }}
-                                        className="text-xs w-fit"
+                                        className="text-xs w-fit text-neutral-900"
                                       >
                                         {item.unit}
                                       </Badge>
@@ -1744,9 +1679,9 @@ export default function SuratPage() {
                         resetForm()
                         handleOpenAddDialog()
                       }}
-                      className="h-7 w-7 md:h-8 md:w-8"
+                      className="h-8 w-8"
                     >
-                      <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                      <Plus className="h-4 w-4" />
                       <span className="sr-only">Tambah Surat</span>
                     </Button>
                   </DialogTrigger>
@@ -1977,7 +1912,7 @@ export default function SuratPage() {
                                 {selectedFailId && filteredFailData.length > 0 ? (
                                   <div className="flex items-center gap-2">
                                     <span
-                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      className="w-2 h-2 rounded-full shrink-0"
                                       style={{
                                         backgroundColor: getFailPartColor(
                                           filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
@@ -2033,7 +1968,7 @@ export default function SuratPage() {
                                       >
                                         <div className="flex items-center gap-2">
                                           <span
-                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            className="w-2 h-2 rounded-full shrink-0"
                                             style={{
                                               backgroundColor: getFailPartColor(fail.part),
                                             }}
@@ -2087,7 +2022,7 @@ export default function SuratPage() {
                         </div>
                       )}
                     </div>
-                    <DialogFooter className="sticky bottom-0 pt-2 pb-2 bg-background flex flex-col sm:flex-row gap-2 sm:gap-0">
+                    <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
                       <Button
                         variant="outline"
                         onClick={() => setIsAddDialogOpen(false)}
@@ -2117,520 +2052,41 @@ export default function SuratPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="overflow-hidden">
-          <div className="overflow-x-auto">
-            {/* Desktop view */}
-            <div className="hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
-              <Table>
-                <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-sm">
-                  <TableRow>
-                    {columnVisibility.bil && (
-                      <TableHead className="w-[80px] cursor-pointer" onClick={() => handleSort("bil")}>
-                        <div className="flex items-center">
-                          Bil
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.kategori && (
-                      <TableHead className="w-[200px] cursor-pointer" onClick={() => handleSort("kategori")}>
-                        <div className="flex flex-col">
-                          <div className="flex items-center">
-                            Kategori
-                            <ArrowUpDown className="ml-1 h-4 w-4" />
-                          </div>
-                          {columnVisibility.tarikh && <div className="text-xs text-muted-foreground mt-1">Tarikh</div>}
-                          <div className="text-xs text-muted-foreground mt-1">Daripada/Kepada</div>
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.perkara && (
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("perkara")}>
-                        <div className="flex items-center">
-                          Perkara
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.reference && (
-                      <TableHead className="w-[150px] cursor-pointer" onClick={() => handleSort("reference")}>
-                        <div className="flex items-center">
-                          Reference
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    <TableHead className="text-right">Tindakan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedSurat.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        {loading ? (
-                          <div className="flex justify-center">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                          </div>
-                        ) : error ? (
-                          <div className="text-destructive">Error loading data. Please try again.</div>
-                        ) : (
-                          <div>
-                            <p className="text-muted-foreground">Tiada data surat dijumpai</p>
-                            <Button variant="outline" size="sm" className="mt-2" onClick={fetchWithCache}>
-                              Muat Semula Data
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    displayedSurat.map((item) => (
-                      <TableRow
-                        key={item.id}
-                        className={cn(
-                          "table-row text-sm transition-all duration-200 hover:bg-muted/30",
-                          item.status === "SELESAI" && "bg-green-50/50",
-                          item.status === "DALAM TINDAKAN" && "bg-blue-50/50",
-                          item.status === "HOLD / KIV" && "bg-orange-50/50",
-                          item.status === "BATAL" && "bg-red-50/50",
-                        )}
-                      >
-                        {columnVisibility.bil && (
-                          <TableCell className="py-2">
-                            <div className="flex items-center gap-2">
-                              {item.status === "SELESAI" ? (
-                                <Badge
-                                  variant="default"
-                                  className="bg-green-500 hover:bg-green-600 cursor-pointer"
-                                  onClick={() => {
-                                    setDetailSurat(item)
-                                    setIsDetailModalOpen(true)
-                                  }}
-                                >
-                                  #{item.bil}
-                                </Badge>
-                              ) : (
-                                <span
-                                  className="cursor-pointer hover:text-blue-600 hover:underline font-medium"
-                                  onClick={() => {
-                                    setDetailSurat(item)
-                                    setIsDetailModalOpen(true)
-                                  }}
-                                >
-                                  #{item.bil}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.kategori && (
-                          <TableCell className="py-2">
-                            <div className="flex flex-col">
-                              <div className="flex items-center">
-                                <span
-                                  className={cn(
-                                    "font-medium",
-                                    item.kategori === "MASUK"
-                                      ? "text-red-600"
-                                      : item.kategori === "KELUAR"
-                                        ? "text-blue-600"
-                                        : "",
-                                  )}
-                                >
-                                  {item.kategori}
-                                </span>
-                                {item.kategori === "MASUK" && <ArrowDown className="ml-1 h-4 w-4 text-red-600" />}
-                                {item.kategori === "KELUAR" && <ArrowUp className="ml-1 h-4 w-4 text-blue-600" />}
-                              </div>
-                              {columnVisibility.tarikh && (
-                                <div
-                                  className={cn(
-                                    "text-sm mt-1",
-                                    item.kategori === "MASUK"
-                                      ? "text-red-600"
-                                      : item.kategori === "KELUAR"
-                                        ? "text-blue-600"
-                                        : "",
-                                  )}
-                                >
-                                  {item.tarikh}
-                                </div>
-                              )}
-                              <div className="text-sm text-muted-foreground mt-1">{item.daripadaKepada}</div>
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.perkara && (
-                          <TableCell className="py-2">
-                            <div className="space-y-1">
-                              <div className="font-medium">{item.perkara}</div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-pointer hover:bg-secondary text-xs transition-all duration-200 hover:scale-105"
-                                  onClick={() => handleUnitFilter(item.unit)}
-                                  style={{
-                                    backgroundColor: getUnitColor(item.unit),
-                                    borderColor: getUnitColor(item.unit),
-                                  }}
-                                >
-                                  {item.unit}
-                                </Badge>
-                                {item.tindakanPic && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs"
-                                    style={{
-                                      backgroundColor: getUnitColor(item.unit),
-                                      borderColor: getUnitColor(item.unit),
-                                    }}
-                                  >
-                                    PIC: {item.tindakanPic}
-                                  </Badge>
-                                )}
-                                <Badge
-                                  className={`cursor-pointer text-xs ${getStatusColor(item.status)}`}
-                                  onClick={() => handleStatusFilter(item.status)}
-                                >
-                                  {item.status}
-                                </Badge>
-                              </div>
-                              {item.nota && (
-                                <div
-                                  className="text-red-500 text-xs mt-1"
-                                  dangerouslySetInnerHTML={{ __html: formatBilReferences(item.nota) }}
-                                  onClick={(e) => {
-                                    // Check if the clicked element has a data-bil attribute
-                                    const target = e.target as HTMLElement
-                                    if (target.hasAttribute("data-bil")) {
-                                      const bilNumber = target.getAttribute("data-bil")
-                                      if (bilNumber) {
-                                        handleBilReferenceClick(bilNumber)
-                                      }
-                                    }
-                                  }}
-                                />
-                              )}
-                              {item.komen && (
-                                <div className="text-blue-600 text-xs mt-1 flex items-start gap-1">
-                                  <MessageSquare className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                  <span className="font-medium">Komen:</span> {item.komen}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.reference && (
-                          <TableCell className="py-2">
-                            {item.reference ? (
-                              <Badge
-                                variant="outline"
-                                className="cursor-pointer bg-black text-white hover:bg-black/80"
-                                onClick={() => handleBilReferenceClick(item.reference)}
-                              >
-                                {item.reference}
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="secondary"
-                                className="cursor-pointer hover:bg-secondary/80"
-                                onClick={() => handleOpenAddDialog(item.bil)}
-                              >
-                                Respon
-                              </Badge>
-                            )}
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right py-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(item)} disabled={!canEditFull}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              {canComment && (
-                                <DropdownMenuItem onClick={() => openCommentDialog(item)}>
-                                  <MessageSquare className="mr-2 h-4 w-4" />
-                                  Komen
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => handleShareToWhatsApp(item)}
-                                disabled={generatingImage}
-                                className="cursor-pointer"
-                              >
-                                <Share2 className="mr-2 h-4 w-4" />
-                                {sharingItemId === item.id ? (
-                                  <span className="flex items-center">
-                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                    Generating...
-                                  </span>
-                                ) : (
-                                  "Share Ke WhatsApp"
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => openDeleteDialog(item)}
-                                disabled={!canDelete}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile view */}
-            <div className="md:hidden space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto pb-4">
-              {displayedSurat.length === 0 ? (
-                <div className="text-center py-8">
-                  {loading ? (
-                    <div className="flex justify-center">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-destructive">Error loading data. Please try again.</div>
-                  ) : (
-                    <div>
-                      <p className="text-muted-foreground">Tiada data surat dijumpai</p>
-                      <Button variant="outline" size="sm" className="mt-2" onClick={fetchWithCache}>
-                        Muat Semula Data
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                displayedSurat.map((item) => (
-                  <Card
-                    key={item.id}
-                    className={`p-3 transition-all duration-200 hover:bg-muted/30 ${
-                      item.status === "SELESAI"
-                        ? "border-green-500 bg-green-50/50"
-                        : item.status === "DALAM TINDAKAN"
-                          ? "border-blue-500 bg-blue-50/50"
-                          : item.status === "HOLD / KIV"
-                            ? "border-orange-500 bg-orange-50/50"
-                            : item.status === "BATAL"
-                              ? "border-red-500 bg-red-50/50"
-                              : "border-gray-200"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center">
-                        <span
-                          className="font-bold text-sm mr-2 cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => {
-                            setDetailSurat(item)
-                            setIsDetailModalOpen(true)
-                          }}
-                        >
-                          #{item.bil}
-                        </span>
-                        {item.status === "SELESAI" && <CheckCircle className="h-3 w-3 text-green-500" />}
-                        {item.status === "BATAL" && <XCircle className="h-3 w-3 text-red-500" />}
-                      </div>
-                      <div className="flex items-center">
-                        <Badge className={`text-[10px] ${getStatusColor(item.status)}`}>{item.status}</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 ml-1">
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(item)} disabled={!canEditFull}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            {canComment && (
-                              <DropdownMenuItem onClick={() => openCommentDialog(item)}>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Komen
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => openDeleteDialog(item)}
-                              disabled={!canDelete}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    <div className="mb-2">
-                      <div className="flex items-center mb-1">
-                        <span className="text-xs text-muted-foreground mr-2">Kategori:</span>
-                        <div className="flex items-center">
-                          <span
-                            className={cn(
-                              "text-xs font-medium",
-                              item.kategori === "MASUK"
-                                ? "text-red-600"
-                                : item.kategori === "KELUAR"
-                                  ? "text-blue-600"
-                                  : "",
-                            )}
-                          >
-                            {item.kategori}
-                          </span>
-                          {item.kategori === "MASUK" && <ArrowDown className="ml-1 h-3 w-3 text-red-600" />}
-                          {item.kategori === "KELUAR" && <ArrowUp className="ml-1 h-3 w-3 text-blue-600" />}
-                        </div>
-                      </div>
-                      <div className="flex items-center mb-1">
-                        <span className="text-xs text-muted-foreground mr-2">Tarikh:</span>
-                        <span className="text-xs">{item.tarikh}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {item.kategori === "MASUK" ? "DARIPADA: " : "KEPADA: "}
-                        {item.daripadaKepada}
-                      </p>
-                    </div>
-
-                    <div className="mb-2">
-                      <h3 className="font-medium text-xs">{item.perkara}</h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mt-2 items-center">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px]"
-                        style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
-                      >
-                        {item.unit}
-                      </Badge>
-                      {item.tindakanPic && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px]"
-                          style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
-                        >
-                          PIC: {item.tindakanPic}
-                        </Badge>
-                      )}
-                      {item.reference ? (
-                        <Badge
-                          variant="outline"
-                          className="cursor-pointer text-[10px] bg-black text-white hover:bg-black/80"
-                          onClick={() => handleBilReferenceClick(item.reference)}
-                        >
-                          {item.reference}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="cursor-pointer text-[10px] hover:bg-secondary/80"
-                          onClick={() => handleOpenAddDialog(item.bil)}
-                        >
-                          Respon
-                        </Badge>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-6 w-6 ml-auto rounded-full bg-green-500 hover:bg-green-600 border-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleShareToWhatsApp(item)
-                        }}
-                        disabled={generatingImage}
-                      >
-                        {sharingItemId === item.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-white" />
-                        ) : (
-                          <Share2 className="h-3 w-3 text-white" />
-                        )}
-                        <span className="sr-only">Share Ke WhatsApp</span>
-                      </Button>
-                    </div>
-
-                    {item.nota && (
-                      <div
-                        className="mt-2 text-[10px] text-red-500"
-                        onClick={(e) => {
-                          // Check if the clicked element has a data-bil attribute
-                          const target = e.target as HTMLElement
-                          if (target.hasAttribute("data-bil")) {
-                            const bilNumber = target.getAttribute("data-bil")
-                            if (bilNumber) {
-                              handleBilReferenceClick(bilNumber)
-                            }
-                          }
-                        }}
-                      >
-                        <span className="font-medium">Nota:</span>{" "}
-                        <span dangerouslySetInnerHTML={{ __html: formatBilReferences(item.nota) }} />
-                      </div>
-                    )}
-
-                    {item.komen && (
-                      <div className="mt-2 text-[10px] text-blue-600 flex items-start gap-1">
-                        <MessageSquare className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <span className="font-medium">Komen:</span> {item.komen}
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Pagination - Non-sticky for mobile */}
-          {filteredSurat.length > 0 && (
-            <div className="flex items-center justify-between space-x-2 py-4 md:mb-0">
-              <div className="text-xs text-muted-foreground">
-                List {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredSurat.length)} from {filteredSurat.length}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="sr-only">Previous Page</span>
-                </Button>
-                <div className="text-xs">
-                  {currentPage} of {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                  <span className="sr-only">Next Page</span>
-                </Button>
-              </div>
-            </div>
-          )}
+        <CardContent className="px-2 pb-3 sm:px-6 sm:pb-6">
+          <SuratList
+            items={displayedSurat}
+            totalCount={filteredSurat.length}
+            loading={loading}
+            error={error}
+            onReload={fetchWithCache}
+            columnVisibility={columnVisibility}
+            onSort={(field) => handleSort(field as any)}
+            onOpenDetail={(item) => {
+              setDetailSurat(item)
+              setIsDetailModalOpen(true)
+            }}
+            onUnitFilter={handleUnitFilter}
+            onStatusFilter={handleStatusFilter}
+            onReferenceClick={handleBilReferenceClick}
+            onRespond={handleOpenAddDialog}
+            onEdit={openEditDialog}
+            onComment={openCommentDialog}
+            onShare={handleShareToWhatsApp}
+            onDelete={openDeleteDialog}
+            canEditFull={Boolean(canEditFull)}
+            canComment={Boolean(canComment)}
+            canDelete={Boolean(canDelete)}
+            generatingImage={generatingImage}
+            sharingItemId={sharingItemId}
+            formatBilReferences={formatBilReferences}
+            page={currentPage}
+            pageSize={ITEMS_PER_PAGE}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
 
           {/* Mobile Footer */}
-          <div className="md:hidden text-center text-xs text-muted-foreground py-4 border-t mt-4">Made By Akmal</div>
+          <div className="md:hidden pt-4 text-center text-caption-1-regular text-text-tertiary">Made By Akmal</div>
         </CardContent>
       </Card>
 
@@ -2837,7 +2293,7 @@ export default function SuratPage() {
                       {selectedFailId && filteredFailData.length > 0 ? (
                         <div className="flex items-center gap-2">
                           <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{
                               backgroundColor: getFailPartColor(
                                 filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
@@ -2891,7 +2347,7 @@ export default function SuratPage() {
                             >
                               <div className="flex items-center gap-2">
                                 <span
-                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  className="w-2 h-2 rounded-full shrink-0"
                                   style={{
                                     backgroundColor: getFailPartColor(fail.part),
                                   }}
@@ -2945,7 +2401,7 @@ export default function SuratPage() {
               </div>
             )}
           </div>
-          <DialogFooter className="sticky bottom-0 pt-2 pb-2 bg-background flex flex-col sm:flex-row gap-2 sm:gap-0">
+          <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
             <Button
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
@@ -2974,7 +2430,7 @@ export default function SuratPage() {
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-[400px] p-3 md:p-6">
+        <DialogContent className="sm:max-w-[400px] p-3 md:p-6">
           <DialogHeader className="p-0 md:p-2">
             <DialogTitle className="text-base md:text-lg">Padam Surat</DialogTitle>
             <DialogDescription className="text-xs md:text-sm">
@@ -3057,6 +2513,7 @@ export default function SuratPage() {
             <h3 className="text-sm font-medium mb-1">Unit</h3>
             <Badge
               variant="outline"
+              className="text-neutral-900"
               style={{
                 backgroundColor: getUnitColor(detailSurat.unit),
                 borderColor: getUnitColor(detailSurat.unit),
@@ -3098,6 +2555,7 @@ export default function SuratPage() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
+                className="text-neutral-900"
                 style={{
                   backgroundColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
                   borderColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
