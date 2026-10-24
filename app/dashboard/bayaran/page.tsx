@@ -983,6 +983,7 @@ ${
 *${sharingBayaran.perkara.toUpperCase()}*
 > KE : _${sharingBayaran.bayaranKe}_ *|* _${sharingBayaran.noKontrak}_
 > _${formatCurrency(sharingBayaran.nilaiBayaran)}_
+> *Kontrak* : ${sharingBayaran.namaKontraktor || "-"}
 > *Nota Kaki:* _${sharingBayaran.notaKaki}_
 
 Detail: ${directLink}
