@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/command";
 import { BayaranShareImageGenerator } from "@/components/bayaran-share-image-generator";
 import { BayaranTable } from "@/components/bayaran/BayaranTable";
+import { matchesBayaranSearch, parseRecordNumber } from "@/lib/bayaran-search";
 import { DetailDialog } from "@/components/bayaran/DetailDialog";
 import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
@@ -300,34 +301,21 @@ export default function BayaranPage() {
   };
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-
-    // Auto-filter for ID searches starting with #
-    if (value.startsWith("#")) {
-      const idNumber = value.substring(1);
-      if (idNumber && !isNaN(Number(idNumber))) {
-        // Filter bayaran by ID
-        const filtered = bayaran.filter((item) => item.id === idNumber);
-        setFilteredBayaran(filtered);
-        setCurrentPage(1);
-      }
-    }
+    // filterBayaran runs from the effect on searchQuery
+    setSearchQuery(e.target.value);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if it's an ID search with single result
-    if (searchQuery.startsWith("#")) {
-      const idNumber = searchQuery.substring(1);
-      if (idNumber && !isNaN(Number(idNumber))) {
-        const foundBayaran = bayaran.find((item) => item.ids === Number(idNumber));
-        if (foundBayaran) {
-          setSelectedBayaran(foundBayaran);
-          setShowDetailDialog(true);
-          return;
-        }
+    // "#119" + Enter opens that record directly
+    if (searchQuery.trim().startsWith("#")) {
+      const recordNumber = parseRecordNumber(searchQuery);
+      const foundBayaran = recordNumber !== null ? bayaran.find((item) => item.ids === recordNumber) : undefined;
+      if (foundBayaran) {
+        setSelectedBayaran(foundBayaran);
+        setShowDetailDialog(true);
+        return;
       }
     }
 
@@ -342,31 +330,9 @@ export default function BayaranPage() {
 
     let filtered = [...bayaran];
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-
-      // Handle ID search with # prefix
-      if (query.startsWith("#")) {
-        const idNumber = query.substring(1);
-        if (idNumber && !isNaN(Number(idNumber))) {
-          filtered = filtered.filter((item) => item.id === idNumber);
-        } else {
-          filtered = [];
-        }
-      } else {
-        // Regular search
-        filtered = filtered.filter(
-          (item) =>
-            (item.daripada || "").toLowerCase().includes(query) ||
-            (item.perkara || "").toLowerCase().includes(query) ||
-            (item.kategori || "").toLowerCase().includes(query) ||
-            (item.bayaranKe || "").toLowerCase().includes(query) ||
-            (item.penerima || "").toLowerCase().includes(query) ||
-            (item.nomborBaucer || "").toLowerCase().includes(query) ||
-            (item.id || "").toLowerCase().includes(query)
-        );
-      }
+    // Apply search filter (record number, Nilai Bayaran, text fields)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((item) => matchesBayaranSearch(item, searchQuery));
     }
 
     // Apply status filter
@@ -944,7 +910,7 @@ export default function BayaranPage() {
       const statusIcon = isCancelled ? "⛔" : sharingBayaran.tarikhBayar ? "✅" : "🕑";
       const checkIcon = isCancelled ? "⛔" : "✅";
 
-      const message = `📌*REKOD BAYARAN #${sharingBayaran.id}*
+      const message = `📌*REKOD BAYARAN #${sharingBayaran.ids ?? sharingBayaran.id}*
       _${sharingBayaran.statusBayaran.toUpperCase()}_ ${statusIcon}
 
 ${
@@ -983,6 +949,7 @@ ${
 *${sharingBayaran.perkara.toUpperCase()}*
 > KE : _${sharingBayaran.bayaranKe}_ *|* _${sharingBayaran.noKontrak}_
 > _${formatCurrency(sharingBayaran.nilaiBayaran)}_
+> *Kontrak* : ${sharingBayaran.namaKontraktor || "-"}
 > *Nota Kaki:* _${sharingBayaran.notaKaki}_
 
 Detail: ${directLink}
