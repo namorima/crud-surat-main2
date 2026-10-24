@@ -196,7 +196,7 @@ export function AddEditForm({
 
             {/* Mobile layout: No Kontrak and Kategori in one line */}
             <div className="md:hidden flex gap-2">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="noKontrak">No Kontrak</Label>
                 <Select
                   value={formData.noKontrak}
@@ -215,7 +215,7 @@ export function AddEditForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="kategori">Kategori</Label>
                 <Select
                   value={formData.kategori}
@@ -365,7 +365,7 @@ export function AddEditForm({
               <>
                 {/* Tarikh PPN (P) and Tarikh PN in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh PPN (P)</Label>
                     <Input
                       type="date"
@@ -374,7 +374,7 @@ export function AddEditForm({
                       disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh PN</Label>
                     <Input
                       type="date"
@@ -414,7 +414,7 @@ export function AddEditForm({
               <>
                 {/* Tarikh Hantar and Penerima in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh Hantar</Label>
                     <Input
                       type="date"
@@ -435,7 +435,7 @@ export function AddEditForm({
                       disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Penerima</Label>
                     <Popover open={showPenerimaDropdown} onOpenChange={setShowPenerimaDropdown}>
                       <PopoverTrigger asChild>
@@ -494,7 +494,7 @@ export function AddEditForm({
 
                 {/* Status Bayaran and Tarikh Bayar in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Status Bayaran</Label>
                     <Select
                       value={formData.statusBayaran}
@@ -528,7 +528,7 @@ export function AddEditForm({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh Bayar</Label>
                     <Input
                       type="date"
