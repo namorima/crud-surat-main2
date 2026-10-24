@@ -83,6 +83,9 @@ The application uses a **dual-database architecture**:
 13. **`role_permissions`** - RBAC role-permission junction
     - Columns: `id`, `role_id`, `permission_id`, `created_at`
 
+14. **`password_reset_tokens`** - One-time reset links (SHA-256 of the token only)
+    - Columns: `id`, `user_id`, `token_hash`, `expires_at`, `used_at`, `created_at`
+
 ### Core Data Types
 
 Located in `types/` directory:
@@ -113,7 +116,7 @@ Located in `types/` directory:
 
 0. **Server-side session (API protection)**
    - Login ([app/api/auth/login/route.ts](app/api/auth/login/route.ts)) sets an HttpOnly signed cookie `crud_session` ([lib/session.ts](lib/session.ts), HMAC-SHA256 with `SESSION_SECRET`, falling back to `SUPABASE_SERVICE_ROLE_KEY`); `/api/auth/logout` clears it
-   - [middleware.ts](middleware.ts) rejects every `/api` request without a valid cookie (401), except login/logout and the public share-link routes (`GET /api/share-link/[id]`, `GET /api/share-link/[id]/bayaran`, `POST /api/share-link/[id]/increment`)
+   - [middleware.ts](middleware.ts) rejects every `/api` request without a valid cookie (401), except login/logout, forgot/reset password and the public share-link routes (`GET /api/share-link/[id]`, `GET /api/share-link/[id]/bayaran`, `POST /api/share-link/[id]/increment`)
    - Sensitive routes also check permissions server-side with `requirePermission()` ([lib/server-auth.ts](lib/server-auth.ts)): users/roles/permissions (pengguna), kontrak/kontraktor and share-link management (tetapan)
    - The client logs out on any 401 from `/api` ([lib/auth-provider.tsx](lib/auth-provider.tsx))
    - `/share/[id]` fetches only its rows from `/api/share-link/[id]/bayaran` (filtered server-side by [lib/share-filter.ts](lib/share-filter.ts))
@@ -182,7 +185,9 @@ Located in `types/` directory:
 #### Password Management
 
 1. **Password Reset Flow**
-   - Forgot/Reset Password ([app/forgot-password/page.tsx](app/forgot-password/page.tsx), [app/reset-password/page.tsx](app/reset-password/page.tsx)): currently DISABLED (API returns 410; the old reset route accepted any token). Users ask an admin to reset from Pengguna
+   - Forgot Password ([app/forgot-password/page.tsx](app/forgot-password/page.tsx)): emails a one-time link via Resend (`RESEND_API_KEY`, optional `RESEND_FROM`, link base `NEXT_PUBLIC_SITE_URL`). Same reply whether or not the email exists; one email per user per minute
+   - Reset Password ([app/reset-password/page.tsx](app/reset-password/page.tsx)): link is `/reset-password#token=...`; token valid 1 hour, single use. Only its SHA-256 is stored in `password_reset_tokens` ([create-password-reset-tokens.sql](create-password-reset-tokens.sql)); logic in [lib/password-reset.ts](lib/password-reset.ts)
+   - Users without an email in `users` cannot self-reset; an admin resets them from Pengguna
    - Change Password: Authenticated user changes password ([app/change-password/page.tsx](app/change-password/page.tsx))
    - Admin Reset: Admin can reset any user's password ([app/api/auth/reset-password-admin/route.ts](app/api/auth/reset-password-admin/route.ts))
 
@@ -212,6 +217,11 @@ Create a `.env.local` file in the project root:
 ```env
 # ImgBB API for image uploads
 NEXT_PUBLIC_IMGBB_API_KEY="your_imgbb_api_key"
+
+# Password reset emails (Resend). RESEND_FROM must use a domain verified in Resend
+RESEND_API_KEY="re_..."
+RESEND_FROM="Sistem Surat & Bayaran <noreply@your-domain>"
+NEXT_PUBLIC_SITE_URL="https://crudladang.vercel.app"
 
 # Session cookie signing (recommended; falls back to SUPABASE_SERVICE_ROLE_KEY)
 SESSION_SECRET="a-long-random-string"
