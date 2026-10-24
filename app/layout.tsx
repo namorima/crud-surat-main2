@@ -19,6 +19,9 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  // Stops iOS Safari zooming in when a search box or form field is focused.
+  // iOS still allows pinch zoom with maximum-scale set.
+  maximumScale: 1,
   viewportFit: "cover",
 }
 
