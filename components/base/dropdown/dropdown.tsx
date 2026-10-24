@@ -184,6 +184,7 @@ export interface DropdownItemProps {
   /** Highlights the row like the hover state (current selection). */
   selected?: boolean;
   onSelect?: () => void;
+  disabled?: boolean;
   /** Row padding defaults to p-2 — override for denser rows (px-2 py-1.5). */
   className?: string;
   children: ReactNode;
@@ -193,15 +194,17 @@ export interface DropdownItemProps {
  * A menu row. Content is free-form — icon + label, avatar + name, label +
  * trailing badge — laid out in a gap-2 flex row.
  */
-export function DropdownItem({ selected, onSelect, className, children }: DropdownItemProps) {
+export function DropdownItem({ selected, onSelect, disabled, className, children }: DropdownItemProps) {
   return (
     <button
       type="button"
       aria-pressed={selected}
+      disabled={disabled}
       onClick={onSelect}
       className={cx(
         MENU_ITEM,
         selected ? MENU_ITEM_ACTIVE : MENU_ITEM_INTERACTIVE,
+        disabled && "pointer-events-none opacity-50",
         className,
       )}
     >

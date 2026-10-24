@@ -78,6 +78,37 @@ const navigation: NavigationItem[] = [
   },
 ]
 
+export type { NavigationItem }
+
+/** Navigation rows the signed-in user may open (RBAC first, legacy roles as fallback). */
+export function useNavigation(): NavigationItem[] {
+  const { user } = useAuth()
+
+  // Filter navigation based on user permissions or legacy role
+  return navigation.filter((item) => {
+    // REMOVED: Blanket block for VIEW and PENERIMA types
+    // Now allowing RBAC permission check to determine access for these user types
+    // Previously blocked these users unconditionally from Surat and Tetapan
+
+    // Check RBAC permissions first
+    if (user?.permissions && user.permissions.length > 0) {
+      return hasPermission(user.permissions, item.requiredPermission)
+    }
+
+    // Fallback to legacy role check for backward compatibility
+    if (item.legacyRoles && user?.role) {
+      // KEWANGAN role specific filtering (legacy)
+      if (user.role === "KEWANGAN") {
+        return item.name === "Bayaran"
+      }
+
+      return item.legacyRoles.includes(user.role)
+    }
+
+    return false
+  })
+}
+
 const COLLAPSED_STORAGE_KEY = "sidebar:collapsed"
 
 /** Label slot that fades and shrinks away when the rail collapses. */
@@ -171,29 +202,7 @@ export function Sidebar({
     } catch {}
   }
 
-  // Filter navigation based on user permissions or legacy role
-  const filteredNavigation = navigation.filter((item) => {
-    // REMOVED: Blanket block for VIEW and PENERIMA types
-    // Now allowing RBAC permission check to determine access for these user types
-    // Previously blocked these users unconditionally from Surat and Tetapan
-
-    // Check RBAC permissions first
-    if (user?.permissions && user.permissions.length > 0) {
-      return hasPermission(user.permissions, item.requiredPermission)
-    }
-
-    // Fallback to legacy role check for backward compatibility
-    if (item.legacyRoles && user?.role) {
-      // KEWANGAN role specific filtering (legacy)
-      if (user.role === "KEWANGAN") {
-        return item.name === "Bayaran"
-      }
-
-      return item.legacyRoles.includes(user.role)
-    }
-
-    return false
-  })
+  const filteredNavigation = useNavigation()
 
   const handleRefreshPermissions = async () => {
     setIsRefreshing(true)

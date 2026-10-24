@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { usePathname } from "next/navigation"
 import { RiMenuLine } from "@remixicon/react"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { BottomTabBar } from "@/components/dashboard/bottom-tab-bar"
 import { IconButton } from "@/components/base/buttons/icon-button"
 import { cx } from "@/utils/cx"
 
@@ -11,8 +12,9 @@ const AppShellContext = createContext<{ openNav: () => void } | null>(null)
 
 /**
  * Dashboard frame, after BoardUI's app-shell: the floating sidebar from `lg`
- * (iPad landscape and desktop) and an overlay drawer below it (iPhone and
- * iPad portrait), opened by each page's <NavTrigger />.
+ * (iPad landscape and desktop) and an overlay drawer below it. On iPad
+ * portrait the drawer opens from each page's <NavTrigger />; on iPhone a
+ * bottom tab bar carries the main pages and opens the drawer via "Lagi".
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false)
@@ -53,18 +55,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main
           className={cx(
             "relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
-            "px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+            "px-2 pt-[max(0.5rem,env(safe-area-inset-top))]",
+            // Room for the fixed bottom tab bar on phones.
+            "pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]",
             "sm:px-4 sm:pt-4 lg:px-1 lg:pt-1 lg:pb-1",
           )}
         >
           <div className="mx-auto w-full max-w-[1300px]">{children}</div>
         </main>
+
+        <BottomTabBar onMore={() => setNavOpen(true)} />
       </div>
     </AppShellContext.Provider>
   )
 }
 
-/** Hamburger shown below `lg`, where the sidebar lives in a drawer. */
+/** Hamburger for iPad portrait (`sm`–`lg`); iPhone uses the bottom tab bar instead. */
 export function NavTrigger({ className }: { className?: string }) {
   const shell = useContext(AppShellContext)
   if (!shell) return null
@@ -74,7 +80,7 @@ export function NavTrigger({ className }: { className?: string }) {
       size="small"
       aria-label="Buka navigasi"
       onClick={shell.openNav}
-      className={cx("lg:hidden", className)}
+      className={cx("hidden sm:inline-flex lg:hidden", className)}
     />
   )
 }

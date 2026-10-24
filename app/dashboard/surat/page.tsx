@@ -23,25 +23,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Plus,
-  MoreHorizontal,
   Edit,
-  Trash,
   AlertCircle,
-  ArrowUpDown,
   Settings,
   Search,
   X,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   SlidersHorizontal,
   CheckCircle,
-  XCircle,
   ArrowDown,
   ArrowUp,
   ArrowDownUp,
@@ -63,6 +56,7 @@ import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NavTrigger } from "@/components/dashboard/app-shell"
+import { SuratList } from "@/components/surat/SuratList"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 
 // Number of items per page
@@ -2105,520 +2099,41 @@ export default function SuratPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="overflow-hidden">
-          <div className="overflow-x-auto">
-            {/* Desktop view */}
-            <div className="hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
-              <Table>
-                <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-xs">
-                  <TableRow>
-                    {columnVisibility.bil && (
-                      <TableHead className="w-[80px] cursor-pointer" onClick={() => handleSort("bil")}>
-                        <div className="flex items-center">
-                          Bil
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.kategori && (
-                      <TableHead className="w-[200px] cursor-pointer" onClick={() => handleSort("kategori")}>
-                        <div className="flex flex-col">
-                          <div className="flex items-center">
-                            Kategori
-                            <ArrowUpDown className="ml-1 h-4 w-4" />
-                          </div>
-                          {columnVisibility.tarikh && <div className="text-xs text-muted-foreground mt-1">Tarikh</div>}
-                          <div className="text-xs text-muted-foreground mt-1">Daripada/Kepada</div>
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.perkara && (
-                      <TableHead className="cursor-pointer" onClick={() => handleSort("perkara")}>
-                        <div className="flex items-center">
-                          Perkara
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    {columnVisibility.reference && (
-                      <TableHead className="w-[150px] cursor-pointer" onClick={() => handleSort("reference")}>
-                        <div className="flex items-center">
-                          Reference
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </TableHead>
-                    )}
-                    <TableHead className="text-right">Tindakan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedSurat.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        {loading ? (
-                          <div className="flex justify-center">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                          </div>
-                        ) : error ? (
-                          <div className="text-destructive">Error loading data. Please try again.</div>
-                        ) : (
-                          <div>
-                            <p className="text-muted-foreground">Tiada data surat dijumpai</p>
-                            <Button variant="outline" size="sm" className="mt-2" onClick={fetchWithCache}>
-                              Muat Semula Data
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    displayedSurat.map((item) => (
-                      <TableRow
-                        key={item.id}
-                        className={cn(
-                          "table-row text-sm transition-all duration-200 hover:bg-muted/30",
-                          item.status === "SELESAI" && "bg-status-surface-selesai",
-                          item.status === "DALAM TINDAKAN" && "bg-status-surface-tindakan",
-                          item.status === "HOLD / KIV" && "bg-status-surface-hold",
-                          item.status === "BATAL" && "bg-status-surface-batal",
-                        )}
-                      >
-                        {columnVisibility.bil && (
-                          <TableCell className="py-2">
-                            <div className="flex items-center gap-2">
-                              {item.status === "SELESAI" ? (
-                                <Badge
-                                  variant="default"
-                                  className="bg-green-500 hover:bg-green-600 cursor-pointer"
-                                  onClick={() => {
-                                    setDetailSurat(item)
-                                    setIsDetailModalOpen(true)
-                                  }}
-                                >
-                                  #{item.bil}
-                                </Badge>
-                              ) : (
-                                <span
-                                  className="cursor-pointer hover:text-blue-600 hover:underline font-medium"
-                                  onClick={() => {
-                                    setDetailSurat(item)
-                                    setIsDetailModalOpen(true)
-                                  }}
-                                >
-                                  #{item.bil}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.kategori && (
-                          <TableCell className="py-2">
-                            <div className="flex flex-col">
-                              <div className="flex items-center">
-                                <span
-                                  className={cn(
-                                    "font-medium",
-                                    item.kategori === "MASUK"
-                                      ? "text-red-600"
-                                      : item.kategori === "KELUAR"
-                                        ? "text-blue-600"
-                                        : "",
-                                  )}
-                                >
-                                  {item.kategori}
-                                </span>
-                                {item.kategori === "MASUK" && <ArrowDown className="ml-1 h-4 w-4 text-red-600" />}
-                                {item.kategori === "KELUAR" && <ArrowUp className="ml-1 h-4 w-4 text-blue-600" />}
-                              </div>
-                              {columnVisibility.tarikh && (
-                                <div
-                                  className={cn(
-                                    "text-sm mt-1",
-                                    item.kategori === "MASUK"
-                                      ? "text-red-600"
-                                      : item.kategori === "KELUAR"
-                                        ? "text-blue-600"
-                                        : "",
-                                  )}
-                                >
-                                  {item.tarikh}
-                                </div>
-                              )}
-                              <div className="text-sm text-muted-foreground mt-1">{item.daripadaKepada}</div>
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.perkara && (
-                          <TableCell className="py-2">
-                            <div className="space-y-1">
-                              <div className="font-medium">{item.perkara}</div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-pointer hover:bg-secondary text-xs transition-all duration-200 hover:scale-105 text-neutral-900"
-                                  onClick={() => handleUnitFilter(item.unit)}
-                                  style={{
-                                    backgroundColor: getUnitColor(item.unit),
-                                    borderColor: getUnitColor(item.unit),
-                                  }}
-                                >
-                                  {item.unit}
-                                </Badge>
-                                {item.tindakanPic && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs text-neutral-900"
-                                    style={{
-                                      backgroundColor: getUnitColor(item.unit),
-                                      borderColor: getUnitColor(item.unit),
-                                    }}
-                                  >
-                                    PIC: {item.tindakanPic}
-                                  </Badge>
-                                )}
-                                <Badge
-                                  className={`cursor-pointer text-xs ${getStatusColor(item.status)}`}
-                                  onClick={() => handleStatusFilter(item.status)}
-                                >
-                                  {item.status}
-                                </Badge>
-                              </div>
-                              {item.nota && (
-                                <div
-                                  className="text-red-500 text-xs mt-1"
-                                  dangerouslySetInnerHTML={{ __html: formatBilReferences(item.nota) }}
-                                  onClick={(e) => {
-                                    // Check if the clicked element has a data-bil attribute
-                                    const target = e.target as HTMLElement
-                                    if (target.hasAttribute("data-bil")) {
-                                      const bilNumber = target.getAttribute("data-bil")
-                                      if (bilNumber) {
-                                        handleBilReferenceClick(bilNumber)
-                                      }
-                                    }
-                                  }}
-                                />
-                              )}
-                              {item.komen && (
-                                <div className="text-blue-600 text-xs mt-1 flex items-start gap-1">
-                                  <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                                  <span className="font-medium">Komen:</span> {item.komen}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
-                        {columnVisibility.reference && (
-                          <TableCell className="py-2">
-                            {item.reference ? (
-                              <Badge
-                                variant="outline"
-                                className="cursor-pointer bg-black text-white hover:bg-black/80"
-                                onClick={() => handleBilReferenceClick(item.reference)}
-                              >
-                                {item.reference}
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="secondary"
-                                className="cursor-pointer hover:bg-secondary/80"
-                                onClick={() => handleOpenAddDialog(item.bil)}
-                              >
-                                Respon
-                              </Badge>
-                            )}
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right py-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(item)} disabled={!canEditFull}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              {canComment && (
-                                <DropdownMenuItem onClick={() => openCommentDialog(item)}>
-                                  <MessageSquare className="mr-2 h-4 w-4" />
-                                  Komen
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => handleShareToWhatsApp(item)}
-                                disabled={generatingImage}
-                                className="cursor-pointer"
-                              >
-                                <Share2 className="mr-2 h-4 w-4" />
-                                {sharingItemId === item.id ? (
-                                  <span className="flex items-center">
-                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                    Generating...
-                                  </span>
-                                ) : (
-                                  "Share Ke WhatsApp"
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => openDeleteDialog(item)}
-                                disabled={!canDelete}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile view */}
-            <div className="md:hidden space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto pb-4">
-              {displayedSurat.length === 0 ? (
-                <div className="text-center py-8">
-                  {loading ? (
-                    <div className="flex justify-center">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-destructive">Error loading data. Please try again.</div>
-                  ) : (
-                    <div>
-                      <p className="text-muted-foreground">Tiada data surat dijumpai</p>
-                      <Button variant="outline" size="sm" className="mt-2" onClick={fetchWithCache}>
-                        Muat Semula Data
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                displayedSurat.map((item) => (
-                  <Card
-                    key={item.id}
-                    className={`p-3 transition-all duration-200 hover:bg-muted/30 ${
-                      item.status === "SELESAI"
-                        ? "border-green-500 bg-status-surface-selesai"
-                        : item.status === "DALAM TINDAKAN"
-                          ? "border-blue-500 bg-status-surface-tindakan"
-                          : item.status === "HOLD / KIV"
-                            ? "border-orange-500 bg-status-surface-hold"
-                            : item.status === "BATAL"
-                              ? "border-red-500 bg-status-surface-batal"
-                              : "border-gray-200"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center">
-                        <span
-                          className="font-bold text-sm mr-2 cursor-pointer hover:text-blue-600 hover:underline"
-                          onClick={() => {
-                            setDetailSurat(item)
-                            setIsDetailModalOpen(true)
-                          }}
-                        >
-                          #{item.bil}
-                        </span>
-                        {item.status === "SELESAI" && <CheckCircle className="h-3 w-3 text-green-500" />}
-                        {item.status === "BATAL" && <XCircle className="h-3 w-3 text-red-500" />}
-                      </div>
-                      <div className="flex items-center">
-                        <Badge className={`text-[10px] ${getStatusColor(item.status)}`}>{item.status}</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 ml-1">
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(item)} disabled={!canEditFull}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            {canComment && (
-                              <DropdownMenuItem onClick={() => openCommentDialog(item)}>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Komen
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => openDeleteDialog(item)}
-                              disabled={!canDelete}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-
-                    <div className="mb-2">
-                      <div className="flex items-center mb-1">
-                        <span className="text-xs text-muted-foreground mr-2">Kategori:</span>
-                        <div className="flex items-center">
-                          <span
-                            className={cn(
-                              "text-xs font-medium",
-                              item.kategori === "MASUK"
-                                ? "text-red-600"
-                                : item.kategori === "KELUAR"
-                                  ? "text-blue-600"
-                                  : "",
-                            )}
-                          >
-                            {item.kategori}
-                          </span>
-                          {item.kategori === "MASUK" && <ArrowDown className="ml-1 h-3 w-3 text-red-600" />}
-                          {item.kategori === "KELUAR" && <ArrowUp className="ml-1 h-3 w-3 text-blue-600" />}
-                        </div>
-                      </div>
-                      <div className="flex items-center mb-1">
-                        <span className="text-xs text-muted-foreground mr-2">Tarikh:</span>
-                        <span className="text-xs">{item.tarikh}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {item.kategori === "MASUK" ? "DARIPADA: " : "KEPADA: "}
-                        {item.daripadaKepada}
-                      </p>
-                    </div>
-
-                    <div className="mb-2">
-                      <h3 className="font-medium text-xs">{item.perkara}</h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mt-2 items-center">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] text-neutral-900"
-                        style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
-                      >
-                        {item.unit}
-                      </Badge>
-                      {item.tindakanPic && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] text-neutral-900"
-                          style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
-                        >
-                          PIC: {item.tindakanPic}
-                        </Badge>
-                      )}
-                      {item.reference ? (
-                        <Badge
-                          variant="outline"
-                          className="cursor-pointer text-[10px] bg-black text-white hover:bg-black/80"
-                          onClick={() => handleBilReferenceClick(item.reference)}
-                        >
-                          {item.reference}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="cursor-pointer text-[10px] hover:bg-secondary/80"
-                          onClick={() => handleOpenAddDialog(item.bil)}
-                        >
-                          Respon
-                        </Badge>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-6 w-6 ml-auto rounded-full bg-green-500 hover:bg-green-600 border-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleShareToWhatsApp(item)
-                        }}
-                        disabled={generatingImage}
-                      >
-                        {sharingItemId === item.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-white" />
-                        ) : (
-                          <Share2 className="h-3 w-3 text-white" />
-                        )}
-                        <span className="sr-only">Share Ke WhatsApp</span>
-                      </Button>
-                    </div>
-
-                    {item.nota && (
-                      <div
-                        className="mt-2 text-[10px] text-red-500"
-                        onClick={(e) => {
-                          // Check if the clicked element has a data-bil attribute
-                          const target = e.target as HTMLElement
-                          if (target.hasAttribute("data-bil")) {
-                            const bilNumber = target.getAttribute("data-bil")
-                            if (bilNumber) {
-                              handleBilReferenceClick(bilNumber)
-                            }
-                          }
-                        }}
-                      >
-                        <span className="font-medium">Nota:</span>{" "}
-                        <span dangerouslySetInnerHTML={{ __html: formatBilReferences(item.nota) }} />
-                      </div>
-                    )}
-
-                    {item.komen && (
-                      <div className="mt-2 text-[10px] text-blue-600 flex items-start gap-1">
-                        <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                        <div>
-                          <span className="font-medium">Komen:</span> {item.komen}
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Pagination - Non-sticky for mobile */}
-          {filteredSurat.length > 0 && (
-            <div className="flex items-center justify-between space-x-2 py-4 md:mb-0">
-              <div className="text-xs text-muted-foreground">
-                List {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredSurat.length)} from {filteredSurat.length}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="sr-only">Previous Page</span>
-                </Button>
-                <div className="text-xs">
-                  {currentPage} of {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                  <span className="sr-only">Next Page</span>
-                </Button>
-              </div>
-            </div>
-          )}
+        <CardContent className="px-2 pb-3 sm:px-6 sm:pb-6">
+          <SuratList
+            items={displayedSurat}
+            totalCount={filteredSurat.length}
+            loading={loading}
+            error={error}
+            onReload={fetchWithCache}
+            columnVisibility={columnVisibility}
+            onSort={(field) => handleSort(field as any)}
+            onOpenDetail={(item) => {
+              setDetailSurat(item)
+              setIsDetailModalOpen(true)
+            }}
+            onUnitFilter={handleUnitFilter}
+            onStatusFilter={handleStatusFilter}
+            onReferenceClick={handleBilReferenceClick}
+            onRespond={handleOpenAddDialog}
+            onEdit={openEditDialog}
+            onComment={openCommentDialog}
+            onShare={handleShareToWhatsApp}
+            onDelete={openDeleteDialog}
+            canEditFull={Boolean(canEditFull)}
+            canComment={Boolean(canComment)}
+            canDelete={Boolean(canDelete)}
+            generatingImage={generatingImage}
+            sharingItemId={sharingItemId}
+            formatBilReferences={formatBilReferences}
+            page={currentPage}
+            pageSize={ITEMS_PER_PAGE}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
 
           {/* Mobile Footer */}
-          <div className="md:hidden text-center text-xs text-muted-foreground py-4 border-t mt-4">Made By Akmal</div>
+          <div className="md:hidden pt-4 text-center text-caption-1-regular text-text-tertiary">Made By Akmal</div>
         </CardContent>
       </Card>
 

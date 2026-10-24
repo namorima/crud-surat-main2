@@ -599,11 +599,18 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `UnitPicManager.tsx` - Unit PIC management
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
-   - `sidebar.tsx` - Navigation sidebar
+   - `app-shell.tsx` - BoardUI page frame: sidebar from `lg`, drawer below, `NavTrigger` for iPad portrait
+   - `bottom-tab-bar.tsx` - iPhone (below `sm`) bottom tab bar; "Lagi" opens the drawer
+   - `sidebar.tsx` - Navigation sidebar and `useNavigation()` (RBAC-filtered nav items)
+   - `row-actions.tsx` - "…" row menu (BoardUI Dropdown)
    - `header.tsx` - Page header
 
-5. **Auth Components** ([components/auth/](components/auth/))
+5. **Surat Components** ([components/surat/](components/surat/))
+   - `SuratList.tsx` - BoardUI table (md+) and compact cards (phones) with pagination
+
+6. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter
+   - `AuthScreen.tsx` - BoardUI auth page frame and card class
 
 ### UI Components
 

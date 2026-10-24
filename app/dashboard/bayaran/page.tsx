@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Share2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { AlertCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1139,16 +1140,14 @@ Detail: ${directLink}
           columnVisibility={columnVisibility}
           setColumnVisibility={setColumnVisibility}
         />
-        <CardContent className="overflow-hidden">
+        <CardContent className="px-2 pb-3 sm:px-6 sm:pb-6">
           <BayaranTable
             displayedBayaran={displayedBayaran}
             columnVisibility={columnVisibility}
             handleSort={handleSort}
             setSelectedBayaran={setSelectedBayaran}
             setShowDetailDialog={setShowDetailDialog}
-            getKategoriColor={getKategoriColor}
-            getStatusColor={getStatusColor}
-            getStatusBadgeStyle={getStatusBadgeStyle}
+            getStatusHex={(status) => (getStatusBadgeStyle(status) as { backgroundColor?: string }).backgroundColor}
             formatCurrency={formatCurrency}
             renderNotaKakiWithLinks={renderNotaKakiWithLinks}
             handleKontrakFilter={handleKontrakFilter}
@@ -1161,43 +1160,13 @@ Detail: ${directLink}
             fetchWithCache={fetchWithCache}
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
+            totalCount={filteredBayaran.length}
+            page={currentPage}
+            pageSize={ITEMS_PER_PAGE}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
           />
 
-          {/* Pagination - Non-sticky for mobile */}
-          {filteredBayaran.length > 0 && (
-            <div className="flex items-center justify-between space-x-2 py-4 md:mb-0">
-              <div className="text-xs text-muted-foreground">
-                List {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredBayaran.length)} from{" "}
-                {filteredBayaran.length}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="sr-only">Previous Page</span>
-                </Button>
-                <div className="text-xs">
-                  {currentPage} of {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="h-10 w-10 p-0 md:h-8 md:w-8"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                  <span className="sr-only">Next Page</span>
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
