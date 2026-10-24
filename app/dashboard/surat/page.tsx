@@ -1179,7 +1179,7 @@ export default function SuratPage() {
   }
 
   return (
-    <div className="space-y-6 max-h-screen overflow-hidden">
+    <div className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
