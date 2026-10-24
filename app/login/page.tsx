@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth-provider"
 import { RiErrorWarningLine, RiLockLine, RiUser3Line } from "@remixicon/react"
 import { Button } from "@/components/base/buttons/button"
 import { Input } from "@/components/base/input/input"
-import { LinkButton } from "@/components/base/buttons/link-button"
 import { AuthMark, AuthScreen, authCardClass } from "@/components/auth/AuthScreen"
 
 export default function LoginPage() {
@@ -70,9 +69,7 @@ export default function LoginPage() {
             onChange={setPassword}
             isRequired
           />
-          <div className="flex items-center justify-end">
-            <LinkButton href="/forgot-password">Lupa Kata Laluan?</LinkButton>
-          </div>
+          <p className="text-right text-sm text-text-secondary">Lupa kata laluan? Hubungi pentadbir.</p>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Sedang Masuk..." : "Log Masuk"}
           </Button>

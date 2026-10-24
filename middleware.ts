@@ -2,14 +2,12 @@ import { NextResponse, type NextRequest } from "next/server"
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session"
 
 /**
- * API routes that work without a session: signing in, password recovery, and
- * the read-only public share-link page (/share/[id]).
+ * API routes that work without a session: signing in and the read-only public
+ * share-link page (/share/[id]).
  */
 const PUBLIC_API: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^\/api\/auth\/login$/ },
   { method: "POST", pattern: /^\/api\/auth\/logout$/ },
-  { method: "POST", pattern: /^\/api\/auth\/forgot-password$/ },
-  { method: "POST", pattern: /^\/api\/auth\/reset-password$/ },
   { method: "GET", pattern: /^\/api\/share-link\/[^/]+$/ },
   { method: "GET", pattern: /^\/api\/share-link\/[^/]+\/bayaran$/ },
   { method: "POST", pattern: /^\/api\/share-link\/[^/]+\/increment$/ },
