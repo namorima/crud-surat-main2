@@ -126,7 +126,7 @@ export function BayaranHeader({
             <form onSubmit={handleSearchSubmit} className="relative">
               <Input
                 ref={searchInputRef}
-                placeholder="Cari..."
+                placeholder="Cari #id, nilai, perkara..."
                 value={searchQuery}
                 onChange={handleSearchInputChange}
                 className="w-[200px] md:w-[300px] pr-8 h-7 md:h-auto text-xs md:text-sm"
