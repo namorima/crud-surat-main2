@@ -1,20 +1,34 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-provider"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { FileText, BarChart3, Users, Settings, LogOut, Home, CreditCard, RefreshCw } from "lucide-react"
+import {
+  RiBarChartBoxLine,
+  RiBankCardLine,
+  RiCloseLine,
+  RiHome5Line,
+  RiLogoutBoxRLine,
+  RiMailOpenLine,
+  RiRefreshLine,
+  RiSettings4Line,
+  RiSideBarFill,
+  RiTeamLine,
+} from "@remixicon/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { hasPermission } from "@/lib/rbac"
 import type { PermissionCheck } from "@/types/rbac"
-import { useState } from "react"
+import { useEffect, useState, type ComponentType, type ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { ThemeToggle } from "@/components/application/theme/theme-toggle"
+import { Avatar } from "@/components/base/avatar/avatar"
+import { cx } from "@/utils/cx"
+
+type IconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
 
 type NavigationItem = {
   name: string
   href: string
-  icon: any
+  icon: IconComponent
   requiredPermission: PermissionCheck
   legacyRoles?: string[] // For backward compatibility
 }
@@ -23,59 +37,59 @@ const navigation: NavigationItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
-    icon: Home,
+    icon: RiHome5Line,
     requiredPermission: { resource: 'dashboard', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
   },
   {
     name: "Surat",
     href: "/dashboard/surat",
-    icon: FileText,
+    icon: RiMailOpenLine,
     requiredPermission: { resource: 'surat', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
   {
     name: "Bayaran",
     href: "/dashboard/bayaran",
-    icon: CreditCard,
+    icon: RiBankCardLine,
     requiredPermission: { resource: 'bayaran', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
   },
   {
     name: "Statistik",
     href: "/dashboard/statistik",
-    icon: BarChart3,
+    icon: RiBarChartBoxLine,
     requiredPermission: { resource: 'statistik', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "PEMASARAN", "PERANCANG", "MSPO"],
   },
   {
     name: "Pengguna",
     href: "/dashboard/pengguna",
-    icon: Users,
+    icon: RiTeamLine,
     requiredPermission: { resource: 'pengguna', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin"]
   },
   {
     name: "Tetapan",
     href: "/dashboard/tetapan",
-    icon: Settings,
+    icon: RiSettings4Line,
     requiredPermission: { resource: 'tetapan', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
 ]
 
-export function Sidebar() {
-  const { user, logout, refreshPermissions } = useAuth()
-  const pathname = usePathname()
-  const { toast } = useToast()
-  const [isRefreshing, setIsRefreshing] = useState(false)
+export type { NavigationItem }
+
+/** Navigation rows the signed-in user may open (RBAC first, legacy roles as fallback). */
+export function useNavigation(): NavigationItem[] {
+  const { user } = useAuth()
 
   // Filter navigation based on user permissions or legacy role
-  const filteredNavigation = navigation.filter((item) => {
+  return navigation.filter((item) => {
     // REMOVED: Blanket block for VIEW and PENERIMA types
     // Now allowing RBAC permission check to determine access for these user types
     // Previously blocked these users unconditionally from Surat and Tetapan
-    
+
     // Check RBAC permissions first
     if (user?.permissions && user.permissions.length > 0) {
       return hasPermission(user.permissions, item.requiredPermission)
@@ -87,12 +101,108 @@ export function Sidebar() {
       if (user.role === "KEWANGAN") {
         return item.name === "Bayaran"
       }
-      
+
       return item.legacyRoles.includes(user.role)
     }
 
     return false
   })
+}
+
+const COLLAPSED_STORAGE_KEY = "sidebar:collapsed"
+
+/** Label slot that fades and shrinks away when the rail collapses. */
+function Collapsible({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={cx(
+        "flex min-w-0 items-center overflow-hidden transition-[max-width,opacity,filter] duration-300 ease-in-out",
+        collapsed ? "max-w-0 opacity-0 blur-[3px]" : "max-w-full opacity-100 blur-0",
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+const rowClass = (collapsed: boolean, isSelected = false) =>
+  cx(
+    "flex items-center gap-2 overflow-hidden rounded-2lg p-2 outline-none",
+    "transition-[width,background-color] duration-300 ease-in-out",
+    "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+    collapsed ? "w-9" : "w-full",
+    isSelected
+      ? "bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected"
+      : "hover:bg-background-secondary-hover",
+  )
+
+function NavRowContent({
+  icon: Icon,
+  label,
+  collapsed,
+  isSelected = false,
+  iconClassName,
+}: {
+  icon: IconComponent
+  label: string
+  collapsed: boolean
+  isSelected?: boolean
+  iconClassName?: string
+}) {
+  return (
+    <>
+      <Icon
+        className={cx("size-5 shrink-0", isSelected ? "text-white" : "text-foreground-icon-secondary", iconClassName)}
+        aria-hidden
+      />
+      <Collapsible collapsed={collapsed}>
+        <span className={cx("text-body-medium whitespace-nowrap", isSelected ? "text-white" : "text-text-secondary")}>
+          {label}
+        </span>
+      </Collapsible>
+    </>
+  )
+}
+
+function initialsOf(name?: string) {
+  if (!name) return "?"
+  const parts = name.trim().split(/\s+/)
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase()
+}
+
+export function Sidebar({
+  mobile = false,
+  onClose,
+  className,
+}: {
+  /** Rendered inside the phone/tablet drawer: always expanded, close button instead of collapse. */
+  mobile?: boolean
+  onClose?: () => void
+  className?: string
+} = {}) {
+  const { user, logout, refreshPermissions } = useAuth()
+  const pathname = usePathname()
+  const { toast } = useToast()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [collapsedState, setCollapsedState] = useState(false)
+  const collapsed = mobile ? false : collapsedState
+
+  useEffect(() => {
+    if (mobile) return
+    try {
+      setCollapsedState(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1")
+    } catch {}
+  }, [mobile])
+
+  const toggleCollapsed = () => {
+    const next = !collapsedState
+    setCollapsedState(next)
+    try {
+      window.localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0")
+    } catch {}
+  }
+
+  const filteredNavigation = useNavigation()
 
   const handleRefreshPermissions = async () => {
     setIsRefreshing(true)
@@ -118,47 +228,130 @@ export function Sidebar() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-card">
-      <div className="flex h-16 items-center border-b px-4">
-        <h2 className="text-lg font-semibold">CRUD Surat</h2>
-      </div>
-      <div className="flex-1 space-y-1 p-4">
-        {filteredNavigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link key={item.name} href={item.href}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn("w-full justify-start", isActive && "bg-secondary text-secondary-foreground")}
+    <aside
+      className={cx(
+        "flex h-full shrink-0 flex-col justify-between overflow-hidden",
+        "rounded-3xl border border-border-button-white bg-background-secondary-default shadow-sidebar",
+        "transition-[width] duration-300 ease-in-out",
+        // Collapsed: 1px border + 11px padding leaves an exact 36px column for the w-9 rows.
+        collapsed ? "w-[60px] px-[11px] py-3" : mobile ? "w-[272px] max-w-[calc(100vw-1rem)] p-3" : "w-[248px] p-3",
+        className,
+      )}
+    >
+      <div className="-m-2 flex min-h-0 w-[calc(100%+16px)] flex-col gap-4 overflow-y-auto p-2 [scrollbar-width:none]">
+        {/* Brand + collapse control */}
+        <div
+          className={cx(
+            "flex w-full",
+            collapsed ? "flex-col-reverse items-start gap-2.5" : "flex-row items-center justify-between gap-2",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-2lg bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected">
+              <RiMailOpenLine className="size-5 text-white" aria-hidden />
+            </span>
+            <Collapsible collapsed={collapsed}>
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-headline-semibold text-text-primary">CRUD Surat</span>
+                <span className="truncate text-caption-1-medium text-text-tertiary">Surat &amp; Bayaran</span>
+              </span>
+            </Collapsible>
+          </div>
+          {mobile ? (
+            <button
+              type="button"
+              aria-label="Tutup navigasi"
+              onClick={onClose}
+              className="flex size-9 cursor-pointer items-center justify-center rounded-2lg text-foreground-icon-secondary hover:bg-background-secondary-hover"
+            >
+              <RiCloseLine className="size-5" aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label={collapsed ? "Kembangkan sidebar" : "Kecilkan sidebar"}
+              aria-expanded={!collapsed}
+              onClick={toggleCollapsed}
+              className={cx(
+                "cursor-pointer text-foreground-icon-secondary",
+                collapsed && "flex w-9 items-center justify-center",
+              )}
+            >
+              <RiSideBarFill
+                className={cx("size-5 transition-transform duration-300 ease-in-out", collapsed ? "" : "-scale-x-100")}
+                aria-hidden
+              />
+            </button>
+          )}
+        </div>
+
+        <nav className={cx("flex w-full flex-col gap-1", !collapsed && "px-0.5")}>
+          {filteredNavigation.map((item) => {
+            const isSelected = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={onClose}
+                aria-current={isSelected ? "page" : undefined}
+                aria-label={item.name}
+                title={collapsed ? item.name : undefined}
+                className={rowClass(collapsed, isSelected)}
               >
-                <item.icon className="mr-2 h-4 w-4" />
-                {item.name}
-              </Button>
-            </Link>
-          )
-        })}
+                <NavRowContent icon={item.icon} label={item.name} collapsed={collapsed} isSelected={isSelected} />
+              </Link>
+            )
+          })}
+        </nav>
       </div>
-      <div className="border-t p-4">
-        <div className="mb-2 text-sm text-muted-foreground">Logged in as: {user?.name}</div>
-        <div className="mb-4 text-xs text-muted-foreground">Role: {user?.role}</div>
-        <div className="space-y-2">
+
+      <div className="flex w-full shrink-0 flex-col gap-3">
+        {collapsed ? <ThemeToggle collapsed /> : <ThemeToggle appearance="sidebar-segmented" />}
+
+        <nav className="flex w-full flex-col gap-1">
           {user?.role_id && (
-            <Button 
-              variant="outline" 
-              className="w-full" 
+            <button
+              type="button"
               onClick={handleRefreshPermissions}
               disabled={isRefreshing}
+              title={collapsed ? "Refresh Permissions" : undefined}
+              className={cx(rowClass(collapsed), "cursor-pointer disabled:cursor-wait disabled:opacity-60")}
             >
-              <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
-              {isRefreshing ? "Refreshing..." : "Refresh Permissions"}
-            </Button>
+              <NavRowContent
+                icon={RiRefreshLine}
+                label={isRefreshing ? "Refreshing..." : "Refresh Permissions"}
+                collapsed={collapsed}
+                iconClassName={isRefreshing ? "animate-spin" : undefined}
+              />
+            </button>
           )}
-          <Button variant="outline" className="w-full" onClick={logout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+          <button
+            type="button"
+            onClick={logout}
+            title={collapsed ? "Logout" : undefined}
+            className={cx(rowClass(collapsed), "cursor-pointer")}
+          >
+            <NavRowContent icon={RiLogoutBoxRLine} label="Logout" collapsed={collapsed} />
+          </button>
+        </nav>
+
+        {/* Signed-in user */}
+        <div
+          className={cx(
+            "flex items-center gap-2 rounded-2xl bg-background-primary-default shadow-card",
+            collapsed ? "w-9 justify-center p-0.5" : "w-full p-2",
+          )}
+          title={collapsed ? `${user?.name ?? ""} (${user?.role ?? ""})` : undefined}
+        >
+          <Avatar size="md" color="blue" initials={initialsOf(user?.name)} />
+          <Collapsible collapsed={collapsed}>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-body-medium text-text-primary">{user?.name}</span>
+              <span className="truncate text-caption-1-medium text-text-tertiary">{user?.role}</span>
+            </span>
+          </Collapsible>
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

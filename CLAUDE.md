@@ -59,7 +59,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `created_at`
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`status_config`** - Status configurations
    - Columns: `id`, `status`, `color_hex`, `kategori`, `created_at`
@@ -148,6 +149,7 @@ Located in `types/` directory:
    - Bayaran: `getAllBayaran()`, `addBayaran()`, `updateBayaran()`, `deleteBayaran()`, `bulkUpdateBayaran()`
    - Users: `getAllUsers()`, `getUserById()`, `addUser()`, `updateUser()`, `deleteUser()`, `updateUserPassword()`
    - Fail: `getAllFail()`, `addFail()`, `updateFail()`, `deleteFail()`
+   - Kontrak: `getAllKontrak()`, `addKontrak()`, `updateKontrak()`, `deleteKontrak()`, `syncAllBayaranKontraktor()`
    - Share Links: `getAllShareLinks()`, `getShareLinkById()`, `addShareLink()`, `deleteShareLink()`, `incrementShareLinkAccess()`
    - RBAC: `getAllRoles()`, `getRoleById()`, `createRole()`, `updateRole()`, `deleteRole()`, `assignPermissionsToRole()`, `getUserPermissions()`
 
@@ -179,7 +181,8 @@ Located in `types/` directory:
 
 ### UI Architecture
 
-- **Styling**: Tailwind CSS with custom configuration ([tailwind.config.ts](tailwind.config.ts))
+- **Styling**: Tailwind CSS v4 (CSS-first config in [app/globals.css](app/globals.css)) with BoardUI design tokens ([styles/theme.css](styles/theme.css), [styles/typography.css](styles/typography.css))
+- **BoardUI**: source-owned components in [components/base/](components/base/), [components/application/](components/application/), [components/foundations/](components/foundations/); merge classes with `cx()` from [utils/cx.ts](utils/cx.ts). The dashboard frame is [components/dashboard/app-shell.tsx](components/dashboard/app-shell.tsx)
 - **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/))
 - **Forms**: React Hook Form with Zod validation ([types/bayaran-schema.ts](types/bayaran-schema.ts))
 - **State Management**: React Context for authentication
@@ -598,11 +601,21 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `UnitPicManager.tsx` - Unit PIC management
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
-   - `sidebar.tsx` - Navigation sidebar
+   - `app-shell.tsx` - BoardUI page frame: sidebar from `lg`, drawer below, `NavTrigger` for iPad portrait
+   - `bottom-tab-bar.tsx` - iPhone (below `sm`) bottom tab bar; "Lagi" opens the drawer
+   - `sidebar.tsx` - Navigation sidebar and `useNavigation()` (RBAC-filtered nav items)
+   - `row-actions.tsx` - "…" row menu (BoardUI Dropdown)
    - `header.tsx` - Page header
 
-5. **Auth Components** ([components/auth/](components/auth/))
+5. **Surat Components** ([components/surat/](components/surat/))
+   - `SuratList.tsx` - BoardUI table (md+) and compact cards (phones) with pagination
+
+6. **Tetapan Components** ([components/tetapan/](components/tetapan/))
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table. Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
+
+7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter
+   - `AuthScreen.tsx` - BoardUI auth page frame and card class
 
 ### UI Components
 
@@ -643,6 +656,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 - `/api/daripada-kepada` - Fetch daripada/kepada options ([app/api/daripada-kepada/route.ts](app/api/daripada-kepada/route.ts))
 - `/api/bayaran-form-data` - Fetch form data for bayaran ([app/api/bayaran-form-data/route.ts](app/api/bayaran-form-data/route.ts))
 - `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts))
+- `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 
 ### RBAC Routes
 

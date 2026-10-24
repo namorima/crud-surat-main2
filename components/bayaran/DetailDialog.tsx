@@ -62,7 +62,7 @@ export function DetailDialog({
   
   return (
     <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Badge
@@ -81,7 +81,7 @@ export function DetailDialog({
         {selectedBayaran && (
           <div className="space-y-6">
             {/* Basic Info Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-2xl bg-background-secondary-default p-4">
               <div className="space-y-3">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Daripada</Label>
@@ -163,7 +163,7 @@ export function DetailDialog({
               <h3 className="text-lg font-semibold">Tracking Bayaran</h3>
               <div className="relative">
                 {/* Timeline Line - Behind icons and semi-transparent */}
-                <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-300 opacity-50 -z-10"></div>
+                <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-border-button-default -z-10"></div>
 
                 {/* Timeline Items */}
                 <div className="space-y-6">
@@ -176,7 +176,7 @@ export function DetailDialog({
                           ? "bg-red-500 text-white"
                           : selectedBayaran.tarikhBayar
                             ? "bg-green-500 text-white"
-                            : "bg-gray-300 text-gray-600",
+                            : "bg-background-tertiary-default text-foreground-icon-secondary",
                       )}
                     >
                       {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar ? (
@@ -221,7 +221,7 @@ export function DetailDialog({
                           ? "bg-red-500 text-white"
                           : selectedBayaran.tarikhHantar
                             ? "bg-green-500 text-white"
-                            : "bg-gray-300 text-gray-600",
+                            : "bg-background-tertiary-default text-foreground-icon-secondary",
                       )}
                     >
                       {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar ? (
@@ -256,7 +256,7 @@ export function DetailDialog({
                           ? "bg-red-500 text-white"
                           : selectedBayaran.tarikhPn
                             ? "bg-green-500 text-white"
-                            : "bg-gray-300 text-gray-600",
+                            : "bg-background-tertiary-default text-foreground-icon-secondary",
                       )}
                     >
                       {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn ? (
@@ -286,7 +286,7 @@ export function DetailDialog({
                           ? "bg-red-500 text-white"
                           : selectedBayaran.tarikhPpnP
                             ? "bg-green-500 text-white"
-                            : "bg-gray-300 text-gray-600",
+                            : "bg-background-tertiary-default text-foreground-icon-secondary",
                       )}
                     >
                       {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP ? (
@@ -316,7 +316,7 @@ export function DetailDialog({
                           ? "bg-red-500 text-white"
                           : selectedBayaran.tarikhMemoLadang
                             ? "bg-green-500 text-white"
-                            : "bg-gray-300 text-gray-600",
+                            : "bg-background-tertiary-default text-foreground-icon-secondary",
                       )}
                     >
                       {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang ? (
@@ -384,7 +384,7 @@ export function DetailDialog({
 
             {/* Nota Kaki Section */}
             {selectedBayaran.notaKaki && (
-              <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="rounded-2xl bg-background-secondary-default p-4">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm font-medium text-muted-foreground">Nota Kaki</Label>
                   {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && (

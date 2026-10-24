@@ -121,7 +121,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {user ? "Edit Pengguna" : "Tambah Pengguna Baru"}
