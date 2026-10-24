@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { Pagination } from "@/components/base/pagination/pagination"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
+import { useListPaging } from "@/hooks/use-list-paging"
 
 interface BayaranTableProps {
   displayedBayaran: Bayaran[]
@@ -129,6 +130,7 @@ export function BayaranTable({
   totalPages,
   onPageChange,
 }: BayaranTableProps) {
+  const { rootRef, scrollBoxRef, goToPage } = useListPaging(onPageChange)
   const openDetail = (item: Bayaran) => {
     setSelectedBayaran(item)
     setShowDetailDialog(true)
@@ -180,10 +182,10 @@ export function BayaranTable({
     ) : null
 
   return (
-    <div className="flex flex-col">
+    <div ref={rootRef} className="flex flex-col">
       {/* Tablet and desktop: BoardUI table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
-        <div className="relative max-h-[calc(100dvh-220px)] overflow-auto">
+        <div ref={scrollBoxRef} className="relative max-h-[calc(100dvh-220px)] overflow-auto">
           <table className="bui-table">
             <thead className="sticky top-0 z-10">
               <tr>
@@ -391,7 +393,7 @@ export function BayaranTable({
           <Pagination
             page={page}
             totalPages={totalPages}
-            onChange={onPageChange}
+            onChange={goToPage}
             previousLabel="Sebelum"
             nextLabel="Seterusnya"
             aria-label="Halaman bayaran"

@@ -19,6 +19,7 @@ import { Pagination } from "@/components/base/pagination/pagination"
 import { RowActions, type RowAction } from "@/components/dashboard/row-actions"
 import { SURAT_STATUS_SURFACE, suratStatusChip, unitChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
+import { useListPaging } from "@/hooks/use-list-paging"
 
 export type SuratColumnVisibility = {
   bil: boolean
@@ -187,6 +188,7 @@ export function SuratList(props: SuratListProps) {
     totalPages,
     onPageChange,
   } = props
+  const { rootRef, scrollBoxRef, goToPage } = useListPaging(onPageChange)
 
   const actionsFor = (item: Surat, includeRespond: boolean): RowAction[] => [
     { label: "Edit", icon: RiEditLine, onSelect: () => props.onEdit(item), disabled: !props.canEditFull },
@@ -221,10 +223,10 @@ export function SuratList(props: SuratListProps) {
   )
 
   return (
-    <div className="flex flex-col">
+    <div ref={rootRef} className="flex flex-col">
       {/* Tablet and desktop: BoardUI table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
-        <div className="relative max-h-[calc(100dvh-220px)] overflow-auto">
+        <div ref={scrollBoxRef} className="relative max-h-[calc(100dvh-220px)] overflow-auto">
           <table className="bui-table">
             <thead className="sticky top-0 z-10">
               <tr>
@@ -388,7 +390,7 @@ export function SuratList(props: SuratListProps) {
           <Pagination
             page={page}
             totalPages={totalPages}
-            onChange={onPageChange}
+            onChange={goToPage}
             previousLabel="Sebelum"
             nextLabel="Seterusnya"
             aria-label="Halaman surat"

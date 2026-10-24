@@ -2,7 +2,7 @@
 
 import { useTemplateCopy } from "@/components/foundations/template-copy/template-copy";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
@@ -17,7 +17,7 @@ import { cx } from "@/utils/cx";
  *     inactive cells are ghost with a secondary-hover background on hover.
  *   - Overflow collapses to leading/trailing dots around a sibling window.
  *
- * Below `COMPACT_WIDTH`, a `ResizeObserver` on the nav switches to a compact
+ * Below `COMPACT_WIDTH`, a `ResizeObserver` on the nav's container switches to a compact
  * layout — icon-only Previous/Next and `siblingCount` clamped to 0 — so the
  * row never overflows a narrow container instead of clipping mid-label.
  *
@@ -76,20 +76,24 @@ const cell = "flex size-8 shrink-0 items-center justify-center rounded-lg text-b
 const COMPACT_WIDTH = 420;
 
 function useIsCompact() {
-  const ref = useRef<HTMLElement>(null);
+  // Callback ref, not useRef: the nav is not rendered while totalPages <= 1
+  // (e.g. during the first fetch), so a mount-only effect would never see it.
+  const [el, setEl] = useState<HTMLElement | null>(null);
   const [isCompact, setIsCompact] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    // Measure the container, not the nav: a shrink-to-fit nav (sm:w-auto)
+    // would measure narrow and stay compact on wide screens.
+    const target = el?.parentElement ?? el;
+    if (!target) return;
     const observer = new ResizeObserver(([entry]) => {
       setIsCompact(entry.contentRect.width < COMPACT_WIDTH);
     });
-    observer.observe(el);
+    observer.observe(target);
     return () => observer.disconnect();
-  }, []);
+  }, [el]);
 
-  return [ref, isCompact] as const;
+  return [setEl, isCompact] as const;
 }
 
 export function Pagination({

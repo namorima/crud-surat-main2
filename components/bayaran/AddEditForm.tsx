@@ -38,10 +38,7 @@ interface AddEditFormProps {
   shouldShowAdvancedFields: () => boolean
   shouldShowHandoverFields: () => boolean
   shouldShowCompletionFields: () => boolean
-  showPenerimaDropdown: boolean
-  setShowPenerimaDropdown: (show: boolean) => void
-  handlePenerimaChange: (value: string) => void
-  filteredPenerimaData: any[]
+  penerimaData: Array<{ name: string; unit: string; display: string; defaultStatus?: string }>
   KATEGORI_COLORS: Record<string, string>
 }
 
@@ -70,13 +67,19 @@ export function AddEditForm({
   shouldShowAdvancedFields,
   shouldShowHandoverFields,
   shouldShowCompletionFields,
-  showPenerimaDropdown,
-  setShowPenerimaDropdown,
-  handlePenerimaChange,
-  filteredPenerimaData,
+  penerimaData,
   KATEGORI_COLORS,
 }: AddEditFormProps) {
   const isEdit = !!editingBayaran
+
+  // One option per name (Select values must be unique); keep an older record's
+  // penerima selectable even if it is no longer in the list.
+  const penerimaOptions = penerimaData.filter(
+    (item, i, all) => item.name && all.findIndex((other) => other.name === item.name) === i
+  )
+  if (formData.penerima && !penerimaOptions.some((item) => item.name === formData.penerima)) {
+    penerimaOptions.unshift({ name: formData.penerima, unit: "", display: formData.penerima })
+  }
 
   return (
     <Dialog open={showAddDialog || showEditDialog} onOpenChange={isEdit ? setShowEditDialog : setShowAddDialog}>
@@ -196,7 +199,7 @@ export function AddEditForm({
 
             {/* Mobile layout: No Kontrak and Kategori in one line */}
             <div className="md:hidden flex gap-2">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="noKontrak">No Kontrak</Label>
                 <Select
                   value={formData.noKontrak}
@@ -215,7 +218,7 @@ export function AddEditForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label htmlFor="kategori">Kategori</Label>
                 <Select
                   value={formData.kategori}
@@ -365,7 +368,7 @@ export function AddEditForm({
               <>
                 {/* Tarikh PPN (P) and Tarikh PN in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh PPN (P)</Label>
                     <Input
                       type="date"
@@ -374,7 +377,7 @@ export function AddEditForm({
                       disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh PN</Label>
                     <Input
                       type="date"
@@ -414,7 +417,7 @@ export function AddEditForm({
               <>
                 {/* Tarikh Hantar and Penerima in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh Hantar</Label>
                     <Input
                       type="date"
@@ -435,66 +438,37 @@ export function AddEditForm({
                       disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
                     />
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Penerima</Label>
-                    <Popover open={showPenerimaDropdown} onOpenChange={setShowPenerimaDropdown}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={showPenerimaDropdown}
-                          className="w-full justify-between bg-transparent"
-                          disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
-                        >
-                          {formData.penerima 
-                            ? filteredPenerimaData.find(item => item.name === formData.penerima)?.display || formData.penerima
-                            : "Pilih nama penerima..."}
-                          <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput
-                            placeholder="Cari nama penerima..."
-                            value={formData.penerima}
-                            onValueChange={handlePenerimaChange}
-                            disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
-                          />
-                          <CommandList>
-                            <CommandEmpty>Tiada hasil dijumpai.</CommandEmpty>
-                            <CommandGroup className="max-h-[200px] overflow-y-auto">
-                              {filteredPenerimaData.map((item) => (
-                                <CommandItem
-                                  key={item.display}
-                                  value={item.display}
-                                  onSelect={() => {
-                                    setFormData((prev: any) => ({
-                                      ...prev,
-                                      penerima: item.name,
-                                      statusBayaran: item.defaultStatus || prev.statusBayaran,
-                                    }))
-                                    setShowPenerimaDropdown(false)
-                                  }}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{item.display}</span>
-                                    {item.defaultStatus && (
-                                      <span className="text-xs text-blue-600">Default: {item.defaultStatus}</span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Select
+                      value={formData.penerima || undefined}
+                      onValueChange={(name) => {
+                        const selected = penerimaOptions.find((item) => item.name === name)
+                        setFormData((prev: any) => ({
+                          ...prev,
+                          penerima: name,
+                          statusBayaran: selected?.defaultStatus || prev.statusBayaran,
+                        }))
+                      }}
+                      disabled={(user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih nama penerima" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {penerimaOptions.map((item) => (
+                          <SelectItem key={item.name} value={item.name}>
+                            {item.display}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 {/* Status Bayaran and Tarikh Bayar in one line */}
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Status Bayaran</Label>
                     <Select
                       value={formData.statusBayaran}
@@ -528,7 +502,7 @@ export function AddEditForm({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <Label>Tarikh Bayar</Label>
                     <Input
                       type="date"
