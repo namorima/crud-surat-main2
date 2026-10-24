@@ -944,7 +944,7 @@ export default function BayaranPage() {
       const statusIcon = isCancelled ? "⛔" : sharingBayaran.tarikhBayar ? "✅" : "🕑";
       const checkIcon = isCancelled ? "⛔" : "✅";
 
-      const message = `📌*REKOD BAYARAN #${sharingBayaran.id}*
+      const message = `📌*REKOD BAYARAN #${sharingBayaran.ids ?? sharingBayaran.id}*
       _${sharingBayaran.statusBayaran.toUpperCase()}_ ${statusIcon}
 
 ${

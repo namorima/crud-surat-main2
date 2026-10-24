@@ -65,7 +65,7 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
           <TableBody>
             {bayaran.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="font-medium">#{item.id}</TableCell>
+                <TableCell className="font-medium">#{item.ids ?? item.id}</TableCell>
                 <TableCell>{item.daripada}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatDate(item.tarikhTerima)}</TableCell>
                 <TableCell>
@@ -108,7 +108,7 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col">
                 <Badge variant="outline" className="w-fit mb-1">
-                  #{item.id}
+                  #{item.ids ?? item.id}
                 </Badge>
                 <span className="font-medium">{item.daripada}</span>
                 <span className="text-xs text-muted-foreground">{formatDate(item.tarikhTerima)}</span>
