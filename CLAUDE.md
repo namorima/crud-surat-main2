@@ -185,6 +185,7 @@ Located in `types/` directory:
 #### Password Management
 
 1. **Password Reset Flow**
+   - **On hold**: both routes return 410 and the login page says "Hubungi pentadbir" unless `NEXT_PUBLIC_PASSWORD_RESET="on"` ([lib/password-reset-flag.ts](lib/password-reset-flag.ts)); turn it on once a sending domain is verified in Resend
    - Forgot Password ([app/forgot-password/page.tsx](app/forgot-password/page.tsx)): emails a one-time link via Resend (`RESEND_API_KEY`, optional `RESEND_FROM`, link base `NEXT_PUBLIC_SITE_URL`). Same reply whether or not the email exists; one email per user per minute
    - Reset Password ([app/reset-password/page.tsx](app/reset-password/page.tsx)): link is `/reset-password#token=...`; token valid 1 hour, single use. Only its SHA-256 is stored in `password_reset_tokens` ([create-password-reset-tokens.sql](create-password-reset-tokens.sql)); logic in [lib/password-reset.ts](lib/password-reset.ts)
    - Users without an email in `users` cannot self-reset; an admin resets them from Pengguna
@@ -218,7 +219,8 @@ Create a `.env.local` file in the project root:
 # ImgBB API for image uploads
 NEXT_PUBLIC_IMGBB_API_KEY="your_imgbb_api_key"
 
-# Password reset emails (Resend). RESEND_FROM must use a domain verified in Resend
+# Password reset emails (Resend). Off unless NEXT_PUBLIC_PASSWORD_RESET="on"; RESEND_FROM must use a domain verified in Resend
+NEXT_PUBLIC_PASSWORD_RESET="off"
 RESEND_API_KEY="re_..."
 RESEND_FROM="Sistem Surat & Bayaran <noreply@your-domain>"
 NEXT_PUBLIC_SITE_URL="https://crudladang.vercel.app"

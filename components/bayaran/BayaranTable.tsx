@@ -183,7 +183,7 @@ export function BayaranTable({
     <div className="flex flex-col">
       {/* Tablet and desktop: BoardUI table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
-        <div className="max-h-[calc(100dvh-220px)] overflow-auto">
+        <div className="relative max-h-[calc(100dvh-220px)] overflow-auto">
           <table className="bui-table">
             <thead className="sticky top-0 z-10">
               <tr>

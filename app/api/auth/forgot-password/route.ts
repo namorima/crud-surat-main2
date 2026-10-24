@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
+import { PASSWORD_RESET_ENABLED, RESET_DISABLED_MESSAGE } from "@/lib/password-reset-flag"
 import { issueResetToken, sendResetEmail } from "@/lib/password-reset"
 
 // Same reply whether or not the email is registered, so the form cannot be
@@ -10,6 +11,9 @@ const GENERIC_REPLY = {
 }
 
 export async function POST(request: Request) {
+  if (!PASSWORD_RESET_ENABLED) {
+    return NextResponse.json({ error: RESET_DISABLED_MESSAGE }, { status: 410 })
+  }
   try {
     const { email } = await request.json()
     if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {

@@ -270,7 +270,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           <>
             {/* Desktop only: with the sidebar, the table needs ~1000px */}
             <div className="hidden overflow-hidden rounded-2xl border border-border-table xl:block">
-              <div className="max-h-[60dvh] overflow-auto">
+              <div className="relative max-h-[60dvh] overflow-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
