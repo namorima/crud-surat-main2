@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requirePermission } from "@/lib/server-auth"
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -6,6 +7,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "manage_roles" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId') || '9297'

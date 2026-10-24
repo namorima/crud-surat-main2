@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/supabase-db"
 
-export async function GET() {
+/** Password hashes never leave the server. */
+function withoutPassword<T extends { password?: unknown }>(user: T): Omit<T, "password"> {
+  const { password: _password, ...rest } = user
+  return rest
+}
+
+export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "view" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
@@ -13,7 +22,7 @@ export async function GET() {
     }
 
     const users = await getAllUsers()
-    return NextResponse.json(users)
+    return NextResponse.json(users.map(withoutPassword))
   } catch (error: any) {
     console.error("Error fetching users data:", error)
     return NextResponse.json(
@@ -24,6 +33,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "create" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const body = await request.json()
 
@@ -42,7 +53,7 @@ export async function POST(request: Request) {
       type: body.type
     })
 
-    return NextResponse.json(user, { status: 201 })
+    return NextResponse.json(user ? withoutPassword(user) : user, { status: 201 })
   } catch (error: any) {
     console.error("Error creating user:", error)
     return NextResponse.json(
@@ -53,6 +64,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "edit" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const username = searchParams.get("id")
@@ -73,7 +86,7 @@ export async function PATCH(request: Request) {
       type: body.type
     })
 
-    return NextResponse.json(user)
+    return NextResponse.json(user ? withoutPassword(user) : user)
   } catch (error: any) {
     console.error("Error updating user:", error)
     return NextResponse.json(
@@ -84,6 +97,8 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "delete" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const username = searchParams.get("id")

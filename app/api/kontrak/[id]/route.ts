@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { updateKontrak, deleteKontrak } from "@/lib/supabase-db"
 import { parseKontrakInput } from "@/lib/kontrak-input"
 import { kontrakErrorResponse } from "@/lib/kontrak-api"
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const { id } = await params
     const input = parseKontrakInput(await request.json())
@@ -19,6 +26,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const { id } = await params
     await deleteKontrak(id)

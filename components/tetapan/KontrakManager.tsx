@@ -82,6 +82,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [form, setForm] = useState<KontrakInput>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
+  const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
+
+  // Nama Kontraktor choices come from Tetapan → Kontraktor; refreshed each time the form opens.
+  const loadKontraktorNames = async () => {
+    try {
+      const response = await fetch("/api/kontraktor")
+      if (!response.ok) throw new Error(await readError(response, "Gagal memuatkan senarai kontraktor"))
+      const list: { namaKontraktor: string }[] = await response.json()
+      setKontraktorNames(list.map((item) => item.namaKontraktor))
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
   const [syncing, setSyncing] = useState(false)
 
   const load = async () => {
@@ -103,6 +116,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
   const kawasanOptions = useMemo(() => [...new Set(items.map((item) => item.kawasan).filter(Boolean))].sort(), [items])
   // The fixed list, plus an older value on the row being edited so it is not silently dropped.
+  // Keep a name that is not (yet) in the Kontraktor list selectable on the row being edited.
+  const namaOptions = useMemo(
+    () => (form.namaKontraktor && !kontraktorNames.includes(form.namaKontraktor) ? [form.namaKontraktor, ...kontraktorNames] : kontraktorNames),
+    [form.namaKontraktor, kontraktorNames],
+  )
+
   const kategoriOptions = useMemo(
     () => (form.kategori && !(KONTRAK_KATEGORI as readonly string[]).includes(form.kategori) ? [...KONTRAK_KATEGORI, form.kategori] : [...KONTRAK_KATEGORI]),
     [form.kategori],
@@ -119,12 +138,14 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   }, [items, query])
 
   const openAdd = () => {
+    loadKontraktorNames()
     setEditing(null)
     setForm(EMPTY)
     setFormOpen(true)
   }
 
   const openEdit = (item: Kontrak) => {
+    loadKontraktorNames()
     setEditing(item)
     setForm({
       kawasan: item.kawasan,
@@ -429,7 +450,23 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="kontrak-nama">Nama Kontraktor</Label>
-              <Input id="kontrak-nama" value={form.namaKontraktor} onChange={setField("namaKontraktor")} placeholder="Contoh: ABC SDN BHD" />
+              <Select
+                value={form.namaKontraktor || NONE}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
+              >
+                <SelectTrigger id="kontrak-nama">
+                  <SelectValue placeholder="Pilih kontraktor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Tiada</SelectItem>
+                  {namaOptions.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-caption-1-regular text-text-tertiary">Tiada dalam senarai? Tambah dahulu di tab Kontraktor.</p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="kontrak-jenis">Jenis Kerja</Label>

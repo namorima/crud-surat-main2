@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { hashPassword, comparePassword, isHashedPassword } from "@/lib/password"
+import { getSession } from "@/lib/session"
 
 export async function POST(request: Request) {
   try {
@@ -29,6 +30,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Only your own password: userId must be the signed-in user.
+    const session = await getSession(request)
+    if (!session || session.uid !== userId) {
+      return NextResponse.json({ error: "Anda hanya boleh menukar kata laluan sendiri" }, { status: 403 })
+    }
+
     // Get user data - userId is actually the username from localStorage
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
@@ -43,17 +50,20 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify current password if not first time
-    if (!isFirstTime) {
+    // The current password may be skipped only when the account really is due
+    // a first-time/forced change, not just because the client says so.
+    const firstTimeAllowed = Boolean(isFirstTime) && (user.must_change_password || !user.is_password_changed)
+    if (!firstTimeAllowed) {
       // Support both hashed and plain text passwords (for transparent migration)
       const isValid = isHashedPassword(user.password)
         ? await comparePassword(currentPassword, user.password)
         : currentPassword === user.password // Legacy plain text
 
       if (!isValid) {
+        // 400, not 401: a wrong current password is not a lost session.
         return NextResponse.json(
           { error: "Current password is incorrect" },
-          { status: 401 }
+          { status: 400 }
         )
       }
     }

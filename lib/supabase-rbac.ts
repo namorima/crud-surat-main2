@@ -1,4 +1,5 @@
-import { supabase } from './supabase'
+// Server-only (API routes): uses the service-role client so it keeps working with RLS enabled.
+import { supabaseAdmin as supabase } from './supabase'
 import type { Role, Permission, CreateRoleInput, UpdateRoleInput } from '@/types/rbac'
 
 /**

@@ -5,6 +5,7 @@ import type { Bayaran } from "@/types/bayaran"
 import type { Fail } from "@/types/fail"
 import type { ShareLink } from "@/types/share-link"
 import type { Kontrak, KontrakInput } from "@/types/kontrak"
+import type { Kontraktor, KontraktorInput } from "@/types/kontraktor"
 import { hashPassword, isHashedPassword } from "./password"
 
 // ===== SURAT FUNCTIONS =====
@@ -894,6 +895,125 @@ export async function syncAllBayaranKontraktor(): Promise<number> {
     console.error("Error syncing nama kontraktor to bayaran:", error)
     throw new Error(`Failed to sync nama kontraktor: ${error.message}`)
   }
+}
+
+// ===== KONTRAKTOR FUNCTIONS =====
+// Contractor master data. kontrak.nama_kontraktor and bayaran.nama_kontraktor
+// hold the name as text, so renaming a contractor rewrites both.
+
+function mapKontraktorRow(row: any): Kontraktor {
+  return {
+    id: row.id,
+    namaKontraktor: row.nama_kontraktor || "",
+    noVendor: row.no_vendor || "",
+    namaAkaun: row.nama_akaun || "",
+    nomborAkaun: row.nombor_akaun || "",
+    jenisBank: row.jenis_bank || "",
+  }
+}
+
+function kontraktorToRow(input: KontraktorInput) {
+  return {
+    nama_kontraktor: input.namaKontraktor,
+    no_vendor: input.noVendor || null,
+    nama_akaun: input.namaAkaun || null,
+    nombor_akaun: input.nomborAkaun || null,
+    jenis_bank: input.jenisBank || null,
+  }
+}
+
+function kontraktorError(error: any, nama: string): Error {
+  // 23505: kontraktor_nama_unique
+  if (error?.code === "23505") return new Error(`Kontraktor ${nama} sudah wujud`)
+  return new Error(error?.message || String(error))
+}
+
+export async function getAllKontraktor(): Promise<Kontraktor[]> {
+  try {
+    const { data, error } = await supabaseAdmin.from("kontraktor").select("*").order("nama_kontraktor")
+    if (error) throw error
+    return (data || []).map(mapKontraktorRow)
+  } catch (error: any) {
+    console.error("Error fetching kontraktor from Supabase:", error)
+    throw new Error(`Failed to fetch kontraktor from Supabase: ${error.message}`)
+  }
+}
+
+export async function addKontraktor(input: KontraktorInput): Promise<Kontraktor> {
+  const { data, error } = await supabaseAdmin.from("kontraktor").insert(kontraktorToRow(input)).select().single()
+  if (error) {
+    console.error("Error adding kontraktor to Supabase:", error)
+    throw kontraktorError(error, input.namaKontraktor)
+  }
+  return mapKontraktorRow(data)
+}
+
+export async function updateKontraktor(
+  id: string,
+  input: KontraktorInput,
+): Promise<{ kontraktor: Kontraktor; kontrakUpdated: number; bayaranUpdated: number }> {
+  const { data: existing, error: findError } = await supabaseAdmin
+    .from("kontraktor")
+    .select("nama_kontraktor")
+    .eq("id", id)
+    .single()
+  if (findError) throw new Error(findError.message)
+
+  const { data, error } = await supabaseAdmin
+    .from("kontraktor")
+    .update({ ...kontraktorToRow(input), updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) {
+    console.error("Error updating kontraktor in Supabase:", error)
+    throw kontraktorError(error, input.namaKontraktor)
+  }
+
+  // Carry a rename over to the kontrak and bayaran rows that use the old name.
+  let kontrakUpdated = 0
+  let bayaranUpdated = 0
+  const oldName = existing?.nama_kontraktor || ""
+  if (oldName && oldName !== input.namaKontraktor) {
+    const kontrak = await supabaseAdmin
+      .from("kontrak")
+      .update({ nama_kontraktor: input.namaKontraktor })
+      .eq("nama_kontraktor", oldName)
+      .select("id")
+    if (kontrak.error) throw new Error(kontrak.error.message)
+    const bayaran = await supabaseAdmin
+      .from("bayaran")
+      .update({ nama_kontraktor: input.namaKontraktor })
+      .eq("nama_kontraktor", oldName)
+      .select("id")
+    if (bayaran.error) throw new Error(bayaran.error.message)
+    kontrakUpdated = kontrak.data?.length || 0
+    bayaranUpdated = bayaran.data?.length || 0
+  }
+
+  return { kontraktor: mapKontraktorRow(data), kontrakUpdated, bayaranUpdated }
+}
+
+/** Refuses while a kontrak still names this contractor. */
+export async function deleteKontraktor(id: string): Promise<void> {
+  const { data: existing, error: findError } = await supabaseAdmin
+    .from("kontraktor")
+    .select("nama_kontraktor")
+    .eq("id", id)
+    .single()
+  if (findError) throw new Error(findError.message)
+
+  const { count, error: countError } = await supabaseAdmin
+    .from("kontrak")
+    .select("id", { count: "exact", head: true })
+    .eq("nama_kontraktor", existing.nama_kontraktor)
+  if (countError) throw new Error(countError.message)
+  if (count && count > 0) {
+    throw new Error(`Kontraktor ini masih digunakan oleh ${count} kontrak. Tukar kontrak tersebut dahulu.`)
+  }
+
+  const { error } = await supabaseAdmin.from("kontraktor").delete().eq("id", id)
+  if (error) throw new Error(error.message)
 }
 
 export async function getStatusBayaranData() {

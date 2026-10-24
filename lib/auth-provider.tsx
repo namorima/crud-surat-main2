@@ -29,7 +29,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser)
-            
+
+            // The API now needs the session cookie set at login. A user saved
+            // before that (or whose cookie expired) has to sign in again.
+            const sessionResponse = await fetch("/api/auth/session").catch(() => null)
+            if (sessionResponse?.status === 401) {
+              localStorage.removeItem("user")
+              setLoading(false)
+              return
+            }
+
             // If user has role_id but no permissions, fetch them
             if (parsedUser.role_id && !parsedUser.permissions) {
               try {
@@ -57,6 +66,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     loadUser()
   }, [])
+
+  // Any API call rejected for a missing/expired session sends the user back to login.
+  useEffect(() => {
+    const originalFetch = window.fetch
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args)
+      const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : args[0].url
+      const path = new URL(url, window.location.origin).pathname
+      if (response.status === 401 && path.startsWith("/api/") && !path.startsWith("/api/auth/login") && !path.startsWith("/api/auth/change-password") && localStorage.getItem("user")) {
+        localStorage.removeItem("user")
+        setUser(null)
+        router.push("/login")
+      }
+      return response
+    }
+    return () => {
+      window.fetch = originalFetch
+    }
+  }, [router])
 
   const login = async (id: string, password: string) => {
     setLoading(true)
@@ -117,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
     setUser(null)
     localStorage.removeItem("user")
     router.push("/login")

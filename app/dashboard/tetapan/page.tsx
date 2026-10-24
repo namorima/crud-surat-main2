@@ -20,6 +20,7 @@ import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
 import { ShareLinkForm } from "@/components/share/ShareLinkForm"
 import { ShareLinkTable } from "@/components/share/ShareLinkTable"
 import { KontrakManager } from "@/components/tetapan/KontrakManager"
+import { KontraktorManager } from "@/components/tetapan/KontraktorManager"
 import { toast as sonnerToast } from "sonner"
 import {
   Dialog,
@@ -486,6 +487,7 @@ export default function TetapanPage() {
               <TabsTrigger value="setup-fail">Setup Fail</TabsTrigger>
               {canViewAll && <TabsTrigger value="pautan-kongsi">Pautan Kongsi</TabsTrigger>}
               {canViewAll && <TabsTrigger value="kontrak">Kontrak</TabsTrigger>}
+              {canViewAll && <TabsTrigger value="kontraktor">Kontraktor</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="setup-fail" className="mt-4 space-y-4">
@@ -910,6 +912,12 @@ export default function TetapanPage() {
             {canViewAll && (
               <TabsContent value="kontrak" className="mt-4 space-y-4">
                 <KontrakManager canEdit={Boolean(canEditTetapan)} />
+              </TabsContent>
+            )}
+
+            {canViewAll && (
+              <TabsContent value="kontraktor" className="mt-4 space-y-4">
+                <KontraktorManager canEdit={Boolean(canEditTetapan)} />
               </TabsContent>
             )}
           </Tabs>
