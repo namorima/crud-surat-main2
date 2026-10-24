@@ -37,7 +37,6 @@ import {
   CheckCircle,
   ArrowDown,
   ArrowUp,
-  ArrowDownUp,
   Loader2,
   Share2,
   Bell,
@@ -1197,69 +1196,16 @@ export default function SuratPage() {
               <CardTitle className="text-base md:text-xl">Surat</CardTitle>
             </div>
             <div className="flex items-center gap-1 flex-wrap justify-end">
-              {/* Mobile toolbar */}
-              <div className="flex md:hidden items-center gap-1">
-                {/* Sort Button */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-7 w-7">
-                      <ArrowDownUp className="h-3 w-3" />
-                      <span className="sr-only">Sort</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0" align="end">
-                    <div className="p-2 space-y-2">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("bil")
-                          setSortDirection("desc")
-                        }}
-                      >
-                        <ArrowDown className="mr-2 h-3 w-3" />
-                        Bil (Besar ke Kecil)
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("bil")
-                          setSortDirection("asc")
-                        }}
-                      >
-                        <ArrowUp className="mr-2 h-3 w-3" />
-                        Bil (Kecil ke Besar)
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-start text-xs"
-                        onClick={() => {
-                          setSortField("tarikh")
-                          setSortDirection("desc")
-                        }}
-                      >
-                        <ArrowDown className="mr-2 h-3 w-3" />
-                        Tarikh (Terbaru)
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
               {/* Clear Filter Button - Only shows when filters are applied */}
               {(statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all" || dateFilter) && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={clearAllFilters}
-                  className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-7 w-7 md:h-8 md:w-8"
+                  className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-8 w-8"
                   title="Clear all filters"
                 >
-                  <X className="h-3 w-3 md:h-4 md:w-4" />
+                  <X className="h-4 w-4" />
                   <span className="sr-only">Clear Filters</span>
                 </Button>
               )}
@@ -1283,7 +1229,7 @@ export default function SuratPage() {
                       setShowSearchInput(false)
                     }}
                   >
-                    <X className="h-3 w-3 md:h-4 md:w-4" />
+                    <X className="h-4 w-4" />
                     <span className="sr-only">Clear Search</span>
                   </Button>
                 </form>
@@ -1294,9 +1240,9 @@ export default function SuratPage() {
                   onClick={() => {
                     setShowSearchInput(true)
                   }}
-                  className="transition-all duration-200 hover:scale-105 h-7 w-7 md:h-8 md:w-8"
+                  className="transition-all duration-200 hover:scale-105 h-8 w-8"
                 >
-                  <Search className="h-3 w-3 md:h-4 md:w-4" />
+                  <Search className="h-4 w-4" />
                   <span className="sr-only">Search</span>
                 </Button>
               )}
@@ -1305,12 +1251,13 @@ export default function SuratPage() {
               {!showSearchInput && (
                 <Popover>
                   <PopoverTrigger asChild>
+                    {/* Phones pick the date from the Tarikh tab in the filter popover instead. */}
                     <Button
                       variant="outline"
                       size="icon"
-                      className={cn(dateFilter && "text-primary", "h-7 w-7 md:h-8 md:w-8")}
+                      className={cn(dateFilter && "text-primary", "hidden h-8 w-8 md:inline-flex")}
                     >
-                      <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                      <Calendar className="h-4 w-4" />
                       <span className="sr-only">Filter Tarikh</span>
                     </Button>
                   </PopoverTrigger>
@@ -1329,19 +1276,22 @@ export default function SuratPage() {
                       size="icon"
                       className={cn(
                         (statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all") && "text-primary",
-                        "h-7 w-7 md:h-8 md:w-8",
+                        "h-8 w-8",
                       )}
                     >
-                      <SlidersHorizontal className="h-3 w-3 md:h-4 md:w-4" />
+                      <SlidersHorizontal className="h-4 w-4" />
                       <span className="sr-only">Filters</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="end">
                     <Tabs defaultValue="status" className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="m-2 mb-0 grid w-[calc(100%-1rem)] grid-cols-4 md:grid-cols-3">
                         <TabsTrigger value="status">Status</TabsTrigger>
                         <TabsTrigger value="unit">Unit</TabsTrigger>
                         <TabsTrigger value="kategori">Kategori</TabsTrigger>
+                        <TabsTrigger value="tarikh" className="md:hidden">
+                          Tarikh
+                        </TabsTrigger>
                       </TabsList>
                       <TabsContent value="status" className="p-4 space-y-4">
                         <div className="space-y-2">
@@ -1394,6 +1344,9 @@ export default function SuratPage() {
                           </Select>
                         </div>
                       </TabsContent>
+                      <TabsContent value="tarikh" className="flex justify-center p-2 md:hidden">
+                        <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateFilter} />
+                      </TabsContent>
                     </Tabs>
                     <div className="flex items-center justify-between p-4 border-t">
                       <Button
@@ -1420,13 +1373,13 @@ export default function SuratPage() {
               {!showSearchInput && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-7 w-7 md:h-8 md:w-8">
-                      <Settings className="h-3 w-3 md:h-4 w-4" />
-                      <span className="sr-only">Column Settings</span>
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Settings className="h-4 w-4" />
+                      <span className="sr-only">Paparan &amp; Isih</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[200px] p-0" align="end">
-                    <div className="p-2 text-sm font-medium">Toggle Columns</div>
+                    <div className="p-2 text-body-medium text-text-secondary">Lajur</div>
                     <div className="p-2 space-y-2">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1486,7 +1439,7 @@ export default function SuratPage() {
 
                     {/* Sort options */}
                     <div className="border-t pt-2 pb-2 px-2">
-                      <div className="text-sm font-medium mb-2">Sort By</div>
+                      <div className="mb-2 text-body-medium text-text-secondary">Isih</div>
                       <div className="space-y-2">
                         <Button
                           variant="outline"
@@ -1538,12 +1491,12 @@ export default function SuratPage() {
                       variant="outline"
                       size="icon"
                       className={cn(
-                        "relative h-7 w-7 md:h-8 md:w-8",
+                        "relative h-8 w-8",
                         notificationCount > 0 && "text-red-500 border-red-200",
                       )}
                       onClick={fetchFXNotifications}
                     >
-                      <Bell className="h-3 w-3 md:h-4 md:w-4" />
+                      <Bell className="h-4 w-4" />
                       {notificationCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
                           {notificationCount > 99 ? "99+" : notificationCount}
@@ -1726,9 +1679,9 @@ export default function SuratPage() {
                         resetForm()
                         handleOpenAddDialog()
                       }}
-                      className="h-7 w-7 md:h-8 md:w-8"
+                      className="h-8 w-8"
                     >
-                      <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                      <Plus className="h-4 w-4" />
                       <span className="sr-only">Tambah Surat</span>
                     </Button>
                   </DialogTrigger>
@@ -2069,7 +2022,7 @@ export default function SuratPage() {
                         </div>
                       )}
                     </div>
-                    <DialogFooter className="sticky bottom-0 pt-2 pb-2 bg-background flex flex-col sm:flex-row gap-2 sm:gap-0">
+                    <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
                       <Button
                         variant="outline"
                         onClick={() => setIsAddDialogOpen(false)}
@@ -2448,7 +2401,7 @@ export default function SuratPage() {
               </div>
             )}
           </div>
-          <DialogFooter className="sticky bottom-0 pt-2 pb-2 bg-background flex flex-col sm:flex-row gap-2 sm:gap-0">
+          <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
             <Button
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
@@ -2477,7 +2430,7 @@ export default function SuratPage() {
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-[400px] p-3 md:p-6">
+        <DialogContent className="sm:max-w-[400px] p-3 md:p-6">
           <DialogHeader className="p-0 md:p-2">
             <DialogTitle className="text-base md:text-lg">Padam Surat</DialogTitle>
             <DialogDescription className="text-xs md:text-sm">
@@ -2560,6 +2513,7 @@ export default function SuratPage() {
             <h3 className="text-sm font-medium mb-1">Unit</h3>
             <Badge
               variant="outline"
+              className="text-neutral-900"
               style={{
                 backgroundColor: getUnitColor(detailSurat.unit),
                 borderColor: getUnitColor(detailSurat.unit),
@@ -2601,6 +2555,7 @@ export default function SuratPage() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
+                className="text-neutral-900"
                 style={{
                   backgroundColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
                   borderColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),

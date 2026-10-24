@@ -329,7 +329,7 @@ export function RoleManager({ onRoleCreated, onRoleUpdated, onRoleDeleted }: Rol
 
       {/* Manage Permissions Dialog */}
       <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               Urus Permissions - {selectedRoleForPermissions?.display_name}

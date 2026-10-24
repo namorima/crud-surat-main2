@@ -11,7 +11,6 @@ import {
   X,
   Calendar,
   SlidersHorizontal,
-  ArrowDownUp,
   ArrowDown,
   Edit,
   Plus,
@@ -104,58 +103,6 @@ export function BayaranHeader({
           <CardTitle className="text-base md:text-xl">Rekod Bayaran</CardTitle>
         </div>
         <div className="flex items-center gap-1 flex-wrap justify-end">
-          {/* Mobile toolbar */}
-          <div className="flex md:hidden items-center gap-1">
-            {/* Sort Button */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="h-7 w-7 bg-transparent">
-                  <ArrowDownUp className="h-3 w-3" />
-                  <span className="sr-only">Sort</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0" align="end">
-                <div className="p-2 space-y-2">
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="w-full justify-start text-xs"
-                    onClick={() => {
-                      setSortField("id")
-                      setSortDirection("desc")
-                    }}
-                  >
-                    <ArrowDown className="mr-2 h-3 w-3" />
-                    ID (Besar ke Kecil)
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="w-full justify-start text-xs"
-                    onClick={() => {
-                      setSortField("tarikhTerima")
-                      setSortDirection("desc")
-                    }}
-                  >
-                    <ArrowDown className="mr-2 h-3 w-3" />
-                    Tarikh (Terbaru)
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="w-full justify-start text-xs"
-                    onClick={() => {
-                      setSortField("nilaiBayaran")
-                      setSortDirection("desc")
-                    }}
-                  >
-                    <ArrowDown className="mr-2 h-3 w-3" />
-                    Nilai (Tinggi ke Rendah)
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
 
           {/* Clear Filter Button - Only shows when filters are applied */}
           {(statusFilter !== "all" ||
@@ -166,7 +113,7 @@ export function BayaranHeader({
               variant="outline"
               size="icon"
               onClick={clearAllFilters}
-              className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-7 w-7 md:h-8 md:w-8 bg-transparent"
+              className="transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-red-500 h-8 w-8 bg-transparent"
               title="Clear all filters"
             >
               <X className="h-3 w-3 md:h-4 md:w-4" />
@@ -204,7 +151,7 @@ export function BayaranHeader({
               onClick={() => {
                 setShowSearchInput(true)
               }}
-              className="transition-all duration-200 hover:scale-105 h-7 w-7 md:h-8 md:w-8"
+              className="transition-all duration-200 hover:scale-105 h-8 w-8"
             >
               <Search className="h-3 w-3 md:h-4 md:w-4" />
               <span className="sr-only">Search</span>
@@ -218,7 +165,7 @@ export function BayaranHeader({
                 <Button
                   variant="outline"
                   size="icon"
-                  className={cn(dateFilter[0] && "text-primary", "h-7 w-7 md:h-8 md:w-8")}
+                  className={cn(dateFilter[0] && "text-primary", "h-8 w-8")}
                 >
                   <Calendar className="h-3 w-3 md:h-4 md:w-4" />
                   <span className="sr-only">Filter Tarikh</span>
@@ -245,7 +192,7 @@ export function BayaranHeader({
                   className={cn(
                     (statusFilter !== "all" || kategoriFilter !== "all" || kontrakFilter !== "all") &&
                       "text-primary",
-                    "h-7 w-7 md:h-8 md:w-8",
+                    "h-8 w-8",
                   )}
                 >
                   <SlidersHorizontal className="h-3 w-3 md:h-4 md:w-4" />
@@ -341,7 +288,7 @@ export function BayaranHeader({
               variant="default"
               size="icon"
               onClick={() => setShowAddDialog(true)}
-              className="h-7 w-7 md:h-8 md:w-8"
+              className="h-8 w-8"
               title="Tambah Rekod Bayaran"
             >
               <Plus className="h-3 w-3 md:h-4 md:w-4" />
@@ -355,7 +302,7 @@ export function BayaranHeader({
               variant="outline"
               size="icon"
               onClick={() => setShowBulkEditDialog(true)}
-              className="h-7 w-7 md:h-8 md:w-8"
+              className="h-8 w-8"
               title="Bulk Edit"
             >
               <Edit className="h-3 w-3 md:h-4 md:w-4" />
@@ -367,7 +314,7 @@ export function BayaranHeader({
           {!showSearchInput && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="h-7 w-7 md:h-8 md:w-8 bg-transparent">
+                <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent">
                   <Settings className="h-3 w-3 md:h-4 w-4" />
                   <span className="sr-only">Column Settings</span>
                 </Button>
@@ -437,7 +384,7 @@ export function BayaranHeader({
 
                 {/* Sort options */}
                 <div className="border-t pt-2 pb-2 px-2">
-                  <div className="text-sm font-medium mb-2">Sort By</div>
+                  <div className="mb-2 text-body-medium text-text-secondary">Isih</div>
                   <div className="space-y-2">
                     <Button
                       variant="outline"

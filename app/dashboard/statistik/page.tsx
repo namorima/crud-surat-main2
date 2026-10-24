@@ -21,9 +21,10 @@ import {
 } from "recharts"
 import { Button } from "@/components/ui/button"
 import { NavTrigger } from "@/components/dashboard/app-shell"
-import {  } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export default function StatistikPage() {
+  const isMobile = useIsMobile()
   const [surat, setSurat] = useState<Surat[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -173,10 +174,11 @@ export default function StatistikPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        outerRadius={120}
+                        outerRadius={isMobile ? 100 : 120}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        // Outside labels clip on phones; the legend and tooltip carry the names there.
+                        label={isMobile ? false : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
                         {statusData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />

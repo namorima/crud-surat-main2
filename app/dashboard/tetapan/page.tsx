@@ -817,6 +817,7 @@ export default function TetapanPage() {
                               <TableCell>
                                 <Badge
                                   variant="outline"
+                                  className="text-neutral-900"
                                   style={{
                                     backgroundColor: getFailPartColor(fail.part),
                                     borderColor: getFailPartColor(fail.part),

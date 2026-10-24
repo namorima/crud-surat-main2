@@ -1243,7 +1243,7 @@ Detail: ${directLink}
 
       {/* Surat Modal */}
       <Dialog open={showSuratModal} onOpenChange={setShowSuratModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Badge variant="outline">#{selectedSurat?.bil}</Badge>
