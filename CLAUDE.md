@@ -179,7 +179,8 @@ Located in `types/` directory:
 
 ### UI Architecture
 
-- **Styling**: Tailwind CSS with custom configuration ([tailwind.config.ts](tailwind.config.ts))
+- **Styling**: Tailwind CSS v4 (CSS-first config in [app/globals.css](app/globals.css)) with BoardUI design tokens ([styles/theme.css](styles/theme.css), [styles/typography.css](styles/typography.css))
+- **BoardUI**: source-owned components in [components/base/](components/base/), [components/application/](components/application/), [components/foundations/](components/foundations/); merge classes with `cx()` from [utils/cx.ts](utils/cx.ts). The dashboard frame is [components/dashboard/app-shell.tsx](components/dashboard/app-shell.tsx)
 - **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/))
 - **Forms**: React Hook Form with Zod validation ([types/bayaran-schema.ts](types/bayaran-schema.ts))
 - **State Management**: React Context for authentication

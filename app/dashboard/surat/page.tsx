@@ -45,7 +45,6 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowDownUp,
-  Menu,
   Loader2,
   Share2,
   Bell,
@@ -63,8 +62,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/dashboard/sidebar"
+import { NavTrigger } from "@/components/dashboard/app-shell"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 
 // Number of items per page
@@ -1201,17 +1199,7 @@ export default function SuratPage() {
         <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+              <NavTrigger />
               <CardTitle className="text-base md:text-xl">Surat</CardTitle>
             </div>
             <div className="flex items-center gap-1 flex-wrap justify-end">
@@ -1629,7 +1617,7 @@ export default function SuratPage() {
                                             backgroundColor: getUnitColor(item.unit),
                                             borderColor: getUnitColor(item.unit),
                                           }}
-                                          className="text-xs block w-fit"
+                                          className="text-xs block w-fit text-neutral-900"
                                         >
                                           {item.unit}
                                         </Badge>
@@ -1681,7 +1669,7 @@ export default function SuratPage() {
                                           backgroundColor: getUnitColor(item.unit),
                                           borderColor: getUnitColor(item.unit),
                                         }}
-                                        className="text-xs w-fit"
+                                        className="text-xs w-fit text-neutral-900"
                                       >
                                         {item.unit}
                                       </Badge>
@@ -1977,7 +1965,7 @@ export default function SuratPage() {
                                 {selectedFailId && filteredFailData.length > 0 ? (
                                   <div className="flex items-center gap-2">
                                     <span
-                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      className="w-2 h-2 rounded-full shrink-0"
                                       style={{
                                         backgroundColor: getFailPartColor(
                                           filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
@@ -2033,7 +2021,7 @@ export default function SuratPage() {
                                       >
                                         <div className="flex items-center gap-2">
                                           <span
-                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            className="w-2 h-2 rounded-full shrink-0"
                                             style={{
                                               backgroundColor: getFailPartColor(fail.part),
                                             }}
@@ -2122,7 +2110,7 @@ export default function SuratPage() {
             {/* Desktop view */}
             <div className="hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
               <Table>
-                <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-sm">
+                <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-xs">
                   <TableRow>
                     {columnVisibility.bil && (
                       <TableHead className="w-[80px] cursor-pointer" onClick={() => handleSort("bil")}>
@@ -2189,10 +2177,10 @@ export default function SuratPage() {
                         key={item.id}
                         className={cn(
                           "table-row text-sm transition-all duration-200 hover:bg-muted/30",
-                          item.status === "SELESAI" && "bg-green-50/50",
-                          item.status === "DALAM TINDAKAN" && "bg-blue-50/50",
-                          item.status === "HOLD / KIV" && "bg-orange-50/50",
-                          item.status === "BATAL" && "bg-red-50/50",
+                          item.status === "SELESAI" && "bg-status-surface-selesai",
+                          item.status === "DALAM TINDAKAN" && "bg-status-surface-tindakan",
+                          item.status === "HOLD / KIV" && "bg-status-surface-hold",
+                          item.status === "BATAL" && "bg-status-surface-batal",
                         )}
                       >
                         {columnVisibility.bil && (
@@ -2267,7 +2255,7 @@ export default function SuratPage() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <Badge
                                   variant="outline"
-                                  className="cursor-pointer hover:bg-secondary text-xs transition-all duration-200 hover:scale-105"
+                                  className="cursor-pointer hover:bg-secondary text-xs transition-all duration-200 hover:scale-105 text-neutral-900"
                                   onClick={() => handleUnitFilter(item.unit)}
                                   style={{
                                     backgroundColor: getUnitColor(item.unit),
@@ -2279,7 +2267,7 @@ export default function SuratPage() {
                                 {item.tindakanPic && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs"
+                                    className="text-xs text-neutral-900"
                                     style={{
                                       backgroundColor: getUnitColor(item.unit),
                                       borderColor: getUnitColor(item.unit),
@@ -2313,7 +2301,7 @@ export default function SuratPage() {
                               )}
                               {item.komen && (
                                 <div className="text-blue-600 text-xs mt-1 flex items-start gap-1">
-                                  <MessageSquare className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                  <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
                                   <span className="font-medium">Komen:</span> {item.komen}
                                 </div>
                               )}
@@ -2418,13 +2406,13 @@ export default function SuratPage() {
                     key={item.id}
                     className={`p-3 transition-all duration-200 hover:bg-muted/30 ${
                       item.status === "SELESAI"
-                        ? "border-green-500 bg-green-50/50"
+                        ? "border-green-500 bg-status-surface-selesai"
                         : item.status === "DALAM TINDAKAN"
-                          ? "border-blue-500 bg-blue-50/50"
+                          ? "border-blue-500 bg-status-surface-tindakan"
                           : item.status === "HOLD / KIV"
-                            ? "border-orange-500 bg-orange-50/50"
+                            ? "border-orange-500 bg-status-surface-hold"
                             : item.status === "BATAL"
-                              ? "border-red-500 bg-red-50/50"
+                              ? "border-red-500 bg-status-surface-batal"
                               : "border-gray-200"
                     }`}
                   >
@@ -2511,7 +2499,7 @@ export default function SuratPage() {
                     <div className="flex flex-wrap gap-2 mt-2 items-center">
                       <Badge
                         variant="outline"
-                        className="text-[10px]"
+                        className="text-[10px] text-neutral-900"
                         style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
                       >
                         {item.unit}
@@ -2519,7 +2507,7 @@ export default function SuratPage() {
                       {item.tindakanPic && (
                         <Badge
                           variant="outline"
-                          className="text-[10px]"
+                          className="text-[10px] text-neutral-900"
                           style={{ backgroundColor: getUnitColor(item.unit), borderColor: getUnitColor(item.unit) }}
                         >
                           PIC: {item.tindakanPic}
@@ -2582,7 +2570,7 @@ export default function SuratPage() {
 
                     {item.komen && (
                       <div className="mt-2 text-[10px] text-blue-600 flex items-start gap-1">
-                        <MessageSquare className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
                         <div>
                           <span className="font-medium">Komen:</span> {item.komen}
                         </div>
@@ -2837,7 +2825,7 @@ export default function SuratPage() {
                       {selectedFailId && filteredFailData.length > 0 ? (
                         <div className="flex items-center gap-2">
                           <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{
                               backgroundColor: getFailPartColor(
                                 filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
@@ -2891,7 +2879,7 @@ export default function SuratPage() {
                             >
                               <div className="flex items-center gap-2">
                                 <span
-                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  className="w-2 h-2 rounded-full shrink-0"
                                   style={{
                                     backgroundColor: getFailPartColor(fail.part),
                                   }}

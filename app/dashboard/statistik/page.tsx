@@ -20,9 +20,8 @@ import {
   Line,
 } from "recharts"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/dashboard/sidebar"
-import { Menu } from "lucide-react"
+import { NavTrigger } from "@/components/dashboard/app-shell"
+import {  } from "lucide-react"
 
 export default function StatistikPage() {
   const [surat, setSurat] = useState<Surat[]>([])
@@ -147,17 +146,7 @@ export default function StatistikPage() {
         <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+              <NavTrigger />
               <CardTitle className="text-base md:text-xl">Statistik</CardTitle>
             </div>
           </div>

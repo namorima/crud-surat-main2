@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/dashboard/sidebar"
-import { Menu, Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lucide-react"
+import { NavTrigger } from "@/components/dashboard/app-shell"
+import { Plus, Loader2, Edit, Trash2, MoreHorizontal, ArrowLeft } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-provider"
@@ -483,17 +482,7 @@ export default function TetapanPage() {
         <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
           <div className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+              <NavTrigger />
               <CardTitle className="text-base md:text-xl">Tetapan</CardTitle>
             </div>
             {fromSurat && (

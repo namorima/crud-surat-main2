@@ -1,21 +1,12 @@
 "use client"
 
 import type React from "react"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
-  Menu,
   Search,
   X,
   Calendar,
@@ -34,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Sidebar } from "@/components/dashboard/sidebar"
+import { NavTrigger } from "@/components/dashboard/app-shell"
 import { hasPermission } from "@/lib/rbac"
 import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
@@ -109,21 +100,7 @@ export function BayaranHeader({
     <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
       <div className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Menu className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-[250px]">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Sidebar</SheetTitle>
-                <SheetDescription>Main navigation sidebar</SheetDescription>
-              </SheetHeader>
-              <Sidebar />
-            </SheetContent>
-          </Sheet>
+          <NavTrigger />
           <CardTitle className="text-base md:text-xl">Rekod Bayaran</CardTitle>
         </div>
         <div className="flex items-center gap-1 flex-wrap justify-end">

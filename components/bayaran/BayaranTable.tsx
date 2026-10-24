@@ -68,7 +68,7 @@ export function BayaranTable({
       {/* Desktop view */}
       <div className="hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
         <Table>
-          <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-sm">
+          <TableHeader className="table-header sticky top-0 z-20 bg-card shadow-xs">
             <TableRow>
               <TableHead className="w-[40px]">
                 <Checkbox

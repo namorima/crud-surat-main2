@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatCards } from '@/components/application/dashboard/stat-cards'
+import { SegmentedControl, SegmentedControlItem } from '@/components/base/segmented-control/segmented-control'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Surat } from '@/types/surat'
 import type { Bayaran } from '@/types/bayaran'
@@ -27,10 +29,16 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
-import { FileText, Clock, CheckCircle, AlertCircle, Menu, DollarSign, PauseCircle } from 'lucide-react'
+import {
+  RiCheckboxCircleLine,
+  RiErrorWarningLine,
+  RiFileList3Line,
+  RiMoneyDollarCircleLine,
+  RiPauseCircleLine,
+  RiTimeLine,
+} from '@remixicon/react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Sidebar } from '@/components/dashboard/sidebar'
+import { NavTrigger } from "@/components/dashboard/app-shell"
 
 const CustomXAxisTick = ({ x, y, payload }) => {
   const value = payload.value
@@ -384,74 +392,36 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="card-hover transition-all duration-300 ease-in-out hover:shadow-md">
-        <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Menu className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[250px]">
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
-              <CardTitle className="text-base md:text-xl">Dashboard</CardTitle>
-            </div>
-            <Tabs value={view} onValueChange={(value) => { setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); setSelectedStatusForStatus(null); setSelectedKawasanForStatus(null); }} className="w-[200px]">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="surat">Surat</TabsTrigger>
-                <TabsTrigger value="bayaran">Bayaran</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
+    <div className="flex flex-col gap-3 sm:gap-4">
+      <header className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <NavTrigger />
+          <h1 className="truncate px-1 text-title-2-medium text-text-primary">Dashboard</h1>
+        </div>
+        <SegmentedControl
+          aria-label="Paparan dashboard"
+          selectedKeys={[view]}
+          onSelectionChange={(keys) => {
+            const value = String([...keys][0] ?? view)
+            setView(value); setSelectedKawasan(null); setSelectedStatus(null); setSelectedKawasanForKategori(null); setSelectedStatusForStatus(null); setSelectedKawasanForStatus(null);
+          }}
+        >
+          <SegmentedControlItem id="surat">Surat</SegmentedControlItem>
+          <SegmentedControlItem id="bayaran">Bayaran</SegmentedControlItem>
+        </SegmentedControl>
+      </header>
+      <div>
           {view === 'surat' && (
             <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Jumlah Surat</CardTitle>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalSurat}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Belum Diproses</CardTitle>
-                    <Clock className="h-4 w-4 text-orange-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{pendingSurat}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Dalam Tindakan</CardTitle>
-                    <AlertCircle className="h-4 w-4 text-blue-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{inProgressSurat}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Selesai</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{completedSurat}</div>
-                  </CardContent>
-                </Card>
-              </div>
-              <Tabs defaultValue="status" className="mt-6">
+              <StatCards
+                stats={[
+                  { icon: RiFileList3Line, label: 'Jumlah Surat', value: String(totalSurat) },
+                  { icon: RiTimeLine, label: 'Belum Diproses', value: String(pendingSurat) },
+                  { icon: RiErrorWarningLine, label: 'Dalam Tindakan', value: String(inProgressSurat) },
+                  { icon: RiCheckboxCircleLine, label: 'Selesai', value: String(completedSurat) },
+                ]}
+              />
+              <Tabs defaultValue="status" className="mt-4 sm:mt-6">
                 <TabsList>
                   <TabsTrigger value="status">Status</TabsTrigger>
                   <TabsTrigger value="category">Kategori</TabsTrigger>
@@ -527,45 +497,15 @@ export default function DashboardPage() {
           )}
           {view === 'bayaran' && (
             <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Jumlah Rekod Bayaran</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalBayaran}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Belum Bayar</CardTitle>
-                    <Clock className="h-4 w-4 text-orange-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{belumBayar}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Selesai Bayaran</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{selesaiBayaran}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">Hold / KIV</CardTitle>
-                    <PauseCircle className="h-4 w-4 text-yellow-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{holdKivBayaran}</div>
-                  </CardContent>
-                </Card>
-              </div>
-              <Tabs defaultValue="status" className="mt-6">
+              <StatCards
+                stats={[
+                  { icon: RiMoneyDollarCircleLine, label: 'Jumlah Rekod Bayaran', value: String(totalBayaran) },
+                  { icon: RiTimeLine, label: 'Belum Bayar', value: String(belumBayar) },
+                  { icon: RiCheckboxCircleLine, label: 'Selesai Bayaran', value: String(selesaiBayaran) },
+                  { icon: RiPauseCircleLine, label: 'Hold / KIV', value: String(holdKivBayaran) },
+                ]}
+              />
+              <Tabs defaultValue="status" className="mt-4 sm:mt-6">
                 <TabsList>
                   <TabsTrigger value="status">Status</TabsTrigger>
                   <TabsTrigger value="kategori">Kategori</TabsTrigger>
@@ -787,8 +727,7 @@ export default function DashboardPage() {
               </Tabs>
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }
