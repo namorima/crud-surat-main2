@@ -59,8 +59,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `created_at`
-   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql) and [add-kontrak-kerja.sql](add-kontrak-kerja.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`status_config`** - Status configurations
    - Columns: `id`, `status`, `color_hex`, `kategori`, `created_at`
@@ -611,7 +611,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `SuratList.tsx` - BoardUI table (md+) and compact cards (phones) with pagination
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/))
-   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table. Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
 
 7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter
