@@ -289,7 +289,6 @@ export default function BayaranPage() {
           statusBayaranData: data.statusBayaranData || [],
         });
         setFilteredDaripadaSuggestions(data.daripadaSuggestions || []);
-        setFilteredPenerimaData(data.penerimaData || []);
       } else {
         console.error("Failed to fetch form data:", response.statusText);
       }
@@ -747,33 +746,6 @@ export default function BayaranPage() {
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
-  const [showPenerimaDropdown, setShowPenerimaDropdown] = useState(false);
-  const [filteredPenerimaData, setFilteredPenerimaData] = useState<
-    Array<{ name: string; unit: string; display: string }>
-  >([]);
-
-  const handlePenerimaChange = (value: string) => {
-    setFormData((prev) => {
-      // Find the selected penerima to get their default status
-      const selectedPenerima = formOptions.penerimaData.find((item) => item.display === value);
-      // Always extract name before parentheses
-      const nameOnly = value.split(" (")[0];
-      return {
-        ...prev,
-        penerima: nameOnly,
-        statusBayaran: selectedPenerima?.defaultStatus || prev.statusBayaran,
-      };
-    });
-
-    // Filter penerima suggestions
-    const filtered = formOptions.penerimaData.filter(
-      (item) =>
-        item.display.toLowerCase().includes(value.toLowerCase()) ||
-        item.name.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredPenerimaData(filtered);
-  };
-
   // Helper functions for conditional visibility
   const shouldShowAdvancedFields = () => {
     return formData.tarikhMemoLadang !== "";
@@ -1215,10 +1187,7 @@ Detail: ${directLink}
         shouldShowAdvancedFields={shouldShowAdvancedFields}
         shouldShowHandoverFields={shouldShowHandoverFields}
         shouldShowCompletionFields={shouldShowCompletionFields}
-        showPenerimaDropdown={showPenerimaDropdown}
-        setShowPenerimaDropdown={setShowPenerimaDropdown}
-        handlePenerimaChange={handlePenerimaChange}
-        filteredPenerimaData={filteredPenerimaData}
+        penerimaData={formOptions.penerimaData}
         KATEGORI_COLORS={KATEGORI_COLORS}
       />
 
