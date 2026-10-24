@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { getAllKontraktor, addKontraktor } from "@/lib/supabase-db"
 import { parseKontraktorInput } from "@/lib/kontraktor-input"
 
@@ -14,7 +15,9 @@ function errorResponse(error: any, fallback: string) {
   return NextResponse.json({ error: fallback, details: message }, { status: 500 })
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "tetapan", action: "manage_all_units" }, ["semua", "Super Admin"])
+  if (guard.denied) return guard.denied
   try {
     return NextResponse.json(await getAllKontraktor())
   } catch (error: any) {
@@ -24,6 +27,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const input = parseKontraktorInput(await request.json())
     if (typeof input === "string") return NextResponse.json({ error: input }, { status: 400 })

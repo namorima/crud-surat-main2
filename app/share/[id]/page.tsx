@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, AlertCircle, FileText } from "lucide-react"
 import type { Bayaran } from "@/types/bayaran"
-import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
+import type { ShareLink } from "@/types/share-link"
 import { PublicBayaranTable } from "@/components/share/PublicBayaranTable"
 import { FilterSummaryBadges } from "@/components/share/FilterSummaryBadges"
 
@@ -48,56 +48,13 @@ export default function SharePage({ params }: PageProps) {
           // Silently fail - access count is not critical
         })
 
-        // Fetch all bayaran data
-        const bayaranResponse = await fetch("/api/bayaran")
+        // Only the rows this link may show; filtered on the server.
+        const bayaranResponse = await fetch(`/api/share-link/${resolvedParams.id}/bayaran`)
         if (!bayaranResponse.ok) {
           throw new Error("Gagal memuatkan data bayaran")
         }
 
-        const allBayaran: Bayaran[] = await bayaranResponse.json()
-
-        // Apply filters
-        const filters: ShareLinkFilter = JSON.parse(linkData.filterJson)
-        let filtered = [...allBayaran]
-
-        if (filters.kategori && filters.kategori.length > 0) {
-          filtered = filtered.filter((item) => filters.kategori!.includes(item.kategori))
-        }
-
-        if (filters.noKontrak && filters.noKontrak.length > 0) {
-          filtered = filtered.filter((item) => filters.noKontrak!.includes(item.noKontrak))
-        }
-
-        if (filters.kawasan && filters.kawasan.length > 0) {
-          filtered = filtered.filter((item) => filters.kawasan!.includes(item.daripada))
-        }
-
-        if (filters.statusBayaran && filters.statusBayaran.length > 0) {
-          filtered = filtered.filter((item) => filters.statusBayaran!.includes(item.statusBayaran))
-        }
-
-        if (filters.namaKontraktor && filters.namaKontraktor.length > 0) {
-          filtered = filtered.filter((item) => filters.namaKontraktor!.includes(item.namaKontraktor))
-        }
-
-        if (filters.dateRange) {
-          if (filters.dateRange.from) {
-            const fromDate = new Date(filters.dateRange.from)
-            filtered = filtered.filter((item) => {
-              const itemDate = new Date(item.tarikhTerima)
-              return itemDate >= fromDate
-            })
-          }
-          if (filters.dateRange.to) {
-            const toDate = new Date(filters.dateRange.to)
-            filtered = filtered.filter((item) => {
-              const itemDate = new Date(item.tarikhTerima)
-              return itemDate <= toDate
-            })
-          }
-        }
-
-        setBayaran(filtered)
+        setBayaran(await bayaranResponse.json())
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ralat tidak diketahui")
       } finally {

@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { syncAllBayaranKontraktor } from "@/lib/supabase-db"
 
 /** Re-copies nama_kontraktor from kontrak onto every bayaran row. */
-export async function POST() {
+export async function POST(request: Request) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const bayaranUpdated = await syncAllBayaranKontraktor()
     return NextResponse.json({ bayaranUpdated })

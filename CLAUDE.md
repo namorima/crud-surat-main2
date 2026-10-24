@@ -111,6 +111,14 @@ Located in `types/` directory:
 
 #### Authentication & Authorization
 
+0. **Server-side session (API protection)**
+   - Login ([app/api/auth/login/route.ts](app/api/auth/login/route.ts)) sets an HttpOnly signed cookie `crud_session` ([lib/session.ts](lib/session.ts), HMAC-SHA256 with `SESSION_SECRET`, falling back to `SUPABASE_SERVICE_ROLE_KEY`); `/api/auth/logout` clears it
+   - [middleware.ts](middleware.ts) rejects every `/api` request without a valid cookie (401), except login/logout, forgot/reset password and the public share-link routes (`GET /api/share-link/[id]`, `GET /api/share-link/[id]/bayaran`, `POST /api/share-link/[id]/increment`)
+   - Sensitive routes also check permissions server-side with `requirePermission()` ([lib/server-auth.ts](lib/server-auth.ts)): users/roles/permissions (pengguna), kontrak/kontraktor and share-link management (tetapan)
+   - The client logs out on any 401 from `/api` ([lib/auth-provider.tsx](lib/auth-provider.tsx))
+   - `/share/[id]` fetches only its rows from `/api/share-link/[id]/bayaran` (filtered server-side by [lib/share-filter.ts](lib/share-filter.ts))
+   - RLS: run [enable-rls.sql](enable-rls.sql) once this code is deployed everywhere; the app only uses the service-role client
+
 1. **Custom Auth Provider** ([lib/auth-provider.tsx](lib/auth-provider.tsx))
    - User credentials stored in Supabase `users` table
    - Session persistence via localStorage
@@ -205,6 +213,9 @@ Create a `.env.local` file in the project root:
 ```env
 # ImgBB API for image uploads
 NEXT_PUBLIC_IMGBB_API_KEY="your_imgbb_api_key"
+
+# Session cookie signing (recommended; falls back to SUPABASE_SERVICE_ROLE_KEY)
+SESSION_SECRET="a-long-random-string"
 
 # Supabase (Primary Database)
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"

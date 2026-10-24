@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
+import { requirePermission } from "@/lib/server-auth"
 import { getPermissions, getPermissionsGrouped } from '@/lib/supabase-rbac'
 
 // GET /api/permissions - Get all permissions
 // GET /api/permissions?grouped=true - Get permissions grouped by resource
 export async function GET(request: Request) {
+  const guard = await requirePermission(request, { resource: "pengguna", action: "view" }, ["semua", "Super Admin", "admin"])
+  if (guard.denied) return guard.denied
   try {
     const { searchParams } = new URL(request.url)
     const grouped = searchParams.get('grouped') === 'true'

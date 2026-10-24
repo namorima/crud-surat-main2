@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
+import { requirePermission } from "@/lib/server-auth"
 import { updateKontraktor, deleteKontraktor } from "@/lib/supabase-db"
 import { parseKontraktorInput } from "@/lib/kontraktor-input"
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const { id } = await params
     const input = parseKontraktorInput(await request.json())
@@ -20,6 +27,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await requirePermission(
+    request,
+    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+    ["semua", "Super Admin"],
+  )
+  if (guard.denied) return guard.denied
   try {
     const { id } = await params
     await deleteKontraktor(id)
