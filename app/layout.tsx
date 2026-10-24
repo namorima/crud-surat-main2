@@ -3,6 +3,8 @@ import Script from "next/script"
 import { Inter } from "next/font/google"
 import { AuthProvider } from "@/lib/auth-provider"
 import { DirectionProvider } from "@/components/foundations/direction/direction"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 // BoardUI's type scale (styles/typography.css) expects Inter on --font-inter.
@@ -37,6 +39,9 @@ export default function RootLayout({
         </Script>
         <DirectionProvider locale="ms-MY">
           <AuthProvider>{children}</AuthProvider>
+          {/* Both toast systems are used across the app (useToast and sonner). */}
+          <Toaster />
+          <SonnerToaster position="top-center" richColors closeButton />
         </DirectionProvider>
       </body>
     </html>

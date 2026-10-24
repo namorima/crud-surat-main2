@@ -148,6 +148,7 @@ Located in `types/` directory:
    - Bayaran: `getAllBayaran()`, `addBayaran()`, `updateBayaran()`, `deleteBayaran()`, `bulkUpdateBayaran()`
    - Users: `getAllUsers()`, `getUserById()`, `addUser()`, `updateUser()`, `deleteUser()`, `updateUserPassword()`
    - Fail: `getAllFail()`, `addFail()`, `updateFail()`, `deleteFail()`
+   - Kontrak: `getAllKontrak()`, `addKontrak()`, `updateKontrak()`, `deleteKontrak()`, `syncAllBayaranKontraktor()`
    - Share Links: `getAllShareLinks()`, `getShareLinkById()`, `addShareLink()`, `deleteShareLink()`, `incrementShareLinkAccess()`
    - RBAC: `getAllRoles()`, `getRoleById()`, `createRole()`, `updateRole()`, `deleteRole()`, `assignPermissionsToRole()`, `getUserPermissions()`
 
@@ -608,7 +609,10 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 5. **Surat Components** ([components/surat/](components/surat/))
    - `SuratList.tsx` - BoardUI table (md+) and compact cards (phones) with pagination
 
-6. **Auth Components** ([components/auth/](components/auth/))
+6. **Tetapan Components** ([components/tetapan/](components/tetapan/))
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table. Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
+
+7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter
    - `AuthScreen.tsx` - BoardUI auth page frame and card class
 
@@ -651,6 +655,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 - `/api/daripada-kepada` - Fetch daripada/kepada options ([app/api/daripada-kepada/route.ts](app/api/daripada-kepada/route.ts))
 - `/api/bayaran-form-data` - Fetch form data for bayaran ([app/api/bayaran-form-data/route.ts](app/api/bayaran-form-data/route.ts))
 - `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts))
+- `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 
 ### RBAC Routes
 

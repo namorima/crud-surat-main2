@@ -4,6 +4,7 @@ import type { User } from "@/types/user"
 import type { Bayaran } from "@/types/bayaran"
 import type { Fail } from "@/types/fail"
 import type { ShareLink } from "@/types/share-link"
+import type { Kontrak, KontrakInput } from "@/types/kontrak"
 import { hashPassword, isHashedPassword } from "./password"
 
 // ===== SURAT FUNCTIONS =====
@@ -728,6 +729,162 @@ export async function getContractCategoryData() {
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
     throw new Error(`Failed to fetch contract and category data from Supabase: ${error.message}`)
+  }
+}
+
+// ===== KONTRAK FUNCTIONS =====
+// Bayaran rows keep a copy of nama_kontraktor (looked up when a bayaran is
+// saved), so changing a contractor here also rewrites that copy.
+
+function mapKontrakRow(row: any): Kontrak {
+  return {
+    id: row.id,
+    kawasan: row.kawasan || "",
+    noKontrak: row.no_kontrak || "",
+    kategori: row.kategori || "",
+    namaKontraktor: row.nama_kontraktor || "",
+  }
+}
+
+export async function getAllKontrak(): Promise<Kontrak[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("kontrak")
+      .select("*")
+      .order("kawasan")
+      .order("no_kontrak")
+
+    if (error) throw error
+    return (data || []).map(mapKontrakRow)
+  } catch (error: any) {
+    console.error("Error fetching kontrak from Supabase:", error)
+    throw new Error(`Failed to fetch kontrak from Supabase: ${error.message}`)
+  }
+}
+
+/**
+ * One contract number can have several kontrak rows (one per kategori), and
+ * bayaran rows look the name up by contract number alone. Keep every sibling
+ * row and every bayaran on the same name; returns the bayaran rows updated.
+ */
+async function applyNamaKontraktor(noKontrak: string, namaKontraktor: string): Promise<number> {
+  if (!noKontrak) return 0
+  const nama = namaKontraktor || null
+
+  const { error: siblingError } = await supabaseAdmin
+    .from("kontrak")
+    .update({ nama_kontraktor: nama })
+    .eq("no_kontrak", noKontrak)
+  if (siblingError) throw siblingError
+
+  const { data, error } = await supabaseAdmin
+    .from("bayaran")
+    .update({ nama_kontraktor: nama })
+    .eq("no_kontrak", noKontrak)
+    .select("id")
+  if (error) throw error
+  return data?.length || 0
+}
+
+async function assertKontrakUnique(input: KontrakInput, exceptId?: string) {
+  let query = supabaseAdmin
+    .from("kontrak")
+    .select("id, kategori")
+    .eq("kawasan", input.kawasan)
+    .eq("no_kontrak", input.noKontrak)
+  if (exceptId) query = query.neq("id", exceptId)
+  const { data, error } = await query
+  if (error) throw error
+  const kategori = input.kategori || ""
+  if (data?.some((row) => (row.kategori || "") === kategori)) {
+    throw new Error(`Kontrak ${input.noKontrak} (${input.kawasan}${kategori ? `, ${kategori}` : ""}) sudah wujud`)
+  }
+}
+
+export async function addKontrak(input: KontrakInput): Promise<{ kontrak: Kontrak; bayaranUpdated: number }> {
+  try {
+    await assertKontrakUnique(input)
+    const { data, error } = await supabaseAdmin
+      .from("kontrak")
+      .insert({
+        kawasan: input.kawasan,
+        no_kontrak: input.noKontrak,
+        kategori: input.kategori || null,
+        nama_kontraktor: input.namaKontraktor || null,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    const bayaranUpdated = input.namaKontraktor ? await applyNamaKontraktor(input.noKontrak, input.namaKontraktor) : 0
+    return { kontrak: { ...mapKontrakRow(data), namaKontraktor: input.namaKontraktor }, bayaranUpdated }
+  } catch (error: any) {
+    console.error("Error adding kontrak to Supabase:", error)
+    throw new Error(error.message)
+  }
+}
+
+export async function updateKontrak(
+  id: string,
+  input: KontrakInput,
+): Promise<{ kontrak: Kontrak; bayaranUpdated: number }> {
+  try {
+    await assertKontrakUnique(input, id)
+    const { data, error } = await supabaseAdmin
+      .from("kontrak")
+      .update({
+        kawasan: input.kawasan,
+        no_kontrak: input.noKontrak,
+        kategori: input.kategori || null,
+        nama_kontraktor: input.namaKontraktor || null,
+      })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor)
+    return { kontrak: mapKontrakRow(data), bayaranUpdated }
+  } catch (error: any) {
+    console.error("Error updating kontrak in Supabase:", error)
+    throw new Error(error.message)
+  }
+}
+
+export async function deleteKontrak(id: string): Promise<void> {
+  try {
+    const { error } = await supabaseAdmin.from("kontrak").delete().eq("id", id)
+    if (error) throw error
+  } catch (error: any) {
+    console.error("Error deleting kontrak from Supabase:", error)
+    throw new Error(`Failed to delete kontrak from Supabase: ${error.message}`)
+  }
+}
+
+/** Re-copies every contractor name onto its bayaran rows (one-off backfill). */
+export async function syncAllBayaranKontraktor(): Promise<number> {
+  try {
+    // First named row per contract number wins, matching the bayaran lookup.
+    const names = new Map<string, string>()
+    for (const kontrak of await getAllKontrak()) {
+      if (kontrak.noKontrak && kontrak.namaKontraktor && !names.has(kontrak.noKontrak)) {
+        names.set(kontrak.noKontrak, kontrak.namaKontraktor)
+      }
+    }
+    let total = 0
+    for (const [noKontrak, nama] of names) {
+      const { data, error } = await supabaseAdmin
+        .from("bayaran")
+        .update({ nama_kontraktor: nama })
+        .eq("no_kontrak", noKontrak)
+        .select("id")
+      if (error) throw error
+      total += data?.length || 0
+    }
+    return total
+  } catch (error: any) {
+    console.error("Error syncing nama kontraktor to bayaran:", error)
+    throw new Error(`Failed to sync nama kontraktor: ${error.message}`)
   }
 }
 
