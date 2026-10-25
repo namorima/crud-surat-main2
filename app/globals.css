@@ -305,3 +305,113 @@
   --viz-ord-4: #9ec5f4;
   --viz-track: color-mix(in srgb, var(--color-neutral-700) 70%, transparent);
 }
+
+/*
+ * Motion. One easing family so everything feels related:
+ *   --ease-out-soft  entrances (pages, lists, tab panels, popovers)
+ *   --ease-sheet     the phone bottom sheet and nav drawer (iOS-like)
+ * Entrance animations use fill-mode `backwards` so no transform is left on the
+ * element afterwards (a lingering transform would trap position:fixed/sticky
+ * descendants). Everything is switched off for prefers-reduced-motion.
+ */
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes motion-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes motion-drawer-out {
+  to {
+    opacity: 0;
+    transform: translateX(-2rem);
+  }
+}
+@keyframes motion-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* A page (dashboard template) or tab panel coming in */
+.motion-page {
+  animation: motion-rise 320ms var(--ease-out-soft) backwards;
+}
+.motion-panel {
+  animation: motion-rise 240ms var(--ease-out-soft) backwards;
+}
+
+/* Lists: children rise in one after another (first 12 staggered, the rest together) */
+.motion-stagger > * {
+  animation: motion-rise 300ms var(--ease-out-soft) backwards;
+  animation-delay: 360ms;
+}
+.motion-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.motion-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.motion-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.motion-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.motion-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.motion-stagger > *:nth-child(6) { animation-delay: 150ms; }
+.motion-stagger > *:nth-child(7) { animation-delay: 180ms; }
+.motion-stagger > *:nth-child(8) { animation-delay: 210ms; }
+.motion-stagger > *:nth-child(9) { animation-delay: 240ms; }
+.motion-stagger > *:nth-child(10) { animation-delay: 270ms; }
+.motion-stagger > *:nth-child(11) { animation-delay: 300ms; }
+.motion-stagger > *:nth-child(12) { animation-delay: 330ms; }
+/* Table rows only fade: transforms on <tr> misbehave in some engines */
+tbody.motion-stagger > * {
+  animation-name: motion-fade;
+}
+
+/* HTML bar lists grow from the left */
+.motion-bar {
+  transform-origin: left center;
+  animation: motion-bar-grow 600ms var(--ease-out-soft) backwards;
+}
+
+/* Nav drawer closing (opening uses tw-animate classes) */
+.motion-drawer-out {
+  animation: motion-drawer-out 200ms var(--ease-sheet) forwards;
+}
+.motion-fade-out {
+  animation: motion-fade-out 200ms ease-out forwards;
+}
+
+/* Touch feedback for tappable cards and tabs */
+.motion-press {
+  transition: transform 160ms var(--ease-out-soft), background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+.motion-press:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Loading spinners still need to spin to read as "busy" */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

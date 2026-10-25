@@ -12,10 +12,12 @@ import { cn } from "@/lib/utils"
  * `sm` it is the centred BoardUI modal.
  */
 export const dialogOverlayClass =
-  "fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+  "fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] duration-300 ease-out data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
 
+// Phone sheet: 340ms in / 220ms out on the iOS sheet curve. Desktop modal: 220ms / 150ms.
 export const dialogSurfaceClass = [
-  "fixed z-50 grid w-full gap-4 border border-border-button-default bg-background-primary-default text-text-primary shadow-waitlist duration-200 dark:bg-background-secondary-default",
+  "fixed z-50 grid w-full gap-4 border border-border-button-default bg-background-primary-default text-text-primary shadow-waitlist dark:bg-background-secondary-default",
+  "duration-[340ms] ease-[var(--ease-sheet)] data-[state=closed]:duration-[220ms] sm:duration-[220ms] sm:ease-[var(--ease-out-soft)] sm:data-[state=closed]:duration-150",
   "inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl px-4 pt-6 pb-4",
   "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
   "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90dvh] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6",

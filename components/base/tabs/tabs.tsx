@@ -187,7 +187,7 @@ export function TabPanel({ className, ref, ...props }: TabPanelProps) {
       {...props}
       className={(state) =>
         cx(
-          "outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+          "motion-panel outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-border-focus-ring",
           typeof className === "function" ? className(state) : className,
         )
       }

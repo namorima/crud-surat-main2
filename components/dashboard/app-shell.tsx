@@ -17,11 +17,32 @@ const AppShellContext = createContext<{ openNav: () => void } | null>(null)
  * bottom tab bar carries the main pages and opens the drawer via "Lagi".
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  const [navOpen, setNavOpen] = useState(false)
+  const [navOpen, setNavOpenState] = useState(false)
+  // Keeps the drawer mounted for its slide-out before it unmounts
+  const [navClosing, setNavClosing] = useState(false)
   const pathname = usePathname()
+
+  const setNavOpen = (open: boolean) => {
+    if (open) {
+      setNavClosing(false)
+      setNavOpenState(true)
+    } else {
+      setNavClosing((closing) => closing || navOpen)
+    }
+  }
+
+  useEffect(() => {
+    if (!navClosing) return
+    const timer = setTimeout(() => {
+      setNavOpenState(false)
+      setNavClosing(false)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [navClosing])
 
   useEffect(() => {
     setNavOpen(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   useEffect(() => {
@@ -44,9 +65,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               type="button"
               aria-label="Tutup navigasi"
               onClick={() => setNavOpen(false)}
-              className="absolute inset-0 cursor-pointer bg-black/40 animate-in fade-in-0 duration-200"
+              className={cx(
+                "absolute inset-0 cursor-pointer bg-black/40",
+                navClosing ? "motion-fade-out" : "animate-in fade-in-0 duration-300 ease-out",
+              )}
             />
-            <div className="relative flex h-full p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] animate-in slide-in-from-left-8 fade-in-0 duration-200">
+            <div
+              className={cx(
+                "relative flex h-full p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+                navClosing
+                  ? "motion-drawer-out"
+                  : "animate-in slide-in-from-left-8 fade-in-0 duration-300 ease-[var(--ease-sheet)]",
+              )}
+            >
               <Sidebar mobile onClose={() => setNavOpen(false)} />
             </div>
           </div>

@@ -272,7 +272,7 @@ export function RoleManager({ onRoleCreated, onRoleUpdated, onRoleDeleted }: Rol
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="motion-stagger">
                     {roles.map((role) => (
                       <tr key={role.id} className="hover:bg-background-secondary-default">
                         <td>
@@ -296,7 +296,7 @@ export function RoleManager({ onRoleCreated, onRoleUpdated, onRoleDeleted }: Rol
             </div>
 
             {/* Phones */}
-            <ul className="grid gap-2 md:hidden">
+            <ul className="motion-stagger grid gap-2 md:hidden">
               {roles.map((role) => (
                 <li key={role.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

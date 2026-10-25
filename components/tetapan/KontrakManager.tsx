@@ -308,7 +308,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="motion-stagger">
                     {filtered.map((item) => (
                       <tr key={item.id} className="hover:bg-background-secondary-default">
                         <td>
@@ -362,7 +362,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             </div>
 
             {/* Phones and iPads */}
-            <ul className="grid gap-2 md:grid-cols-2 xl:hidden">
+            <ul className="motion-stagger grid gap-2 md:grid-cols-2 xl:hidden">
               {filtered.map((item) => (
                 <li key={item.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

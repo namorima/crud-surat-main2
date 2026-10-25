@@ -208,6 +208,14 @@ Located in `types/` directory:
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
 - **Charts**: Recharts + HTML bar lists on the Dashboard ([components/dashboard/charts.tsx](components/dashboard/charts.tsx)); chart colours are `--viz-*` tokens in [app/globals.css](app/globals.css)
 - **Notifications**: Sonner toast notifications ([hooks/use-toast.ts](hooks/use-toast.ts))
+- **Motion**: CSS-only, defined at the end of [app/globals.css](app/globals.css) (`--ease-out-soft`, `--ease-sheet`)
+  - `motion-page`: page rise, from [app/dashboard/template.tsx](app/dashboard/template.tsx)
+  - `motion-panel`: BoardUI tab panels
+  - `motion-stagger`: put on a list's `ul`/`tbody` and its first 12 children come in one by one (rows only fade)
+  - `motion-bar`: Dashboard bar lists
+  - `motion-press`: tap feedback
+  - Dialogs slide up as a sheet on phones and zoom on desktop; the nav drawer animates out
+  - Entrances use fill-mode `backwards` so no transform stays behind; `prefers-reduced-motion` turns all of it off except spinners
 
 ## Environment Setup
 
