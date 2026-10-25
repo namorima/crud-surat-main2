@@ -646,7 +646,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 5. **Surat Components** ([components/surat/](components/surat/))
    - `SuratList.tsx` - BoardUI table (md+: Bil, Tarikh, Perkara, Unit/PIC from lg, Status, Ref) and compact neutral cards (phones) with pagination; status shows as a chip, rows are not tinted
    - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share)
-   - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving
+   - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving. Perkara is a wrapping textarea with its own suggestion list. A Respon starts as the opposite kategori of the surat it answers (MASUK → KELUAR, status SELESAI) and offers "Salin perkara surat #N"
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
