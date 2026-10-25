@@ -1193,6 +1193,7 @@ Detail: ${directLink}
       {sharingBayaran && (
         <BayaranShareImageGenerator
           bayaran={sharingBayaran}
+          kontrakInfo={sharingBayaran.noKontrak ? formOptions.kontrakInfo[sharingBayaran.noKontrak] : undefined}
           onImageGenerated={handleImageGenerated}
           onError={handleImageError}
         />
