@@ -5,20 +5,18 @@ import {
   getContractCategoryData,
   getPenerimaData,
   getStatusBayaranData,
-  getAllBayaran,
 } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
     // Fetch all required data in parallel
-    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData, allBayaran] =
+    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData] =
       await Promise.all([
         getDaripadaKepadaValues(),
         getStatusLadangData(),
         getContractCategoryData(),
         getPenerimaData(),
         getStatusBayaranData(),
-        getAllBayaran(),
       ])
 
     return NextResponse.json({
@@ -28,6 +26,8 @@ export async function GET() {
       categoryData: contractCategoryData.categoryData,
       allContracts: contractCategoryData.allContracts,
       allCategories: contractCategoryData.allCategories,
+      contractorData: contractCategoryData.contractorData,
+      kontrakInfo: contractCategoryData.kontrakInfo,
       penerimaData,
       statusBayaranData,
     })

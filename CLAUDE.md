@@ -612,7 +612,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
-   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields, tracking timeline; Padam / Tutup / Edit / Share
+   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields (incl. Kerja and Nilai Kontrak of its kontrak, from `kontrakInfo` in `/api/bayaran-form-data`, loaded on first open), tracking timeline; Padam / Tutup / Edit / Share
    - `progress.tsx` - process steps (Memo → PPN(P) → PN → Hantar → Bayar) and the `StageDots` indicator
 
 2. **Share Components** ([components/share/](components/share/))

@@ -36,10 +36,14 @@ import { StageDots, isBayaranBatal, isBayaranHold, isBayaranSelesai } from "@/co
 
 type IconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
 
+/** Kerja and nilai of the record's kontrak, from /api/bayaran-form-data `kontrakInfo`. */
+export type KontrakInfo = { kerja: string; nilaiKontrak: number | null }
+
 interface DetailDialogProps {
   showDetailDialog: boolean
   setShowDetailDialog: (show: boolean) => void
   selectedBayaran: Bayaran | null
+  kontrakInfo?: KontrakInfo
   handleEdit: (bayaran: Bayaran) => void
   handleShare: (bayaran: Bayaran) => void
   isSharing: boolean
@@ -118,6 +122,7 @@ export function DetailDialog({
   showDetailDialog,
   setShowDetailDialog,
   selectedBayaran: b,
+  kontrakInfo,
   handleEdit,
   handleShare,
   isSharing,
@@ -248,6 +253,20 @@ export function DetailDialog({
                   <Field label="Nama Kontraktor" className="col-span-2">
                     {b.namaKontraktor || "-"}
                   </Field>
+                  {b.noKontrak && (
+                    <>
+                      <Field label="Kerja" className="col-span-2">
+                        {kontrakInfo?.kerja || "-"}
+                      </Field>
+                      <Field label="Nilai Kontrak" className="col-span-2">
+                        {kontrakInfo?.nilaiKontrak != null ? (
+                          <span className="tabular-nums">{formatCurrency(String(kontrakInfo.nilaiKontrak))}</span>
+                        ) : (
+                          "-"
+                        )}
+                      </Field>
+                    </>
+                  )}
                   <Field label="Peringkat" className="col-span-2">
                     <StageDots item={b} />
                   </Field>
