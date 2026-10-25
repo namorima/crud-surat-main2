@@ -51,7 +51,7 @@ import {
 import { BayaranShareImageGenerator } from "@/components/bayaran-share-image-generator";
 import { BayaranTable } from "@/components/bayaran/BayaranTable";
 import { matchesBayaranSearch, parseRecordNumber } from "@/lib/bayaran-search";
-import { DetailDialog } from "@/components/bayaran/DetailDialog";
+import { DetailDialog, type KontrakInfo } from "@/components/bayaran/DetailDialog";
 import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
@@ -141,6 +141,7 @@ export default function BayaranPage() {
     allContracts: [] as string[],
     allCategories: [] as string[],
     contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
+    kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -273,6 +274,8 @@ export default function BayaranPage() {
     }
   }, [showAddDialog, showEditDialog]);
 
+  const formDataLoaded = useRef(false);
+
   const fetchFormData = async () => {
     try {
       setFormDataLoading(true);
@@ -287,10 +290,12 @@ export default function BayaranPage() {
           allContracts: data.allContracts || [],
           allCategories: data.allCategories || [],
           contractorData: data.contractorData || {},
+          kontrakInfo: data.kontrakInfo || {},
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
         setFilteredDaripadaSuggestions(data.daripadaSuggestions || []);
+        formDataLoaded.current = true;
       } else {
         console.error("Failed to fetch form data:", response.statusText);
       }
@@ -722,6 +727,13 @@ export default function BayaranPage() {
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
+  // The detail dialog shows kerja / nilai kontrak from the form data; load it once
+  useEffect(() => {
+    if (showDetailDialog && !formDataLoaded.current) {
+      fetchFormData();
+    }
+  }, [showDetailDialog]);
+
   // Helper functions for conditional visibility
   const shouldShowAdvancedFields = () => {
     return formData.tarikhMemoLadang !== "";
@@ -1121,6 +1133,7 @@ Detail: ${directLink}
         showDetailDialog={showDetailDialog}
         setShowDetailDialog={setShowDetailDialog}
         selectedBayaran={selectedBayaran}
+        kontrakInfo={selectedBayaran?.noKontrak ? formOptions.kontrakInfo[selectedBayaran.noKontrak] : undefined}
         handleEdit={handleEdit}
         handleShare={handleShare}
         isSharing={isSharing}

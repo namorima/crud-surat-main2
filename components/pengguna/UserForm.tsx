@@ -1,27 +1,22 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { toast } from "sonner"
+import { RiLoader4Line } from "@remixicon/react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/base/buttons/button"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  FormField,
+  dialogBodyClass,
+  dialogFooterClass,
+  dialogFrameClass,
+  dialogHeaderClass,
+} from "@/components/dashboard/form-field"
 import type { User } from "@/types/user"
 import type { Role } from "@/types/rbac"
-import { Loader2 } from "lucide-react"
 
 type UserFormProps = {
   open: boolean
@@ -29,6 +24,12 @@ type UserFormProps = {
   user?: User | null
   onSuccess?: () => void
 }
+
+const TYPES = [
+  { value: "none", label: "Biasa" },
+  { value: "VIEW", label: "VIEW" },
+  { value: "PENERIMA", label: "PENERIMA" },
+]
 
 export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps) {
   const [roles, setRoles] = useState<Role[]>([])
@@ -66,7 +67,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         type: ""
       })
     }
-  }, [user])
+  }, [user, open])
 
   const fetchRoles = async () => {
     try {
@@ -80,13 +81,17 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.role_id) {
+      toast.error("Sila pilih role")
+      return
+    }
     setLoading(true)
 
     try {
       const url = user ? `/api/auth?id=${user.id}` : "/api/auth"
       const method = user ? "PATCH" : "POST"
 
-      const body: any = {
+      const body: Record<string, string | null> = {
         username: formData.username,
         name: formData.name,
         role_id: formData.role_id,
@@ -105,15 +110,16 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
       })
 
       if (response.ok) {
+        toast.success(user ? "Pengguna dikemaskini" : "Pengguna baru dicipta")
         onSuccess?.()
         onOpenChange(false)
       } else {
-        const error = await response.json()
-        alert(`Error: ${error.error || "Failed to save user"}`)
+        const error = await response.json().catch(() => ({}))
+        toast.error(error.error || "Gagal menyimpan pengguna")
       }
     } catch (error) {
       console.error("Error saving user:", error)
-      alert("Failed to save user")
+      toast.error("Gagal menyimpan pengguna")
     } finally {
       setLoading(false)
     }
@@ -121,98 +127,104 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {user ? "Edit Pengguna" : "Tambah Pengguna Baru"}
+      <DialogContent className={`${dialogFrameClass} sm:max-w-md`}>
+        <DialogHeader className={dialogHeaderClass}>
+          <DialogTitle className="pr-8 text-headline-semibold text-text-primary">
+            {user ? `Edit ${user.name}` : "Tambah Pengguna Baru"}
           </DialogTitle>
-          <DialogDescription>
-            {user
-              ? "Kemaskini maklumat pengguna"
-              : "Cipta pengguna baru untuk sistem"}
+          <DialogDescription className="text-caption-1-regular text-text-secondary">
+            {user ? "Kemaskini maklumat pengguna." : "Cipta pengguna baru untuk sistem."} Medan bertanda * wajib diisi.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username / ID</Label>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className={dialogBodyClass}>
+            <FormField label="Username / ID" htmlFor="username" required={!user} hint={user ? "Username tidak boleh ditukar." : undefined}>
               <Input
                 id="username"
+                autoComplete="off"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
                 disabled={!!user}
               />
-            </div>
-            <div>
-              <Label htmlFor="password">
-                Password {user && "(Biarkan kosong jika tidak mahu ubah)"}
-              </Label>
+            </FormField>
+            <FormField
+              label="Kata Laluan"
+              htmlFor="password"
+              required={!user}
+              hint={user ? "Biarkan kosong jika tidak mahu ubah." : undefined}
+            >
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required={!user}
               />
-            </div>
-            <div>
-              <Label htmlFor="name">Nama Penuh</Label>
+            </FormField>
+            <FormField label="Nama Penuh" htmlFor="name" required>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
+            </FormField>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Role" htmlFor="role_id" required>
+                <Select value={formData.role_id} onValueChange={(value) => setFormData({ ...formData, role_id: value })}>
+                  <SelectTrigger id="role_id">
+                    <SelectValue placeholder="Pilih role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label="Jenis" htmlFor="type">
+                <Select
+                  value={formData.type || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, type: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
             </div>
-            <div>
-              <Label htmlFor="role_id">Role</Label>
-              <Select
-                value={formData.role_id}
-                onValueChange={(value) => setFormData({ ...formData, role_id: value })}
-                required
-              >
-                <SelectTrigger id="role_id">
-                  <SelectValue placeholder="Pilih role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="type">Type (Optional)</Label>
-              <Select
-                value={formData.type || "none"}
-                onValueChange={(value) => setFormData({ ...formData, type: value === "none" ? "" : value })}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Pilih type (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="VIEW">VIEW</SelectItem>
-                  <SelectItem value="PENERIMA">PENERIMA</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Type VIEW/PENERIMA akan menghadkan akses kepada halaman tertentu
-              </p>
-            </div>
+            <p className="text-caption-2-regular text-text-tertiary">
+              Jenis VIEW / PENERIMA menghadkan akses kepada halaman tertentu.
+            </p>
           </div>
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className={dialogFooterClass}>
+            <Button type="button" variant="secondary" size="small" onClick={() => onOpenChange(false)} disabled={loading} className="flex-1 sm:flex-none">
               Batal
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {user ? "Kemaskini" : "Cipta"}
+            <Button type="submit" size="small" disabled={loading} className="flex-1 sm:flex-none">
+              {loading ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <RiLoader4Line className="size-4 animate-spin" aria-hidden />
+                  Menyimpan...
+                </span>
+              ) : user ? (
+                "Kemaskini"
+              ) : (
+                "Cipta"
+              )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
