@@ -42,7 +42,7 @@ interface AddEditFormProps {
   shouldShowAdvancedFields: () => boolean
   shouldShowHandoverFields: () => boolean
   shouldShowCompletionFields: () => boolean
-  penerimaData: Array<{ name: string; unit: string; display: string; defaultStatus?: string }>
+  penerimaData: Array<{ name: string; unit: string; display: string; defaultStatus?: string; active?: boolean }>
   /** Legacy class map; kategori options now use BoardUI chips. */
   KATEGORI_COLORS?: Record<string, string>
 }
@@ -129,13 +129,20 @@ export function AddEditForm({
   // KEWANGAN and PENERIMA may only change status bayaran, tarikh bayar and baucer of an existing record
   const locked = (user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit
 
-  // One option per name (Select values must be unique); keep an older record's
-  // penerima selectable even if it is no longer in the list.
-  const penerimaOptions = penerimaData.filter(
+  // One option per name (Select values must be unique), active accounts only:
+  // a deactivated penerima (moved unit) cannot be picked for new records. An
+  // older record keeps its penerima selectable even if it is no longer listed.
+  const activePenerima = penerimaData.filter((item) => item.active !== false)
+  const penerimaOptions = activePenerima.filter(
     (item, i, all) => item.name && all.findIndex((other) => other.name === item.name) === i
   )
   if (formData.penerima && !penerimaOptions.some((item) => item.name === formData.penerima)) {
-    penerimaOptions.unshift({ name: formData.penerima, unit: "", display: formData.penerima })
+    const old = penerimaData.find((item) => item.name === formData.penerima)
+    penerimaOptions.unshift({
+      name: formData.penerima,
+      unit: old?.unit ?? "",
+      display: old ? `${old.display} · tidak aktif` : formData.penerima,
+    })
   }
 
   const close = () => {

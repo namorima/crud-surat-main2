@@ -51,6 +51,7 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `username`, `password`, `name`, `role`, `role_id`, `type`, `email`, `is_password_changed`, `must_change_password`, `last_password_change`, `created_at`, `updated_at`
    - Password: bcrypt hashed
    - User types: normal (empty), "VIEW", "PENERIMA"
+   - `staff_id`, `is_active`, `deactivated_at`, `replaced_by` from [add-user-active.sql](add-user-active.sql): staff moving unit get a new account with the same staff ID; `POST /api/auth` with `replaceExisting: true` (409 without it) renames the old account's username to `<staff_id>~<yyyymmddhhmi>` and deactivates it (no login, not offered as Penerima or PIC, records keep their name). The UI shows `staff_id` as "ID Staf"
 
 5. **`audit_bayaran`** - Payment audit trail
    - Columns: `id`, `bayaran_id`, `action`, `changed_by`, `old_values`, `new_values`, `timestamp`

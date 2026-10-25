@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       .from("users")
       .select("id, name, email")
       .ilike("email", pattern)
+      .eq("is_active", true)
       .limit(2)
     if (error) throw error
 

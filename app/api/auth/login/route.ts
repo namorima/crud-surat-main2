@@ -29,6 +29,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Replaced when the staff member moved unit (their usernames are archived as
+    // "<id>~<stamp>", so this only guards a direct hit on an archived row)
+    if (user.is_active === false) {
+      return NextResponse.json(
+        { error: "Akaun ini telah dinyahaktifkan" },
+        { status: 401 }
+      )
+    }
+
     // Verify password - support both hashed and plain text (for transparent migration)
     let isPasswordValid = false
     let needsMigration = false
