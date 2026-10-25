@@ -203,7 +203,7 @@ export function UnitPicManager() {
             </div>
 
             {/* Phones */}
-            <ul className="motion-stagger grid gap-2 md:hidden">
+            <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
               {filtered.map((unitPic) => (
                 <li key={unitPic.id} className="flex items-center gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
