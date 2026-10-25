@@ -32,9 +32,15 @@ import { Chip } from "@/components/base/badges/chip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RowActions } from "@/components/dashboard/row-actions"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_KERJA, KONTRAK_KATEGORI, tahunFromTarikh } from "@/lib/kontrak-input"
+import { JENIS_KERJA, KONTRAK_KATEGORI, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 
-const EMPTY: KontrakInput = {
+/** The form keeps nilai as typed text; the server parses it. */
+type KontrakForm = Omit<KontrakInput, "nilaiKontrak"> & { nilaiKontrak: string }
+
+const formatNilai = (value: number) =>
+  value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const EMPTY: KontrakForm = {
   kawasan: "",
   noKontrak: "",
   kategori: "",
@@ -43,6 +49,7 @@ const EMPTY: KontrakInput = {
   tarikhAkhir: "",
   jenisKerja: "",
   kerja: "",
+  nilaiKontrak: "",
 }
 
 /** Radix Select cannot hold "", so an unset optional field uses this value. */
@@ -79,7 +86,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Kontrak | null>(null)
-  const [form, setForm] = useState<KontrakInput>(EMPTY)
+  const [form, setForm] = useState<KontrakForm>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
@@ -131,7 +138,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     const q = query.trim().toLowerCase()
     if (!q) return items
     return items.filter((item) =>
-      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? "")].some(
+      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? ""), String(item.nilaiKontrak ?? "")].some(
         (value) => value.toLowerCase().includes(q),
       ),
     )
@@ -156,11 +163,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       tarikhAkhir: item.tarikhAkhir,
       jenisKerja: item.jenisKerja,
       kerja: item.kerja,
+      nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
     })
     setFormOpen(true)
   }
 
-  const setField = (field: keyof KontrakInput) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const setField = (field: keyof KontrakForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
   const save = async (e: React.FormEvent) => {
@@ -171,6 +179,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     }
     if (form.tarikhMula && form.tarikhAkhir && form.tarikhAkhir < form.tarikhMula) {
       toast.error("Tarikh Akhir tidak boleh sebelum Tarikh Mula")
+      return
+    }
+    if (Number.isNaN(parseNilai(form.nilaiKontrak))) {
+      toast.error("Nilai kontrak tidak sah (contoh: 125000.00)")
       return
     }
     setSaving(true)
@@ -278,10 +290,13 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                         No Kontrak
                         <span className="block text-caption-1-regular">Kawasan</span>
                       </th>
-                      <th className="min-w-[200px]">Kerja</th>
+                      <th className="min-w-[200px]">
+                        Kerja
+                        <span className="block text-caption-1-regular">Jenis Kerja</span>
+                      </th>
                       <th>Kategori</th>
                       <th>Nama Kontraktor</th>
-                      <th>Jenis Kerja</th>
+                      <th className="text-end!">Nilai</th>
                       <th>
                         Tempoh
                         <span className="block text-caption-1-regular">Tahun</span>
@@ -308,6 +323,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           ) : (
                             <span className="text-text-tertiary">-</span>
                           )}
+                          {item.jenisKerja && <span className="block text-caption-1-regular text-text-tertiary">{item.jenisKerja}</span>}
                         </td>
                         <td>
                           {item.kategori ? (
@@ -319,7 +335,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           )}
                         </td>
                         <td>{item.namaKontraktor || <span className="text-text-tertiary">-</span>}</td>
-                        <td className="text-text-secondary">{item.jenisKerja || <span className="text-text-tertiary">-</span>}</td>
+                        <td className="whitespace-nowrap text-end text-body-semibold tabular-nums">
+                          {item.nilaiKontrak === null ? <span className="font-normal text-text-tertiary">-</span> : `RM ${formatNilai(item.nilaiKontrak)}`}
+                        </td>
                         <td className="whitespace-nowrap text-text-secondary">
                           <Tempoh item={item} />
                           {item.tahunKontrak && (
@@ -356,7 +374,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                         </Chip>
                       )}
                     </div>
-                    <span className="truncate text-body-medium text-text-primary">{item.namaKontraktor || "-"}</span>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="min-w-0 truncate text-body-medium text-text-primary">{item.namaKontraktor || "-"}</span>
+                      {item.nilaiKontrak !== null && (
+                        <span className="shrink-0 text-body-semibold text-text-primary tabular-nums">RM {formatNilai(item.nilaiKontrak)}</span>
+                      )}
+                    </div>
                     {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
                       {[item.kawasan, item.jenisKerja].filter(Boolean).join(" · ")}
@@ -486,6 +509,25 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="kontrak-nilai">Nilai Kontrak</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+                <Input
+                  id="kontrak-nilai"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={form.nilaiKontrak}
+                  onChange={setField("nilaiKontrak")}
+                  onBlur={() => {
+                    const n = parseNilai(form.nilaiKontrak)
+                    if (n !== null && !Number.isNaN(n)) setForm((prev) => ({ ...prev, nilaiKontrak: formatNilai(n) }))
+                  }}
+                  placeholder="0.00"
+                  className="pl-9 tabular-nums"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <div className="grid gap-1.5">

@@ -1,17 +1,9 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import { RiDeleteBinLine, RiExternalLinkLine, RiFileCopyLine, RiLoader4Line } from "@remixicon/react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +14,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { toast } from "sonner"
-import { Copy, MoreHorizontal, Trash2, Loader2, ExternalLink } from "lucide-react"
+import { Chip } from "@/components/base/badges/chip"
+import { RowActions } from "@/components/dashboard/row-actions"
 import type { ShareLink } from "@/types/share-link"
 import { FilterSummaryBadges } from "./FilterSummaryBadges"
 
@@ -33,15 +25,32 @@ interface ShareLinkTableProps {
   baseUrl: string
 }
 
+const isExpired = (expiresAt?: string) => Boolean(expiresAt) && new Date(expiresAt!) < new Date()
+
+const formatDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString("ms-MY", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
+function StatusChip({ expired }: { expired: boolean }) {
+  return (
+    <Chip variant="caption" color={expired ? "rose" : "lime"}>
+      {expired ? "Tamat Tempoh" : "Aktif"}
+    </Chip>
+  )
+}
+
 export function ShareLinkTable({ shareLinks, onDelete, baseUrl }: ShareLinkTableProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedLink, setSelectedLink] = useState<ShareLink | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const copyToClipboard = async (linkId: string) => {
-    const url = `${baseUrl}/share/${linkId}`
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(`${baseUrl}/share/${linkId}`)
       toast.success("Link berjaya disalin!")
     } catch {
       toast.error("Gagal menyalin link")
@@ -49,162 +58,140 @@ export function ShareLinkTable({ shareLinks, onDelete, baseUrl }: ShareLinkTable
   }
 
   const openInNewTab = (linkId: string) => {
-    const url = `${baseUrl}/share/${linkId}`
-    window.open(url, "_blank", "noopener,noreferrer")
+    window.open(`${baseUrl}/share/${linkId}`, "_blank", "noopener,noreferrer")
   }
 
-  const isExpired = (expiresAt?: string) => {
-    if (!expiresAt) return false
-    return new Date(expiresAt) < new Date()
-  }
-
-  const handleDeleteClick = (link: ShareLink) => {
-    setSelectedLink(link)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (e: React.MouseEvent) => {
+    e.preventDefault()
     if (!selectedLink) return
 
     setIsDeleting(true)
     try {
       await onDelete(selectedLink.linkId)
       toast.success("Pautan berjaya dipadam")
-      setDeleteDialogOpen(false)
       setSelectedLink(null)
-    } catch (error) {
+    } catch {
       toast.error("Gagal memadam pautan")
     } finally {
       setIsDeleting(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ms-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  const actionsFor = (link: ShareLink) => [
+    { label: "Salin Link", icon: RiFileCopyLine, onSelect: () => copyToClipboard(link.linkId) },
+    { label: "Buka Link", icon: RiExternalLinkLine, onSelect: () => openInNewTab(link.linkId) },
+    { label: "Padam", icon: RiDeleteBinLine, onSelect: () => setSelectedLink(link), danger: true },
+  ]
 
   if (shareLinks.length === 0) {
-    return (
-      <div className="flex justify-center py-8">
-        <p className="text-muted-foreground">Tiada pautan dikongsi</p>
-      </div>
-    )
+    return <p className="py-10 text-center text-body-regular text-text-secondary">Tiada pautan dikongsi</p>
   }
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Link ID</TableHead>
-              <TableHead>Keterangan</TableHead>
-              <TableHead>Filter</TableHead>
-              <TableHead>Dicipta Oleh</TableHead>
-              <TableHead>Tarikh Cipta</TableHead>
-              <TableHead>Tarikh Luput</TableHead>
-              <TableHead className="w-[80px]">Akses</TableHead>
-              <TableHead className="w-[80px]">Status</TableHead>
-              <TableHead className="w-[80px]">Tindakan</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shareLinks.map((link) => {
-              const expired = isExpired(link.expiresAt)
-              return (
-                <TableRow key={link.linkId}>
-                  <TableCell className="font-mono text-xs">{link.linkId}</TableCell>
-                  <TableCell>
-                    {link.description || <span className="text-muted-foreground italic">Tiada</span>}
-                  </TableCell>
-                  <TableCell>
-                    <FilterSummaryBadges filterJson={link.filterJson} />
-                  </TableCell>
-                  <TableCell>{link.createdBy}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(link.createdAt)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {link.expiresAt ? formatDate(link.expiresAt) : <span className="italic">Tiada</span>}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{link.accessCount}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={expired ? "destructive" : "default"} className={expired ? "" : "bg-green-600"}>
-                      {expired ? "Tamat" : "Aktif"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Buka menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Tindakan</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => copyToClipboard(link.linkId)}>
-                          <Copy className="mr-2 h-4 w-4" />
-                          Salin Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openInNewTab(link.linkId)}>
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Buka Link
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteClick(link)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Padam
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+      {/* iPad landscape and desktop */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border-table lg:block">
+        <div className="relative max-h-[60dvh] overflow-auto">
+          <table className="bui-table">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                <th>Pautan</th>
+                <th>Filter</th>
+                <th>Dicipta</th>
+                <th>Luput</th>
+                <th className="text-end!">Akses</th>
+                <th>Status</th>
+                <th className="w-[56px]">
+                  <span className="sr-only">Tindakan</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {shareLinks.map((link) => {
+                const expired = isExpired(link.expiresAt)
+                return (
+                  <tr key={link.linkId} className="hover:bg-background-secondary-default">
+                    <td className="max-w-[16rem]">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-body-semibold text-text-primary">
+                          {link.description || <span className="text-text-tertiary">Tiada keterangan</span>}
+                        </span>
+                        <span className="font-mono text-caption-1-regular text-text-tertiary">{link.linkId}</span>
+                      </div>
+                    </td>
+                    <td className="max-w-[22rem]">
+                      <FilterSummaryBadges filterJson={link.filterJson} />
+                    </td>
+                    <td>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="whitespace-nowrap text-caption-1-regular text-text-secondary tabular-nums">{formatDate(link.createdAt)}</span>
+                        <span className="text-caption-1-regular text-text-tertiary">{link.createdBy}</span>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap text-caption-1-regular text-text-secondary tabular-nums">
+                      {link.expiresAt ? formatDate(link.expiresAt) : <span className="text-text-tertiary">Tiada</span>}
+                    </td>
+                    <td className="text-end tabular-nums">{link.accessCount}</td>
+                    <td>
+                      <StatusChip expired={expired} />
+                    </td>
+                    <td className="text-end">
+                      <RowActions actions={actionsFor(link)} />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Phones and iPad portrait */}
+      <ul className="grid gap-2 md:grid-cols-2 lg:hidden">
+        {shareLinks.map((link) => {
+          const expired = isExpired(link.expiresAt)
+          return (
+            <li key={link.linkId} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="min-w-0 text-body-semibold text-text-primary">
+                    {link.description || <span className="text-text-tertiary">Tiada keterangan</span>}
+                  </span>
+                  <StatusChip expired={expired} />
+                </div>
+                <FilterSummaryBadges filterJson={link.filterJson} />
+                <span className="text-caption-1-regular text-text-tertiary tabular-nums">
+                  {[
+                    link.createdBy,
+                    formatDate(link.createdAt),
+                    link.expiresAt && `Luput ${formatDate(link.expiresAt)}`,
+                    `${link.accessCount} akses`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+                <span className="truncate font-mono text-caption-2-regular text-text-tertiary">{link.linkId}</span>
+              </div>
+              <RowActions className="-me-1.5 size-7" actions={actionsFor(link)} />
+            </li>
+          )
+        })}
+      </ul>
+
+      <AlertDialog open={Boolean(selectedLink)} onOpenChange={(open) => !open && !isDeleting && setSelectedLink(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Adakah anda pasti?</AlertDialogTitle>
+            <AlertDialogTitle>Padam pautan ini?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini tidak boleh dibatalkan. Pautan ini akan dipadam secara kekal dan tidak boleh diakses lagi.
-              {selectedLink && (
-                <div className="mt-2">
-                  <p className="font-medium">Link ID: {selectedLink.linkId}</p>
-                  {selectedLink.description && <p className="text-sm">Keterangan: {selectedLink.description}</p>}
-                </div>
-              )}
+              {selectedLink?.description ? `${selectedLink.description} (${selectedLink.linkId}). ` : `Pautan ${selectedLink?.linkId}. `}
+              Pautan akan dipadam secara kekal dan tidak boleh diakses lagi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memadam...
-                </>
-              ) : (
-                "Padam"
-              )}
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={isDeleting} className="bg-button-danger">
+              {isDeleting && <RiLoader4Line className="animate-spin" />}
+              {isDeleting ? "Memadam..." : "Padam"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

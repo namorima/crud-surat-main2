@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS kontrak (
   tahun_kontrak INTEGER GENERATED ALWAYS AS (EXTRACT(YEAR FROM tarikh_mula)::INTEGER) STORED,
   jenis_kerja TEXT,
   kerja TEXT,
+  nilai_kontrak NUMERIC(14,2) CHECK (nilai_kontrak IS NULL OR nilai_kontrak >= 0),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT kontrak_tarikh_check CHECK (tarikh_akhir IS NULL OR tarikh_mula IS NULL OR tarikh_akhir >= tarikh_mula)
 );

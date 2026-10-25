@@ -10,6 +10,14 @@ export function tahunFromTarikh(tarikhMula: string): number | null {
   return ISO_DATE.test(tarikhMula) ? Number(tarikhMula.slice(0, 4)) : null
 }
 
+/** "RM 1,234.50" / "1234.5" / 1234.5 → 1234.5; "" → null; anything else → NaN. */
+export function parseNilai(value: unknown): number | null {
+  if (value === null || value === undefined) return null
+  const text = String(value).replace(/rm/i, "").replace(/[,\s]/g, "")
+  if (!text) return null
+  return /^\d+(\.\d{0,2})?$/.test(text) ? Number(text) : Number.NaN
+}
+
 /** Trims the fields and checks them; returns an error message or the clean input. */
 export function parseKontrakInput(body: any): KontrakInput | string {
   const text = (value: unknown) => String(value ?? "").trim()
@@ -23,10 +31,13 @@ export function parseKontrakInput(body: any): KontrakInput | string {
     jenisKerja: text(body?.jenisKerja).toUpperCase(),
     // Free text: kept as typed rather than upper-cased.
     kerja: text(body?.kerja).replace(/\s+/g, " "),
+    nilaiKontrak: parseNilai(body?.nilaiKontrak),
   }
   if (!input.kawasan || !input.noKontrak) return "Kawasan dan No Kontrak wajib diisi"
   // Kategori is picked from KONTRAK_KATEGORI in the form; older rows may hold
   // other values, so the server does not reject them.
+  if (Number.isNaN(input.nilaiKontrak)) return "Nilai kontrak tidak sah (contoh: 125000.00)"
+  if (input.nilaiKontrak !== null && input.nilaiKontrak > 999_999_999_999.99) return "Nilai kontrak terlalu besar"
   if (input.jenisKerja && !(JENIS_KERJA as readonly string[]).includes(input.jenisKerja)) {
     return `Jenis kerja tidak sah: ${input.jenisKerja}`
   }
