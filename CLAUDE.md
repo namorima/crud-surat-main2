@@ -632,7 +632,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
    - `UserForm.tsx` - User add/edit dialog
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
-   - `UnitPicManager.tsx` - Unit PIC management with search
+   - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
@@ -695,7 +695,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 
 - `/api/daripada-kepada` - Fetch daripada/kepada options ([app/api/daripada-kepada/route.ts](app/api/daripada-kepada/route.ts))
 - `/api/bayaran-form-data` - Fetch form data for bayaran ([app/api/bayaran-form-data/route.ts](app/api/bayaran-form-data/route.ts))
-- `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts))
+- `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts)); GET is open to signed-in users (Surat form), writes need `pengguna:manage_roles`
 - `/api/kontraktor` - Kontraktor list/add; `/api/kontraktor/[id]` edit/delete ([app/api/kontraktor/route.ts](app/api/kontraktor/route.ts))
 - `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 
