@@ -58,6 +58,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NavTrigger } from "@/components/dashboard/app-shell"
 import { SuratList } from "@/components/surat/SuratList"
 import { SuratDetailDialog } from "@/components/surat/SuratDetailDialog"
+import { SuratFormDialog } from "@/components/surat/SuratFormDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 
 // Number of items per page
@@ -1660,393 +1661,17 @@ export default function SuratPage() {
 
               {/* Add Button */}
               {!showSearchInput && canCreate && (
-                <Dialog
-                  open={isAddDialogOpen}
-                  onOpenChange={(open) => {
-                    setIsAddDialogOpen(open)
-                    if (!open) {
-                      // Reset reference when closing dialog
-                      setReferenceBil(null)
-                      resetForm()
-                    }
+                <Button
+                  size="icon"
+                  onClick={() => {
+                    resetForm()
+                    handleOpenAddDialog()
                   }}
+                  className="h-8 w-8"
                 >
-                  <DialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      onClick={() => {
-                        resetForm()
-                        handleOpenAddDialog()
-                      }}
-                      className="h-8 w-8"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span className="sr-only">Tambah Surat</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
-                    <DialogHeader className="p-0 md:p-2">
-                      <DialogTitle className="text-base md:text-lg">Tambah Surat Baru</DialogTitle>
-                      <DialogDescription className="text-xs md:text-sm">
-                        Masukkan maklumat surat baru di bawah.
-                        {referenceBil && (
-                          <span className="block mt-1 text-blue-600 font-medium">
-                            Respon kepada Surat Bil: {referenceBil}
-                          </span>
-                        )}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-3 py-3 md:gap-4 md:py-4">
-                      {referenceBil && (
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="reference" className="text-xs md:text-sm">
-                            Reference (Bil Surat Asal)
-                          </Label>
-                          <Input
-                            id="reference"
-                            name="reference"
-                            value={formData.reference}
-                            readOnly
-                            disabled
-                            className="h-8 md:h-10 text-xs md:text-sm bg-muted"
-                          />
-                        </div>
-                      )}
-                      {/* Row 1: Daripada/Kepada | Tarikh | Status | Tarikh Selesai */}
-                      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-3 md:gap-4">
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="daripadaKepada" className="text-xs md:text-sm">
-                            Daripada/Kepada
-                          </Label>
-                          <div className="relative">
-                            <Input
-                              id="daripadaKepada"
-                              name="daripadaKepada"
-                              value={formData.daripadaKepada}
-                              onChange={handleInputChange}
-                              className="w-full h-8 md:h-10 text-xs md:text-sm"
-                              list="daripadaKepada-suggestions"
-                            />
-                            <datalist id="daripadaKepada-suggestions">
-                              {daripadaKepadaSuggestions
-                                .filter((p) => p.toLowerCase().includes(formData.daripadaKepada.toLowerCase()))
-                                .slice(0, 5)
-                                .map((daripadaKepada) => (
-                                  <option key={daripadaKepada} value={daripadaKepada} />
-                                ))}
-                            </datalist>
-                          </div>
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="tarikh" className="text-xs md:text-sm">
-                            Tarikh
-                          </Label>
-                          <Input
-                            id="tarikh"
-                            name="tarikh"
-                            type="date"
-                            value={formData.tarikh}
-                            onChange={handleInputChange}
-                            className="h-8 md:h-10 text-xs md:text-sm"
-                          />
-                          <div className="text-xs text-muted-foreground">
-                            Format: {formatDateToDisplay(formData.tarikh) || "DD/MM/YYYY"}
-                          </div>
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="status" className="text-xs md:text-sm">
-                            Status <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.status}
-                            onValueChange={(value) => handleSelectChange("status", value)}
-                            disabled={formData.kategori === "KELUAR"}
-                          >
-                            <SelectTrigger
-                              className={`h-8 md:h-10 text-xs md:text-sm text-left ${formErrors.status ? "border-red-500" : ""}`}
-                            >
-                              <SelectValue placeholder="Pilih status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
-                              <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
-                              <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
-                              <SelectItem value="SELESAI">SELESAI</SelectItem>
-                              <SelectItem value="BATAL">BATAL</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="tarikhSelesai" className="text-xs md:text-sm">
-                            Tarikh Selesai
-                          </Label>
-                          <Input
-                            id="tarikhSelesai"
-                            name="tarikhSelesai"
-                            type="date"
-                            value={formData.tarikhSelesai}
-                            onChange={handleInputChange}
-                            disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
-                            className="h-8 md:h-10 text-xs md:text-sm"
-                          />
-                          <div className="text-xs text-muted-foreground">
-                            Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
-                          </div>
-                        </div>
-                      </div>
-                      {/* Row 2: Perkara (full width) */}
-                      <div className="space-y-1 md:space-y-2">
-                        <Label htmlFor="perkara" className="text-xs md:text-sm">
-                          Perkara
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="perkara"
-                            name="perkara"
-                            value={formData.perkara}
-                            onChange={handleInputChange}
-                            className="w-full h-8 md:h-10 text-xs md:text-sm"
-                            list="perkara-suggestions"
-                          />
-                          <datalist id="perkara-suggestions">
-                            {perkaraSuggestions
-                              .filter((p) => p.toLowerCase().includes(formData.perkara.toLowerCase()))
-                              .slice(0, 5)
-                              .map((perkara) => (
-                                <option key={perkara} value={perkara} />
-                              ))}
-                          </datalist>
-                        </div>
-                      </div>
-                      {/* Row 3: Unit | Tindakan PIC | Kategori | Fail */}
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4">
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="unit" className="text-xs md:text-sm">
-                            Unit <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.unit}
-                            onValueChange={(value) => handleSelectChange("unit", value)}
-                          >
-                            <SelectTrigger
-                              className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.unit ? "border-red-500" : ""}`}
-                            >
-                              <SelectValue placeholder="Pilih unit" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredUnits.length > 0 ? (
-                                filteredUnits.map((unit) => (
-                                  <SelectItem key={unit} value={unit || "unknown"}>
-                                    {unit || "Unknown"}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="loading">Loading units...</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {formErrors.unit && <p className="text-red-500 text-xs mt-1">{formErrors.unit}</p>}
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="tindakanPic" className="text-xs md:text-sm">
-                            Tindakan PIC <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.tindakanPic}
-                            onValueChange={(value) => handleSelectChange("tindakanPic", value)}
-                            disabled={!formData.unit}
-                          >
-                            <SelectTrigger
-                              className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
-                            >
-                              <SelectValue placeholder="Pilih PIC" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
-                                unitPicMap[formData.unit].map((pic) => (
-                                  <SelectItem key={pic} value={pic || "unknown"}>
-                                    {pic || "Unknown"}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="no-pic">Tiada PIC</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {formErrors.tindakanPic && (
-                            <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="kategori" className="text-xs md:text-sm">
-                            Kategori
-                          </Label>
-                          <Select
-                            value={formData.kategori}
-                            onValueChange={(value) => handleSelectChange("kategori", value)}
-                          >
-                            <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                              <SelectValue placeholder="Pilih kategori" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="MASUK">MASUK</SelectItem>
-                              <SelectItem value="KELUAR">KELUAR</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1 md:space-y-2 md:col-span-2">
-                          <Label htmlFor="fail" className="text-xs md:text-sm">
-                            Fail
-                          </Label>
-                          <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={failComboboxOpen}
-                                className="h-8 md:h-10 w-full justify-between text-xs md:text-sm"
-                                disabled={!formData.unit}
-                              >
-                                {selectedFailId && filteredFailData.length > 0 ? (
-                                  <div className="flex items-center gap-2">
-                                    <span
-                                      className="w-2 h-2 rounded-full shrink-0"
-                                      style={{
-                                        backgroundColor: getFailPartColor(
-                                          filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
-                                        ),
-                                      }}
-                                    />
-                                    <span>
-                                      {formatFailDisplay(
-                                        filteredFailData.find((fail) => fail.id === selectedFailId) as Fail
-                                      )}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    {!formData.unit ? "Pilih unit dahulu" : "Pilih fail"}
-                                  </span>
-                                )}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0" align="start">
-                              <Command>
-                                <CommandInput placeholder="Cari fail..." className="h-9" />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    {formData.unit ? (
-                                      <div className="text-center p-2">
-                                        <p className="text-sm text-muted-foreground">Tiada fail untuk unit ini.</p>
-                                        <p className="text-sm mt-1">
-                                          Sila ke{" "}
-                                          <Link
-                                            href="/dashboard/tetapan?from=surat"
-                                            className="text-red-600 hover:text-red-700 hover:underline font-bold"
-                                          >
-                                            Setup Fail
-                                          </Link>{" "}
-                                          untuk tambah pilihan fail.
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      "Pilih unit dahulu"
-                                    )}
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {filteredFailData.map((fail) => (
-                                      <CommandItem
-                                        key={fail.id}
-                                        value={formatFailDisplay(fail)}
-                                        onSelect={() => {
-                                          handleSelectChange("fail", fail.id)
-                                          setFailComboboxOpen(false)
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span
-                                            className="w-2 h-2 rounded-full shrink-0"
-                                            style={{
-                                              backgroundColor: getFailPartColor(fail.part),
-                                            }}
-                                          />
-                                          <span>{formatFailDisplay(fail)}</span>
-                                        </div>
-                                        <Check
-                                          className={cn(
-                                            "ml-auto h-4 w-4",
-                                            selectedFailId === fail.id ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                      {/* Row 4: Nota (full width) */}
-                      <div className="space-y-1 md:space-y-2">
-                        <Label htmlFor="nota" className="text-xs md:text-sm">
-                          Nota
-                        </Label>
-                        <Textarea
-                          id="nota"
-                          name="nota"
-                          value={formData.nota}
-                          onChange={handleInputChange}
-                          rows={3}
-                          className="text-xs md:text-sm"
-                        />
-                      </div>
-                      {canComment && (
-                        <div className="space-y-1 md:space-y-2">
-                          <Label htmlFor="komen" className="text-xs md:text-sm flex items-center gap-2">
-                            <MessageSquare className="h-3 w-3" />
-                            Komen Pengurus
-                          </Label>
-                          <Textarea
-                            id="komen"
-                            name="komen"
-                            value={formData.komen}
-                            onChange={handleInputChange}
-                            rows={2}
-                            className="text-xs md:text-sm"
-                            placeholder="Tambah komen sebagai pengurus..."
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsAddDialogOpen(false)}
-                        className="w-full sm:w-auto sm:mr-2 text-xs md:text-sm h-8 md:h-10"
-                        disabled={isSaving}
-                      >
-                        Batal
-                      </Button>
-                      <Button
-                        onClick={handleAddSurat}
-                        className="w-full sm:w-auto text-xs md:text-sm h-8 md:h-10"
-                        disabled={isSaving}
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                            Menyimpan...
-                          </>
-                        ) : (
-                          "Simpan"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                  <Plus className="h-4 w-4" />
+                  <span className="sr-only">Tambah Surat</span>
+                </Button>
               )}
             </div>
           </div>
@@ -2088,343 +1713,64 @@ export default function SuratPage() {
         </CardContent>
       </Card>
 
+      {/* Add Dialog */}
+      <SuratFormDialog
+        mode="add"
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) {
+            // Reset reference when closing dialog
+            setReferenceBil(null)
+            resetForm()
+          }
+        }}
+        referenceBil={referenceBil}
+        unitOptions={filteredUnits}
+        formData={formData}
+        formErrors={formErrors}
+        onInputChange={handleInputChange}
+        onSelectChange={handleSelectChange}
+        daripadaKepadaSuggestions={daripadaKepadaSuggestions}
+        perkaraSuggestions={perkaraSuggestions}
+        unitPicMap={unitPicMap}
+        failOptions={filteredFailData}
+        selectedFailId={selectedFailId}
+        failComboboxOpen={failComboboxOpen}
+        setFailComboboxOpen={setFailComboboxOpen}
+        formatFailDisplay={formatFailDisplay}
+        formatDateToDisplay={formatDateToDisplay}
+        canComment={!!canComment}
+        saving={isSaving}
+        onSave={handleAddSurat}
+        onCancel={() => setIsAddDialogOpen(false)}
+      />
+
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
-          <DialogHeader className="p-0 md:p-2">
-            <DialogTitle className="text-base md:text-lg">Edit Surat</DialogTitle>
-            <DialogDescription className="text-xs md:text-sm">Kemaskini maklumat surat.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-3 md:gap-4 md:py-4">
-            {/* Row 1: Daripada/Kepada | Tarikh | Status | Tarikh Selesai */}
-            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-3 md:gap-4">
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="daripadaKepada-edit" className="text-xs md:text-sm">
-                  Daripada/Kepada
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="daripadaKepada-edit"
-                    name="daripadaKepada"
-                    value={formData.daripadaKepada}
-                    onChange={handleInputChange}
-                    className="w-full h-8 md:h-10 text-xs md:text-sm"
-                    list="daripadaKepada-edit-suggestions"
-                  />
-                  <datalist id="daripadaKepada-edit-suggestions">
-                    {daripadaKepadaSuggestions
-                      .filter((p) => p.toLowerCase().includes(formData.daripadaKepada.toLowerCase()))
-                      .slice(0, 5)
-                      .map((daripadaKepada) => (
-                        <option key={daripadaKepada} value={daripadaKepada} />
-                      ))}
-                  </datalist>
-                </div>
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="tarikh-edit" className="text-xs md:text-sm">
-                  Tarikh
-                </Label>
-                <Input
-                  id="tarikh-edit"
-                  name="tarikh"
-                  type="date"
-                  value={formData.tarikh}
-                  onChange={handleInputChange}
-                  className="h-8 md:h-10 text-xs md:text-sm"
-                />
-                <div className="text-xs text-muted-foreground">
-                  Format: {formatDateToDisplay(formData.tarikh) || "DD/MM/YYYY"}
-                </div>
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="status-edit" className="text-xs md:text-sm">
-                  Status <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleSelectChange("status", value)}
-                  disabled={formData.kategori === "KELUAR"}
-                >
-                  <SelectTrigger
-                    className={`h-8 md:h-10 text-xs md:text-sm text-left ${formErrors.status ? "border-red-500" : ""}`}
-                  >
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BELUM PROSES">BELUM PROSES</SelectItem>
-                    <SelectItem value="HOLD / KIV">HOLD / KIV</SelectItem>
-                    <SelectItem value="DALAM TINDAKAN">DALAM TINDAKAN</SelectItem>
-                    <SelectItem value="SELESAI">SELESAI</SelectItem>
-                    <SelectItem value="BATAL">BATAL</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formErrors.status && <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>}
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="tarikhSelesai-edit" className="text-xs md:text-sm">
-                  Tarikh Selesai
-                </Label>
-                <Input
-                  id="tarikhSelesai-edit"
-                  name="tarikhSelesai"
-                  type="date"
-                  value={formData.tarikhSelesai}
-                  onChange={handleInputChange}
-                  disabled={formData.status !== "SELESAI" && formData.kategori !== "KELUAR"}
-                  className="h-8 md:h-10 text-xs md:text-sm"
-                />
-                <div className="text-xs text-muted-foreground">
-                  Format: {formatDateToDisplay(formData.tarikhSelesai) || "DD/MM/YYYY"}
-                </div>
-              </div>
-            </div>
-            {/* Row 2: Perkara (full width) */}
-            <div className="space-y-1 md:space-y-2">
-              <Label htmlFor="perkara-edit" className="text-xs md:text-sm">
-                Perkara
-              </Label>
-              <div className="relative">
-                <Input
-                  id="perkara-edit"
-                  name="perkara"
-                  value={formData.perkara}
-                  onChange={handleInputChange}
-                  className="w-full h-8 md:h-10 text-xs md:text-sm"
-                  list="perkara-edit-suggestions"
-                />
-                <datalist id="perkara-edit-suggestions">
-                  {perkaraSuggestions
-                    .filter((p) => p.toLowerCase().includes(formData.perkara.toLowerCase()))
-                    .slice(0, 5)
-                    .map((perkara) => (
-                      <option key={perkara} value={perkara} />
-                    ))}
-                </datalist>
-              </div>
-            </div>
-            {/* Row 3: Unit | Tindakan PIC | Kategori | Fail */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4">
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="unit-edit" className="text-xs md:text-sm">
-                  Unit <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.unit}
-                  onValueChange={(value) => handleSelectChange("unit", value)}
-                  disabled={user?.role !== "semua" && user?.role !== "PENGURUS"}
-                >
-                  <SelectTrigger
-                    className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.unit ? "border-red-500" : ""}`}
-                  >
-                    <SelectValue placeholder="Pilih unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.length > 0 ? (
-                      units.map((unit) => (
-                        <SelectItem key={unit} value={unit || "unknown"}>
-                          {unit || "Unknown"}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="loading">Loading units...</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {formErrors.unit && <p className="text-red-500 text-xs mt-1">{formErrors.unit}</p>}
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="tindakanPic-edit" className="text-xs md:text-sm">
-                  Tindakan PIC <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.tindakanPic}
-                  onValueChange={(value) => handleSelectChange("tindakanPic", value)}
-                  disabled={!formData.unit}
-                >
-                  <SelectTrigger
-                    className={`h-8 md:h-10 text-xs md:text-sm ${formErrors.tindakanPic ? "border-red-500" : ""}`}
-                  >
-                    <SelectValue placeholder="Pilih PIC" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.unit && unitPicMap[formData.unit] && unitPicMap[formData.unit].length > 0 ? (
-                      unitPicMap[formData.unit].map((pic) => (
-                        <SelectItem key={pic} value={pic || "unknown"}>
-                          {pic || "Unknown"}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-pic">Tiada PIC</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {formErrors.tindakanPic && <p className="text-red-500 text-xs mt-1">{formErrors.tindakanPic}</p>}
-              </div>
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="kategori-edit" className="text-xs md:text-sm">
-                  Kategori
-                </Label>
-                <Select value={formData.kategori} onValueChange={(value) => handleSelectChange("kategori", value)}>
-                  <SelectTrigger className="h-8 md:h-10 text-xs md:text-sm">
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MASUK">MASUK</SelectItem>
-                    <SelectItem value="KELUAR">KELUAR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 md:space-y-2 md:col-span-2">
-                <Label htmlFor="fail-edit" className="text-xs md:text-sm">
-                  Fail
-                </Label>
-                <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={failComboboxOpen}
-                      className="h-8 md:h-10 w-full justify-between text-xs md:text-sm"
-                      disabled={!formData.unit}
-                    >
-                      {selectedFailId && filteredFailData.length > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{
-                              backgroundColor: getFailPartColor(
-                                filteredFailData.find((fail) => fail.id === selectedFailId)?.part || ""
-                              ),
-                            }}
-                          />
-                          <span>
-                            {formatFailDisplay(filteredFailData.find((fail) => fail.id === selectedFailId) as Fail)}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {!formData.unit ? "Pilih unit dahulu" : "Pilih fail"}
-                        </span>
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Cari fail..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>
-                          {formData.unit ? (
-                            <div className="text-center p-2">
-                              <p className="text-sm text-muted-foreground">Tiada fail untuk unit ini.</p>
-                              <p className="text-sm mt-1">
-                                Sila ke{" "}
-                                <Link
-                                  href="/dashboard/tetapan?from=surat"
-                                  className="text-red-600 hover:text-red-700 hover:underline font-bold"
-                                >
-                                  Setup Fail
-                                </Link>{" "}
-                                untuk tambah pilihan fail.
-                              </p>
-                            </div>
-                          ) : (
-                            "Pilih unit dahulu"
-                          )}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {filteredFailData.map((fail) => (
-                            <CommandItem
-                              key={fail.id}
-                              value={formatFailDisplay(fail)}
-                              onSelect={() => {
-                                handleSelectChange("fail", fail.id)
-                                setFailComboboxOpen(false)
-                              }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className="w-2 h-2 rounded-full shrink-0"
-                                  style={{
-                                    backgroundColor: getFailPartColor(fail.part),
-                                  }}
-                                />
-                                <span>{formatFailDisplay(fail)}</span>
-                              </div>
-                              <Check
-                                className={cn(
-                                  "ml-auto h-4 w-4",
-                                  selectedFailId === fail.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            {/* Row 4: Nota (full width) */}
-            <div className="space-y-1 md:space-y-2">
-              <Label htmlFor="nota-edit" className="text-xs md:text-sm">
-                Nota
-              </Label>
-              <Textarea
-                id="nota-edit"
-                name="nota"
-                value={formData.nota}
-                onChange={handleInputChange}
-                rows={3}
-                className="text-xs md:text-sm"
-              />
-            </div>
-            {canComment && (
-              <div className="space-y-1 md:space-y-2">
-                <Label htmlFor="komen-edit" className="text-xs md:text-sm flex items-center gap-2">
-                  <MessageSquare className="h-3 w-3" />
-                  Komen Pengurus
-                </Label>
-                <Textarea
-                  id="komen-edit"
-                  name="komen"
-                  value={formData.komen}
-                  onChange={handleInputChange}
-                  rows={2}
-                  className="text-xs md:text-sm"
-                  placeholder="Tambah komen sebagai pengurus..."
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter className="sticky bottom-0 z-10 -mx-3 -mb-3 border-t border-separator-border bg-background-primary-default px-3 py-3 dark:bg-background-secondary-default md:-mx-6 md:-mb-6 md:px-6">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              className="w-full sm:w-auto sm:mr-2 text-xs md:text-sm h-8 md:h-10"
-              disabled={isSaving}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleEditSurat}
-              className="w-full sm:w-auto text-xs md:text-sm h-8 md:h-10"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SuratFormDialog
+        mode="edit"
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        unitOptions={units}
+        unitLocked={user?.role !== "semua" && user?.role !== "PENGURUS"}
+        formData={formData}
+        formErrors={formErrors}
+        onInputChange={handleInputChange}
+        onSelectChange={handleSelectChange}
+        daripadaKepadaSuggestions={daripadaKepadaSuggestions}
+        perkaraSuggestions={perkaraSuggestions}
+        unitPicMap={unitPicMap}
+        failOptions={filteredFailData}
+        selectedFailId={selectedFailId}
+        failComboboxOpen={failComboboxOpen}
+        setFailComboboxOpen={setFailComboboxOpen}
+        formatFailDisplay={formatFailDisplay}
+        formatDateToDisplay={formatDateToDisplay}
+        canComment={!!canComment}
+        saving={isSaving}
+        onSave={handleEditSurat}
+        onCancel={() => setIsEditDialogOpen(false)}
+      />
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
