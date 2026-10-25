@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server"
 import { requirePermission } from "@/lib/server-auth"
-import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/supabase-db"
+import {
+  getAllUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getActiveUserByStaffId,
+  deactivateUserForReplacement,
+  restoreReplacedUser,
+} from "@/lib/supabase-db"
 
 /** Password hashes never leave the server. */
 function withoutPassword<T extends { password?: unknown }>(user: T): Omit<T, "password"> {
@@ -45,15 +53,38 @@ export async function POST(request: Request) {
       )
     }
 
-    const user = await createUser({
-      username: body.username,
-      password: body.password,
-      name: body.name,
-      role_id: body.role_id,
-      type: body.type
-    })
+    const staffId = String(body.username).trim()
 
-    return NextResponse.json(user ? withoutPassword(user) : user, { status: 201 })
+    // Same staff ID already active: the person moved unit. Only replace (deactivate
+    // the old account) when the admin confirmed it in the form.
+    const existing = await getActiveUserByStaffId(staffId)
+    if (existing && body.replaceExisting !== true) {
+      return NextResponse.json(
+        { error: `ID staf ${staffId} sudah digunakan oleh ${existing.name}`, existing },
+        { status: 409 }
+      )
+    }
+
+    const archived = existing ? await deactivateUserForReplacement(staffId) : null
+    let user
+    try {
+      user = await createUser({
+        username: staffId,
+        password: body.password,
+        name: body.name,
+        role_id: body.role_id,
+        type: body.type
+      })
+    } catch (createError) {
+      // Put the old account back so the staff member is never left without one
+      if (archived) await restoreReplacedUser(archived, staffId).catch((e) => console.error("Restore failed:", e))
+      throw createError
+    }
+
+    return NextResponse.json(
+      { ...(user ? withoutPassword(user) : user), replaced: archived ? existing : null },
+      { status: 201 }
+    )
   } catch (error: any) {
     console.error("Error creating user:", error)
     return NextResponse.json(

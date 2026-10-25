@@ -107,7 +107,8 @@ export function UnitPicManager() {
         fetchUnitPics(),
         fetch("/api/auth")
           .then((response) => (response.ok ? response.json() : []))
-          .then((data) => setUsers(Array.isArray(data) ? data : []))
+          // Only active accounts: a replaced account (staff moved unit) is not offered as PIC
+          .then((data) => setUsers(Array.isArray(data) ? data.filter((u: User) => u.is_active !== false) : []))
           .catch((error) => console.error("Error fetching users:", error)),
       ])
       setLoading(false)

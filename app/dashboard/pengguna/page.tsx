@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { RiDeleteBinLine, RiEditLine, RiLoader4Line, RiLockPasswordLine, RiSearchLine, RiUserAddLine } from "@remixicon/react"
+import { RiDeleteBinLine, RiEditLine, RiHistoryLine, RiLoader4Line, RiLockPasswordLine, RiSearchLine, RiUserAddLine } from "@remixicon/react"
 import { useAuth } from "@/lib/auth-provider"
 import { hasPermission } from "@/lib/rbac"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +28,7 @@ import { RoleManager } from "@/components/pengguna/RoleManager"
 import { UnitPicManager } from "@/components/pengguna/UnitPicManager"
 import { UserForm } from "@/components/pengguna/UserForm"
 import type { User } from "@/types/user"
+import { cx } from "@/utils/cx"
 import type { Role } from "@/types/rbac"
 
 type Pending = { kind: "delete" | "reset"; user: User }
@@ -41,6 +42,19 @@ function TypeChip({ type }: { type?: string }) {
   )
 }
 
+/** "Tidak aktif sejak …" for an account replaced when its staff member moved unit */
+function InactiveNote({ user }: { user: User }) {
+  const since = user.deactivated_at ? new Date(user.deactivated_at).toLocaleDateString("ms-MY") : ""
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <Chip variant="caption" color="gray">
+        Tidak aktif
+      </Chip>
+      {since && <span className="text-caption-1-regular text-text-tertiary">sejak {since} · bertukar unit</span>}
+    </span>
+  )
+}
+
 export default function PenggunaPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -48,6 +62,8 @@ export default function PenggunaPage() {
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [query, setQuery] = useState("")
+  // Accounts replaced when the staff member moved unit; hidden unless asked for
+  const [showInactive, setShowInactive] = useState(false)
   const [isUserFormOpen, setIsUserFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [pending, setPending] = useState<Pending | null>(null)
@@ -147,14 +163,18 @@ export default function PenggunaPage() {
     return user.role
   }
 
+  const activeUsers = useMemo(() => users.filter((u) => u.is_active !== false), [users])
+  const inactiveCount = users.length - activeUsers.length
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return users
-    return users.filter((u) =>
-      [u.id, u.name, getRoleName(u), u.type].some((value) => (value || "").toLowerCase().includes(q)),
+    const pool = showInactive ? users : activeUsers
+    if (!q) return pool
+    return pool.filter((u) =>
+      [u.staff_id || u.id, u.name, getRoleName(u), u.type].some((value) => (value || "").toLowerCase().includes(q)),
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, roles, query])
+  }, [users, activeUsers, showInactive, roles, query])
 
   // Check permissions
   const canManageRoles = user?.permissions && user.permissions.length > 0
@@ -175,9 +195,15 @@ export default function PenggunaPage() {
 
   const hasActions = Boolean(canEditUser || canDeleteUser)
 
+  // A deactivated account is history only: it can be deleted but not edited or reset
   const actionsFor = (u: User) => [
-    { label: "Edit", icon: RiEditLine, onSelect: () => handleEditUser(u), hidden: !canEditUser },
-    { label: "Reset Kata Laluan", icon: RiLockPasswordLine, onSelect: () => setPending({ kind: "reset", user: u }), hidden: !canEditUser },
+    { label: "Edit", icon: RiEditLine, onSelect: () => handleEditUser(u), hidden: !canEditUser || u.is_active === false },
+    {
+      label: "Reset Kata Laluan",
+      icon: RiLockPasswordLine,
+      onSelect: () => setPending({ kind: "reset", user: u }),
+      hidden: !canEditUser || u.is_active === false,
+    },
     { label: "Padam", icon: RiDeleteBinLine, onSelect: () => setPending({ kind: "delete", user: u }), danger: true, hidden: !canDeleteUser },
   ]
 
@@ -194,7 +220,7 @@ export default function PenggunaPage() {
         {/* Scrolls sideways on narrow phones instead of wrapping */}
         <div className="-mx-2 overflow-x-auto px-2 sm:mx-0 sm:px-0">
           <TabList aria-label="Pengguna" className="w-max min-w-full">
-            <Tab id="users" count={loadingUsers ? undefined : users.length}>
+            <Tab id="users" count={loadingUsers ? undefined : activeUsers.length}>
               Pengguna
             </Tab>
             {canManageRoles && <Tab id="roles">Role & Permissions</Tab>}
@@ -217,15 +243,34 @@ export default function PenggunaPage() {
             </CardHeader>
 
             <CardContent className="space-y-3">
-              <div className="relative">
-                <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Cari username, nama, role atau jenis…"
-                  className="pl-8"
-                  aria-label="Cari pengguna"
-                />
+              <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Cari ID staf, nama, role atau jenis…"
+                    className="pl-8"
+                    aria-label="Cari pengguna"
+                  />
+                </div>
+                {inactiveCount > 0 && (
+                  <button
+                    type="button"
+                    aria-pressed={showInactive}
+                    onClick={() => setShowInactive((v) => !v)}
+                    className={cx(
+                      "motion-press inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-2lg border px-2.5 text-caption-1-medium outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+                      showInactive
+                        ? "border-accent-600 bg-accent-600 text-text-white"
+                        : "border-border-button-default text-text-secondary hover:bg-background-secondary-default",
+                    )}
+                  >
+                    <RiHistoryLine className="size-4" aria-hidden />
+                    <span className="hidden min-[400px]:inline">Tidak aktif</span>
+                    <span className="tabular-nums">{inactiveCount}</span>
+                  </button>
+                )}
               </div>
 
               {loadingUsers ? (
@@ -245,7 +290,7 @@ export default function PenggunaPage() {
                       <table className="bui-table">
                         <thead className="sticky top-0 z-10">
                           <tr>
-                            <th>Username</th>
+                            <th>ID Staf</th>
                             <th>Nama</th>
                             <th>Role</th>
                             <th>Jenis</th>
@@ -258,9 +303,17 @@ export default function PenggunaPage() {
                         </thead>
                         <tbody className="motion-stagger">
                           {filtered.map((u) => (
-                            <tr key={u.id} className="hover:bg-background-secondary-default">
-                              <td className="font-mono text-body-regular">{u.id}</td>
-                              <td className="text-body-semibold">{u.name}</td>
+                            <tr
+                              key={u.id}
+                              className={cx("hover:bg-background-secondary-default", u.is_active === false && "text-text-tertiary")}
+                            >
+                              <td className="font-mono text-body-regular">{u.staff_id || u.id}</td>
+                              <td>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className={cx("text-body-semibold", u.is_active === false && "text-text-secondary")}>{u.name}</span>
+                                  {u.is_active === false && <InactiveNote user={u} />}
+                                </div>
+                              </td>
                               <td>
                                 <Chip variant="caption" color="soft">
                                   {getRoleName(u)}
@@ -284,10 +337,19 @@ export default function PenggunaPage() {
                   {/* Phones */}
                   <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
                     {filtered.map((u) => (
-                      <li key={u.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+                      <li
+                        key={u.id}
+                        className={cx(
+                          "flex items-start gap-2 rounded-2xl border border-border-button-default p-3",
+                          u.is_active === false && "border-dashed bg-background-secondary-default",
+                        )}
+                      >
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
-                          <span className="text-body-semibold text-text-primary">{u.name}</span>
-                          <span className="font-mono text-caption-1-regular text-text-tertiary">{u.id}</span>
+                          <span className={cx("text-body-semibold", u.is_active === false ? "text-text-secondary" : "text-text-primary")}>
+                            {u.name}
+                          </span>
+                          <span className="font-mono text-caption-1-regular text-text-tertiary">{u.staff_id || u.id}</span>
+                          {u.is_active === false && <InactiveNote user={u} />}
                           <div className="flex flex-wrap items-center gap-1">
                             <Chip variant="caption" color="soft">
                               {getRoleName(u)}
@@ -306,7 +368,8 @@ export default function PenggunaPage() {
             <CardFooter>
               <p className="text-body-regular text-text-secondary">
                 Jumlah: {query ? `${filtered.length} / ` : ""}
-                {users.length} pengguna
+                {activeUsers.length} pengguna aktif
+                {inactiveCount > 0 && ` · ${inactiveCount} tidak aktif`}
               </p>
             </CardFooter>
           </Card>
@@ -325,7 +388,7 @@ export default function PenggunaPage() {
         )}
       </Tabs>
 
-      <UserForm open={isUserFormOpen} onOpenChange={setIsUserFormOpen} user={editingUser} onSuccess={fetchUsers} />
+      <UserForm open={isUserFormOpen} onOpenChange={setIsUserFormOpen} user={editingUser} users={users} onSuccess={fetchUsers} />
 
       <AlertDialog open={Boolean(pending)} onOpenChange={(open) => !open && !working && setPending(null)}>
         <AlertDialogContent>
@@ -335,7 +398,7 @@ export default function PenggunaPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pending?.kind === "delete"
-                ? `Akaun ${pending.user.id} akan dipadam dan tidak boleh log masuk lagi. Tindakan ini tidak boleh dibatalkan.`
+                ? `Akaun ${pending.user.staff_id || pending.user.id} akan dipadam dan tidak boleh log masuk lagi. Tindakan ini tidak boleh dibatalkan.`
                 : "Kata laluan akan dikembalikan kepada username, dan pengguna dipaksa tukar kata laluan pada log masuk seterusnya."}
             </AlertDialogDescription>
           </AlertDialogHeader>

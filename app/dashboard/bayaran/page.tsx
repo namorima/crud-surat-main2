@@ -147,6 +147,7 @@ export default function BayaranPage() {
       unit: string;
       display: string;
       defaultStatus: string;
+      active?: boolean;
     }>,
     statusBayaranData: [] as Array<{ status: string; colorHex: string }>,
   });
@@ -706,13 +707,16 @@ export default function BayaranPage() {
     if (!penerima) return "";
 
     // 1. Cari data penerima yang sesuai dari formOptions.penerimaData
-    const penerimaData = formOptions.penerimaData.find(
-      (item) => item.name === penerima || item.display === penerima
-    );
+    const exact = formOptions.penerimaData.find((item) => item.display === penerima);
+    if (exact) return exact.display;
+    const byName = formOptions.penerimaData.filter((item) => item.name === penerima);
 
-    // 2. Jika ditemukan, kembalikan format "Nama (Unit)"
-    if (penerimaData) {
-      return `${penerimaData.name} (${penerimaData.unit})`;
+    // 2. Satu akaun sahaja: kembalikan format "Nama (Unit)". Jika nama sama wujud
+    //    dalam beberapa unit (pengguna bertukar unit), unit sebenar rekod lama
+    //    tidak diketahui, jadi papar nama sahaja.
+    if (byName.length > 0) {
+      const units = new Set(byName.map((item) => item.unit));
+      return units.size === 1 ? `${byName[0].name} (${byName[0].unit})` : penerima;
     }
 
     // 3. Jika input sudah mengandung format "Nama (Unit)", kembalikan apa adanya
