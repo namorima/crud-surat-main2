@@ -17,7 +17,8 @@ import { Chip } from "@/components/base/badges/chip"
 import { Button } from "@/components/base/buttons/button"
 import { Pagination } from "@/components/base/pagination/pagination"
 import { RowActions, type RowAction } from "@/components/dashboard/row-actions"
-import { SURAT_STATUS_SURFACE, suratStatusChip, unitChip } from "@/lib/ui-status"
+import { suratStatusChip, unitChip } from "@/lib/ui-status"
+import { TextWithBilLinks } from "@/components/surat/bil-links"
 import { cx } from "@/utils/cx"
 import { useListPaging } from "@/hooks/use-list-paging"
 
@@ -53,7 +54,6 @@ export interface SuratListProps {
   canDelete: boolean
   generatingImage: boolean
   sharingItemId: string | null
-  formatBilReferences: (text: string) => string
   page: number
   pageSize: number
   totalPages: number
@@ -65,46 +65,44 @@ const KATEGORI_TEXT: Record<string, string> = {
   KELUAR: "text-accent-600 dark:text-accent-400",
 }
 
-function KategoriLabel({ kategori, className }: { kategori: string; className?: string }) {
+function KategoriLabel({ kategori, iconOnly, className }: { kategori: string; iconOnly?: boolean; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-0.5 text-body-medium", KATEGORI_TEXT[kategori], className)}>
-      {kategori}
-      {kategori === "MASUK" && <RiArrowDownLine className="size-4" aria-hidden />}
-      {kategori === "KELUAR" && <RiArrowUpLine className="size-4" aria-hidden />}
+    <span
+      className={cx("inline-flex items-center gap-0.5 text-caption-1-medium", KATEGORI_TEXT[kategori], className)}
+      title={iconOnly ? kategori : undefined}
+    >
+      {kategori === "MASUK" && <RiArrowDownLine className="size-3.5" aria-hidden />}
+      {kategori === "KELUAR" && <RiArrowUpLine className="size-3.5" aria-hidden />}
+      {iconOnly ? <span className="sr-only">{kategori}</span> : kategori}
     </span>
   )
 }
 
-/** Nota text with clickable #BIL references (rendered by formatBilReferences). */
+/** One-line nota with clickable #BIL references (plain text, never HTML). */
 function NotaText({
   nota,
-  format,
   onReferenceClick,
   className,
 }: {
   nota: string
-  format: (text: string) => string
   onReferenceClick: (bil: string) => void
   className?: string
 }) {
-  const onClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    const bil = target.getAttribute("data-bil")
-    if (bil) onReferenceClick(bil)
-  }
   return (
-    <p className={cx("flex items-start gap-1 text-caption-1-regular text-text-error-primary", className)} onClick={onClick}>
+    <p className={cx("flex min-w-0 items-start gap-1 text-caption-1-regular text-text-destructive", className)}>
       <RiStickyNoteLine className="mt-px size-3.5 shrink-0" aria-hidden />
-      <span dangerouslySetInnerHTML={{ __html: format(nota) }} />
+      <span className="min-w-0 line-clamp-2">
+        <TextWithBilLinks text={nota} onBilClick={onReferenceClick} />
+      </span>
     </p>
   )
 }
 
 function KomenText({ komen, className }: { komen: string; className?: string }) {
   return (
-    <p className={cx("flex items-start gap-1 text-caption-1-regular text-accent-600 dark:text-accent-400", className)}>
+    <p className={cx("flex min-w-0 items-start gap-1 text-caption-1-regular text-status-blue-text", className)}>
       <RiChat3Line className="mt-px size-3.5 shrink-0" aria-hidden />
-      <span>
+      <span className="min-w-0 line-clamp-2">
         <span className="text-caption-1-semibold">Komen:</span> {komen}
       </span>
     </p>
@@ -135,18 +133,41 @@ function ReferenceChip({
 }) {
   if (item.reference) {
     return (
-      <button type="button" onClick={() => onReferenceClick(item.reference)} className="cursor-pointer">
-        <Chip variant="caption" color="gray" className="border border-border-button-default">
-          {item.reference}
+      <button type="button" onClick={() => onReferenceClick(item.reference)} className="cursor-pointer" title={`Buka surat #${item.reference}`}>
+        <Chip variant="caption" color="blue" className="tabular-nums">
+          #{item.reference}
         </Chip>
       </button>
     )
   }
   return (
-    <button type="button" onClick={() => onRespond(item.bil)} className="cursor-pointer">
-      <Chip variant="caption" color="soft" className="gap-1 hover:text-text-primary">
-        <RiReplyLine className="size-3.5" aria-hidden />
-        Respon
+    <button
+      type="button"
+      onClick={() => onRespond(item.bil)}
+      className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-caption-1-medium text-text-tertiary outline-none hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <RiReplyLine className="size-3.5" aria-hidden />
+      Respon
+    </button>
+  )
+}
+
+function UnitChip({ item, onUnitFilter }: { item: Surat; onUnitFilter: (unit: string) => void }) {
+  if (!item.unit) return <span className="text-caption-1-regular text-text-tertiary">-</span>
+  return (
+    <button type="button" onClick={() => onUnitFilter(item.unit)} className="cursor-pointer" title={`Tapis unit ${item.unit}`}>
+      <Chip variant="caption" color={unitChip(item.unit)}>
+        {item.unit}
+      </Chip>
+    </button>
+  )
+}
+
+function StatusChip({ item, onStatusFilter }: { item: Surat; onStatusFilter: (status: string) => void }) {
+  return (
+    <button type="button" onClick={() => onStatusFilter(item.status)} className="cursor-pointer" title={`Tapis status ${item.status}`}>
+      <Chip variant="caption" color={suratStatusChip(item.status)}>
+        {item.status}
       </Chip>
     </button>
   )
@@ -182,7 +203,6 @@ export function SuratList(props: SuratListProps) {
     onStatusFilter,
     onReferenceClick,
     onRespond,
-    formatBilReferences,
     page,
     pageSize,
     totalPages,
@@ -231,16 +251,13 @@ export function SuratList(props: SuratListProps) {
             <thead className="sticky top-0 z-10">
               <tr>
                 {cols.bil && (
-                  <th className="w-[72px]">
+                  <th className="w-[68px]">
                     <SortHeader label="Bil" field="bil" onSort={onSort} />
                   </th>
                 )}
-                {cols.kategori && (
-                  <th className="w-[200px]">
-                    <SortHeader label="Kategori" field="kategori" onSort={onSort} />
-                    <span className="block text-caption-1-regular">
-                      {cols.tarikh ? "Tarikh · " : ""}Daripada/Kepada
-                    </span>
+                {(cols.tarikh || cols.kategori) && (
+                  <th className="w-[112px]">
+                    <SortHeader label={cols.tarikh ? "Tarikh" : "Kategori"} field={cols.tarikh ? "tarikh" : "kategori"} onSort={onSort} />
                   </th>
                 )}
                 {cols.perkara && (
@@ -248,12 +265,14 @@ export function SuratList(props: SuratListProps) {
                     <SortHeader label="Perkara" field="perkara" onSort={onSort} />
                   </th>
                 )}
+                <th className="hidden w-[150px] lg:table-cell">Unit / PIC</th>
+                <th className="w-[128px]">Status</th>
                 {cols.reference && (
-                  <th className="w-[120px]">
-                    <SortHeader label="Reference" field="reference" onSort={onSort} />
+                  <th className="w-[96px]">
+                    <SortHeader label="Ref" field="reference" onSort={onSort} />
                   </th>
                 )}
-                <th className="w-[56px] text-end">
+                <th className="w-[48px] text-end">
                   <span className="sr-only">Tindakan</span>
                 </th>
               </tr>
@@ -261,55 +280,59 @@ export function SuratList(props: SuratListProps) {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={7}>
                     <EmptyState loading={props.loading} error={props.error} onReload={props.onReload} />
                   </td>
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className={cx("hover:bg-background-secondary-default", SURAT_STATUS_SURFACE[item.status])}>
+                  <tr key={item.id} className="hover:bg-background-secondary-default">
                     {cols.bil && (
                       <td className="align-top">
                         <BilButton item={item} />
                       </td>
                     )}
-                    {cols.kategori && (
+                    {(cols.tarikh || cols.kategori) && (
                       <td className="align-top">
                         <div className="flex flex-col gap-0.5">
-                          <KategoriLabel kategori={item.kategori} />
-                          {cols.tarikh && <span className="text-body-regular text-text-secondary tabular-nums">{item.tarikh}</span>}
-                          <span className="text-caption-1-regular text-text-tertiary">{item.daripadaKepada}</span>
+                          {cols.tarikh && <span className="text-body-regular text-text-primary tabular-nums">{item.tarikh}</span>}
+                          {cols.kategori && <KategoriLabel kategori={item.kategori} />}
                         </div>
                       </td>
                     )}
                     {cols.perkara && (
                       <td className="align-top">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-body-medium text-text-primary">{item.perkara}</span>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <button type="button" onClick={() => onUnitFilter(item.unit)} className="cursor-pointer">
-                              <Chip variant="caption" color={unitChip(item.unit)}>
-                                {item.unit}
-                              </Chip>
-                            </button>
-                            {item.tindakanPic && (
-                              <Chip variant="caption" color={unitChip(item.unit)}>
-                                PIC: {item.tindakanPic}
-                              </Chip>
-                            )}
-                            <button type="button" onClick={() => onStatusFilter(item.status)} className="cursor-pointer">
-                              <Chip variant="caption" color={suratStatusChip(item.status)}>
-                                {item.status}
-                              </Chip>
-                            </button>
-                          </div>
-                          {cols.nota && item.nota && (
-                            <NotaText nota={item.nota} format={formatBilReferences} onReferenceClick={onReferenceClick} />
-                          )}
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onOpenDetail(item)}
+                            className="cursor-pointer text-left text-body-medium text-text-primary outline-none hover:text-accent-600 focus-visible:underline dark:hover:text-accent-400"
+                          >
+                            {item.perkara}
+                          </button>
+                          <span className="text-caption-1-regular text-text-tertiary">
+                            {item.kategori === "KELUAR" ? "Kepada: " : "Daripada: "}
+                            {item.daripadaKepada || "-"}
+                          </span>
+                          {/* Unit / PIC fold under perkara until the column appears at lg */}
+                          <span className="flex flex-wrap items-center gap-1.5 lg:hidden">
+                            <UnitChip item={item} onUnitFilter={onUnitFilter} />
+                            {item.tindakanPic && <span className="text-caption-1-regular text-text-secondary">{item.tindakanPic}</span>}
+                          </span>
+                          {cols.nota && item.nota && <NotaText nota={item.nota} onReferenceClick={onReferenceClick} />}
                           {item.komen && <KomenText komen={item.komen} />}
                         </div>
                       </td>
                     )}
+                    <td className="hidden align-top lg:table-cell">
+                      <div className="flex flex-col items-start gap-1">
+                        <UnitChip item={item} onUnitFilter={onUnitFilter} />
+                        <span className="text-caption-1-regular text-text-secondary">{item.tindakanPic || "-"}</span>
+                      </div>
+                    </td>
+                    <td className="align-top">
+                      <StatusChip item={item} onStatusFilter={onStatusFilter} />
+                    </td>
                     {cols.reference && (
                       <td className="align-top">
                         <ReferenceChip item={item} onReferenceClick={onReferenceClick} onRespond={onRespond} />
@@ -336,47 +359,35 @@ export function SuratList(props: SuratListProps) {
           items.map((item) => (
             <li
               key={item.id}
-              className={cx(
-                "flex flex-col gap-1.5 rounded-2xl border border-border-button-default bg-background-primary-default p-3 dark:bg-background-secondary-default",
-                SURAT_STATUS_SURFACE[item.status],
-              )}
+              className="flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs"
             >
               <div className="flex min-w-0 items-center gap-2">
                 <BilButton item={item} className="shrink-0" />
-                <KategoriLabel kategori={item.kategori} className="shrink-0 text-caption-1-medium" />
-                <span className="min-w-0 truncate text-caption-1-regular text-text-secondary tabular-nums">{item.tarikh}</span>
+                <span className="shrink-0 text-caption-1-regular text-text-secondary tabular-nums">{item.tarikh}</span>
+                <KategoriLabel kategori={item.kategori} iconOnly className="shrink-0" />
                 <span className="ms-auto shrink-0">
-                  <Chip variant="caption" color={suratStatusChip(item.status)}>
-                    {item.status}
-                  </Chip>
+                  <StatusChip item={item} onStatusFilter={onStatusFilter} />
                 </span>
                 <RowActions actions={actionsFor(item, true)} className="-me-1.5 size-7" />
               </div>
-              <p className="line-clamp-2 text-body-medium text-text-primary">{item.perkara}</p>
-              <p className="truncate text-caption-1-regular text-text-tertiary">
-                {item.kategori === "MASUK" ? "Daripada: " : "Kepada: "}
-                {item.daripadaKepada}
-              </p>
+              <button type="button" onClick={() => onOpenDetail(item)} className="cursor-pointer text-left">
+                <p className="line-clamp-2 text-body-medium text-text-primary">{item.perkara}</p>
+                <p className="mt-0.5 truncate text-caption-1-regular text-text-tertiary">
+                  {item.kategori === "KELUAR" ? "Kepada: " : "Daripada: "}
+                  {item.daripadaKepada || "-"}
+                </p>
+              </button>
               <div className="flex flex-wrap items-center gap-1.5">
-                <Chip variant="caption" color={unitChip(item.unit)}>
-                  {item.unit}
-                </Chip>
-                {item.tindakanPic && (
-                  <Chip variant="caption" color={unitChip(item.unit)}>
-                    PIC: {item.tindakanPic}
-                  </Chip>
+                <UnitChip item={item} onUnitFilter={onUnitFilter} />
+                {item.tindakanPic && <span className="text-caption-1-regular text-text-secondary">PIC {item.tindakanPic}</span>}
+                {item.reference && (
+                  <span className="ms-auto">
+                    <ReferenceChip item={item} onReferenceClick={onReferenceClick} onRespond={onRespond} />
+                  </span>
                 )}
-                {item.reference && <ReferenceChip item={item} onReferenceClick={onReferenceClick} onRespond={onRespond} />}
               </div>
-              {item.nota && (
-                <NotaText
-                  nota={item.nota}
-                  format={formatBilReferences}
-                  onReferenceClick={onReferenceClick}
-                  className="line-clamp-2"
-                />
-              )}
-              {item.komen && <KomenText komen={item.komen} className="line-clamp-2" />}
+              {item.nota && <NotaText nota={item.nota} onReferenceClick={onReferenceClick} />}
+              {item.komen && <KomenText komen={item.komen} />}
             </li>
           ))
         )}
