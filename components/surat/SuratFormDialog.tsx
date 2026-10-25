@@ -2,8 +2,9 @@
 
 import type React from "react"
 import type { ReactNode } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { RiArrowDownLine, RiArrowUpDownLine, RiArrowUpLine, RiChat3Line, RiCheckLine, RiLoader4Line, RiReplyLine } from "@remixicon/react"
+import { RiArrowDownLine, RiArrowUpDownLine, RiArrowUpLine, RiChat3Line, RiCheckLine, RiFileCopyLine, RiLoader4Line, RiReplyLine } from "@remixicon/react"
 import type { Fail } from "@/types/fail"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -49,6 +50,8 @@ export interface SuratFormDialogProps {
   onSelectChange: (name: string, value: string) => void
   /** Add mode: the surat this one replies to. */
   referenceBil?: number | null
+  /** Add mode, Respon: perkara of the surat being answered, offered as a one-tap copy */
+  referencePerkara?: string
   daripadaKepadaSuggestions: string[]
   perkaraSuggestions: string[]
   unitOptions: string[]
@@ -136,6 +139,8 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
     saving,
   } = props
   const id = (name: string) => (mode === "edit" ? `${name}-edit` : name)
+  // Perkara is a textarea (long subjects wrap), so its suggestions are our own list, not a datalist
+  const [perkaraFocused, setPerkaraFocused] = useState(false)
   const isKeluar = formData.kategori === "KELUAR"
   const selectedFail = failOptions.find((fail) => fail.id === selectedFailId)
   const pics = (formData.unit && unitPicMap[formData.unit]) || []
@@ -212,20 +217,66 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                 </Field>
               </div>
 
-              <Field label="Perkara" htmlFor={id("perkara")}>
-                <Input
-                  id={id("perkara")}
-                  name="perkara"
-                  value={formData.perkara}
-                  onChange={onInputChange}
-                  list={id("perkara-suggestions")}
-                  autoComplete="off"
-                />
-                <datalist id={id("perkara-suggestions")}>
-                  {suggestions(props.perkaraSuggestions, formData.perkara).map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
+              <Field
+                label={
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span>Perkara</span>
+                    {mode === "add" && referenceBil && props.referencePerkara && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectChange("perkara", props.referencePerkara!)}
+                        className="motion-press inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-caption-1-medium text-accent-600 outline-none hover:bg-background-secondary-default focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                      >
+                        <RiFileCopyLine className="size-3.5" aria-hidden />
+                        Salin perkara surat #{referenceBil}
+                      </button>
+                    )}
+                  </span>
+                }
+                htmlFor={id("perkara")}
+              >
+                <div className="relative">
+                  <Textarea
+                    id={id("perkara")}
+                    name="perkara"
+                    value={formData.perkara}
+                    onChange={onInputChange}
+                    onFocus={() => setPerkaraFocused(true)}
+                    onBlur={() => setPerkaraFocused(false)}
+                    rows={3}
+                    autoComplete="off"
+                    className="min-h-[4.75rem] resize-y [field-sizing:content] max-h-48"
+                  />
+                  {perkaraFocused && formData.perkara.trim().length >= 2 && (() => {
+                    const matches = suggestions(props.perkaraSuggestions, formData.perkara).filter((v) => v !== formData.perkara)
+                    if (matches.length === 0) return null
+                    return (
+                      <ul
+                        role="listbox"
+                        aria-label="Cadangan perkara"
+                        className="absolute inset-x-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-dropdown"
+                      >
+                        {matches.map((v) => (
+                          <li key={v}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={false}
+                              // mousedown keeps the textarea focused until the pick lands
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                onSelectChange("perkara", v)
+                              }}
+                              className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-body-regular text-text-primary hover:bg-background-secondary-default"
+                            >
+                              {v}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  })()}
+                </div>
               </Field>
 
               {mode === "add" && referenceBil && (

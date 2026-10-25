@@ -211,6 +211,10 @@ export async function getAllUsers(): Promise<User[]> {
         is_password_changed: row.is_password_changed || false,
         must_change_password: row.must_change_password || false,
         last_password_change: row.last_password_change || undefined,
+        staff_id: row.staff_id || row.username,
+        is_active: row.is_active !== false,
+        deactivated_at: row.deactivated_at || undefined,
+        replaced_by: row.replaced_by || undefined,
       })) || []
     )
   } catch (error: any) {
@@ -242,6 +246,7 @@ export async function createUser(userData: {
       .from("users")
       .insert({
         username: userData.username,
+        staff_id: userData.username,
         password: hashedPassword, // Store hashed password
         name: userData.name,
         role: roleData?.name || "viewer", // Fallback for legacy role field
@@ -274,6 +279,51 @@ export async function createUser(userData: {
     console.error("Error creating user in Supabase:", error)
     throw new Error(`Failed to create user in Supabase: ${error.message}`)
   }
+}
+
+/** The active account that holds this staff ID (username), if any. */
+export async function getActiveUserByStaffId(staffId: string): Promise<{ username: string; name: string; role: string } | null> {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("username, name, role")
+    .eq("username", staffId)
+    .eq("is_active", true)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Staff moving unit: frees the staff ID for a new account by deactivating the
+ * current one. Its username becomes "<staff_id>~<yyyymmddhhmi>" (username stays
+ * unique and the old login stops working); staff_id, name and history are kept.
+ * Returns the archived username so a failed create can restore it.
+ */
+export async function deactivateUserForReplacement(staffId: string): Promise<string> {
+  const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12)
+  const archived = `${staffId}~${stamp}`
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({
+      username: archived,
+      staff_id: staffId,
+      is_active: false,
+      deactivated_at: new Date().toISOString(),
+      replaced_by: staffId,
+    })
+    .eq("username", staffId)
+    .eq("is_active", true)
+  if (error) throw error
+  return archived
+}
+
+/** Undo deactivateUserForReplacement when the new account could not be created. */
+export async function restoreReplacedUser(archivedUsername: string, staffId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ username: staffId, is_active: true, deactivated_at: null, replaced_by: null })
+    .eq("username", archivedUsername)
+  if (error) throw error
 }
 
 export async function updateUser(
@@ -647,11 +697,13 @@ export async function getPenerimaData() {
         name, 
         type,
         role_id,
+        is_active,
         roles (
           name
         )
       `)
       .eq("type", "PENERIMA")
+      .order("is_active", { ascending: false })
       .order("name")
 
     if (error) throw error
@@ -664,6 +716,9 @@ export async function getPenerimaData() {
           name: row.name,
           display: `${row.name} (${roleName})`,
           defaultStatus: "",
+          // Deactivated accounts stay listed so old records still show their unit,
+          // but the Bayaran form does not offer them for new records
+          active: row.is_active !== false,
         }
       }) || []
     )
@@ -686,6 +741,8 @@ export async function getContractCategoryData() {
     const kontrakInfo: Record<string, { kerja: string; nilaiKontrak: number | null }> = {}
     const allContracts: string[] = []
     const allCategories: string[] = []
+    // A no kontrak with an AKTIF row stays selectable in Tambah Rekod Bayaran
+    const activeContracts = new Set<string>()
 
     data?.forEach((row) => {
       const kawasan = row.kawasan || ""
@@ -727,6 +784,8 @@ export async function getContractCategoryData() {
         }
       }
 
+      if (noKontrak && (row.status || "AKTIF") === "AKTIF") activeContracts.add(noKontrak)
+
       // Collect all contracts and categories for LADANG NEGERI
       if (noKontrak && !allContracts.includes(noKontrak)) {
         allContracts.push(noKontrak)
@@ -736,7 +795,10 @@ export async function getContractCategoryData() {
       }
     })
 
-    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo }
+    // SELESAI / TIDAK AKTIF: kept for old records and filters, hidden from new bayaran
+    const closedContracts = allContracts.filter((noKontrak) => !activeContracts.has(noKontrak))
+
+    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo, closedContracts }
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
     throw new Error(`Failed to fetch contract and category data from Supabase: ${error.message}`)
@@ -760,6 +822,7 @@ function mapKontrakRow(row: any): Kontrak {
     jenisKerja: row.jenis_kerja || "",
     kerja: row.kerja || "",
     nilaiKontrak: row.nilai_kontrak === null || row.nilai_kontrak === undefined ? null : Number(row.nilai_kontrak),
+    status: row.status || "AKTIF",
   }
 }
 
@@ -774,6 +837,7 @@ function kontrakToRow(input: KontrakInput) {
     jenis_kerja: input.jenisKerja || null,
     kerja: input.kerja || null,
     nilai_kontrak: input.nilaiKontrak,
+    status: input.status || "AKTIF",
   }
 }
 
@@ -864,6 +928,13 @@ export async function updateKontrak(
       .single()
 
     if (error) throw error
+    // Rows sharing this no kontrak (one per kategori) open and close together
+    const { error: statusError } = await supabaseAdmin
+      .from("kontrak")
+      .update({ status: input.status || "AKTIF" })
+      .eq("no_kontrak", input.noKontrak)
+      .neq("id", id)
+    if (statusError) throw statusError
     const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor)
     return { kontrak: mapKontrakRow(data), bayaranUpdated }
   } catch (error: any) {

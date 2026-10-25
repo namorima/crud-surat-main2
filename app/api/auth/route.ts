@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server"
 import { requirePermission } from "@/lib/server-auth"
-import { getAllUsers, createUser, updateUser, deleteUser } from "@/lib/supabase-db"
+import {
+  getAllUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getActiveUserByStaffId,
+  deactivateUserForReplacement,
+  restoreReplacedUser,
+} from "@/lib/supabase-db"
 
 /** Password hashes never leave the server. */
 function withoutPassword<T extends { password?: unknown }>(user: T): Omit<T, "password"> {
@@ -38,22 +46,46 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    if (!body.username || !body.password || !body.name || !body.role_id) {
+    // No password: the first password is the staff ID; the user must change it on first login
+    if (!body.username || !body.name || !body.role_id) {
       return NextResponse.json(
-        { error: "username, password, name, and role_id are required" },
+        { error: "username, name, and role_id are required" },
         { status: 400 }
       )
     }
 
-    const user = await createUser({
-      username: body.username,
-      password: body.password,
-      name: body.name,
-      role_id: body.role_id,
-      type: body.type
-    })
+    const staffId = String(body.username).trim()
 
-    return NextResponse.json(user ? withoutPassword(user) : user, { status: 201 })
+    // Same staff ID already active: the person moved unit. Only replace (deactivate
+    // the old account) when the admin confirmed it in the form.
+    const existing = await getActiveUserByStaffId(staffId)
+    if (existing && body.replaceExisting !== true) {
+      return NextResponse.json(
+        { error: `ID staf ${staffId} sudah digunakan oleh ${existing.name}`, existing },
+        { status: 409 }
+      )
+    }
+
+    const archived = existing ? await deactivateUserForReplacement(staffId) : null
+    let user
+    try {
+      user = await createUser({
+        username: staffId,
+        password: body.password || staffId,
+        name: body.name,
+        role_id: body.role_id,
+        type: body.type
+      })
+    } catch (createError) {
+      // Put the old account back so the staff member is never left without one
+      if (archived) await restoreReplacedUser(archived, staffId).catch((e) => console.error("Restore failed:", e))
+      throw createError
+    }
+
+    return NextResponse.json(
+      { ...(user ? withoutPassword(user) : user), replaced: archived ? existing : null },
+      { status: 201 }
+    )
   } catch (error: any) {
     console.error("Error creating user:", error)
     return NextResponse.json(

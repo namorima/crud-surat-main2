@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { RiAddLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiRefreshLine, RiSearchLine } from "@remixicon/react"
-import type { Kontrak, KontrakInput } from "@/types/kontrak"
+import type { Kontrak, KontrakInput, KontrakStatus } from "@/types/kontrak"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,8 @@ import { Chip } from "@/components/base/badges/chip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RowActions } from "@/components/dashboard/row-actions"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_KERJA, KONTRAK_KATEGORI, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
+import { cx } from "@/utils/cx"
+import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 
 /** The form keeps nilai as typed text; the server parses it. */
 type KontrakForm = Omit<KontrakInput, "nilaiKontrak"> & { nilaiKontrak: string }
@@ -50,6 +51,17 @@ const EMPTY: KontrakForm = {
   jenisKerja: "",
   kerja: "",
   nilaiKontrak: "",
+  status: "AKTIF",
+}
+
+/** Only AKTIF contracts are offered in Tambah Rekod Bayaran, so only the others get a chip. */
+function StatusChip({ status }: { status: KontrakStatus }) {
+  if (status === "AKTIF") return null
+  return (
+    <Chip variant="caption" color={status === "SELESAI" ? "blue" : "gray"}>
+      {status === "SELESAI" ? "Selesai" : "Tidak aktif"}
+    </Chip>
+  )
 }
 
 /** Radix Select cannot hold "", so an unset optional field uses this value. */
@@ -84,6 +96,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [items, setItems] = useState<Kontrak[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<KontrakStatus | "ALL">("ALL")
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Kontrak | null>(null)
   const [form, setForm] = useState<KontrakForm>(EMPTY)
@@ -136,13 +149,14 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return items
-    return items.filter((item) =>
+    const byStatus = statusFilter === "ALL" ? items : items.filter((item) => item.status === statusFilter)
+    if (!q) return byStatus
+    return byStatus.filter((item) =>
       [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? ""), String(item.nilaiKontrak ?? "")].some(
         (value) => value.toLowerCase().includes(q),
       ),
     )
-  }, [items, query])
+  }, [items, query, statusFilter])
 
   const openAdd = () => {
     loadKontraktorNames()
@@ -164,6 +178,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       jenisKerja: item.jenisKerja,
       kerja: item.kerja,
       nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
+      status: item.status,
     })
     setFormOpen(true)
   }
@@ -258,15 +273,30 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="relative">
-          <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari no kontrak, kerja, kontraktor, kawasan atau tahun…"
-            className="pl-8"
-            aria-label="Cari kontrak"
-          />
+        <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari no kontrak, kerja, kontraktor, kawasan atau tahun…"
+              className="pl-8"
+              aria-label="Cari kontrak"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as KontrakStatus | "ALL")}>
+            <SelectTrigger className="w-[148px] shrink-0 sm:w-[160px]" aria-label="Tapis status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Semua status</SelectItem>
+              {KONTRAK_STATUS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -276,7 +306,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-10 text-center text-body-regular text-text-secondary">
-            {items.length === 0 ? "Tiada kontrak lagi" : "Tiada kontrak sepadan dengan carian"}
+            {items.length === 0 ? "Tiada kontrak lagi" : "Tiada kontrak sepadan dengan carian atau status"}
           </p>
         ) : (
           <>
@@ -310,9 +340,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                   </thead>
                   <tbody className="motion-stagger">
                     {filtered.map((item) => (
-                      <tr key={item.id} className="hover:bg-background-secondary-default">
+                      <tr key={item.id} className={cx("hover:bg-background-secondary-default", item.status !== "AKTIF" && "text-text-secondary")}>
                         <td>
-                          <span className="block text-body-semibold">{item.noKontrak}</span>
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-body-semibold">{item.noKontrak}</span>
+                            <StatusChip status={item.status} />
+                          </span>
                           <span className="block text-caption-1-regular text-text-tertiary">{item.kawasan}</span>
                         </td>
                         <td className="max-w-[320px]">
@@ -373,6 +406,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           {item.kategori}
                         </Chip>
                       )}
+                      <StatusChip status={item.status} />
                     </div>
                     {/* The amount drops under the name when both do not fit */}
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
@@ -425,17 +459,39 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={save} className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontrak-kawasan">
-                Kawasan <span className="text-text-error-primary">*</span>
-              </Label>
-              <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
-              <datalist id="kontrak-kawasan-options">
-                {kawasanOptions.map((value) => (
-                  <option key={value} value={value} />
-                ))}
-              </datalist>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="kontrak-kawasan">
+                  Kawasan <span className="text-text-error-primary">*</span>
+                </Label>
+                <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
+                <datalist id="kontrak-kawasan-options">
+                  {kawasanOptions.map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="kontrak-status">Status</Label>
+                <Select value={form.status} onValueChange={(value) => setForm((prev) => ({ ...prev, status: value as KontrakStatus }))}>
+                  <SelectTrigger id="kontrak-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {KONTRAK_STATUS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {form.status !== "AKTIF" && (
+              <p className="-mt-1 text-caption-1-regular text-text-tertiary">
+                No Kontrak ini tidak dipaparkan di Tambah Rekod Bayaran. Rekod bayaran sedia ada tidak berubah.
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <Label htmlFor="kontrak-no">

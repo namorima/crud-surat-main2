@@ -51,6 +51,7 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `username`, `password`, `name`, `role`, `role_id`, `type`, `email`, `is_password_changed`, `must_change_password`, `last_password_change`, `created_at`, `updated_at`
    - Password: bcrypt hashed
    - User types: normal (empty), "VIEW", "PENERIMA"
+   - `staff_id`, `is_active`, `deactivated_at`, `replaced_by` from [add-user-active.sql](add-user-active.sql): staff moving unit get a new account with the same staff ID; `POST /api/auth` with `replaceExisting: true` (409 without it) renames the old account's username to `<staff_id>~<yyyymmddhhmi>` and deactivates it (no login, not offered as Penerima or PIC, records keep their name). The UI shows `staff_id` as "ID Staf"
 
 5. **`audit_bayaran`** - Payment audit trail
    - Columns: `id`, `bayaran_id`, `action`, `changed_by`, `old_values`, `new_values`, `timestamp`
@@ -59,8 +60,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `created_at`
-   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql) and [add-kontrak-nilai.sql](add-kontrak-nilai.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `status` (AKTIF | SELESAI | TIDAK AKTIF, default AKTIF), `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql), [add-kontrak-nilai.sql](add-kontrak-nilai.sql) and [add-kontrak-status.sql](add-kontrak-status.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`kontraktor`** - Contractor master data (vendor and bank details)
    - Columns: `id`, `nama_kontraktor` (unique, case-insensitive), `no_vendor`, `nama_akaun`, `nombor_akaun`, `jenis_bank`, `created_at`, `updated_at`
@@ -630,7 +631,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `FilterSummaryBadges.tsx` - Filter badges display
 
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
-   - `UserForm.tsx` - User add/edit dialog
+   - `UserForm.tsx` - User add/edit dialog; a new account has no password field: its first password is the staff ID and `must_change_password` forces a change on first login
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
    - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
@@ -645,13 +646,13 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 5. **Surat Components** ([components/surat/](components/surat/))
    - `SuratList.tsx` - BoardUI table (md+: Bil, Tarikh, Perkara, Unit/PIC from lg, Status, Ref) and compact neutral cards (phones) with pagination; status shows as a chip, rows are not tinted
    - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share)
-   - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving
+   - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving. Perkara is a wrapping textarea with its own suggestion list. A Respon starts as the opposite kategori of the surat it answers (MASUK → KELUAR, status SELESAI) and offers "Salin perkara surat #N"
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
    - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
-   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name). Status is shared by rows with the same `no_kontrak`; a no kontrak without an AKTIF row is in `closedContracts` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran (a record that already uses it keeps it)
 
 7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter

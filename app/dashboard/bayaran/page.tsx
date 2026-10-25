@@ -142,11 +142,13 @@ export default function BayaranPage() {
     allCategories: [] as string[],
     contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
     kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak
+    closedContracts: [] as string[], // SELESAI / TIDAK AKTIF: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
       display: string;
       defaultStatus: string;
+      active?: boolean;
     }>,
     statusBayaranData: [] as Array<{ status: string; colorHex: string }>,
   });
@@ -291,6 +293,7 @@ export default function BayaranPage() {
           allCategories: data.allCategories || [],
           contractorData: data.contractorData || {},
           kontrakInfo: data.kontrakInfo || {},
+          closedContracts: data.closedContracts || [],
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -497,10 +500,14 @@ export default function BayaranPage() {
   };
 
   const getAvailableKontraks = () => {
-    if (formData.daripada.toUpperCase() === "LADANG NEGERI") {
-      return formOptions.allContracts;
-    }
-    return formOptions.contractData[formData.daripada] || [];
+    const all =
+      formData.daripada.toUpperCase() === "LADANG NEGERI"
+        ? formOptions.allContracts
+        : formOptions.contractData[formData.daripada] || [];
+    // Closed contracts (SELESAI / TIDAK AKTIF) are hidden; a record that already
+    // uses one keeps showing it so editing does not wipe its no kontrak
+    const closed = new Set(formOptions.closedContracts);
+    return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === formData.noKontrak);
   };
 
   const getAvailableKategoris = () => {
@@ -706,13 +713,16 @@ export default function BayaranPage() {
     if (!penerima) return "";
 
     // 1. Cari data penerima yang sesuai dari formOptions.penerimaData
-    const penerimaData = formOptions.penerimaData.find(
-      (item) => item.name === penerima || item.display === penerima
-    );
+    const exact = formOptions.penerimaData.find((item) => item.display === penerima);
+    if (exact) return exact.display;
+    const byName = formOptions.penerimaData.filter((item) => item.name === penerima);
 
-    // 2. Jika ditemukan, kembalikan format "Nama (Unit)"
-    if (penerimaData) {
-      return `${penerimaData.name} (${penerimaData.unit})`;
+    // 2. Satu akaun sahaja: kembalikan format "Nama (Unit)". Jika nama sama wujud
+    //    dalam beberapa unit (pengguna bertukar unit), unit sebenar rekod lama
+    //    tidak diketahui, jadi papar nama sahaja.
+    if (byName.length > 0) {
+      const units = new Set(byName.map((item) => item.unit));
+      return units.size === 1 ? `${byName[0].name} (${byName[0].unit})` : penerima;
     }
 
     // 3. Jika input sudah mengandung format "Nama (Unit)", kembalikan apa adanya

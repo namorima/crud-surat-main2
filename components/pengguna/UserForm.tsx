@@ -3,9 +3,10 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { RiLoader4Line } from "@remixicon/react"
+import { RiLoader4Line, RiLockPasswordLine } from "@remixicon/react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/base/buttons/button"
 import {
@@ -22,6 +23,8 @@ type UserFormProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   user?: User | null
+  /** All accounts, to spot a staff ID that is already in use when adding */
+  users?: User[]
   onSuccess?: () => void
 }
 
@@ -31,9 +34,12 @@ const TYPES = [
   { value: "PENERIMA", label: "PENERIMA" },
 ]
 
-export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps) {
+export function UserForm({ open, onOpenChange, user, users = [], onSuccess }: UserFormProps) {
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(false)
+  // Adding a staff ID that already has an active account: the person moved unit
+  const [confirmReplace, setConfirmReplace] = useState(false)
+  const [serverConflict, setServerConflict] = useState<{ name: string; role: string } | null>(null)
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -67,7 +73,17 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         type: ""
       })
     }
+    setConfirmReplace(false)
+    setServerConflict(null)
   }, [user, open])
+
+  const typedId = formData.username.trim()
+  const clash = !user && typedId
+    ? users.find((u) => u.is_active !== false && u.id === typedId) ?? null
+    : null
+  const conflict: { name: string; role: string; type?: string } | null = clash
+    ? { name: clash.name, role: clash.role, type: clash.type }
+    : serverConflict
 
   const fetchRoles = async () => {
     try {
@@ -85,14 +101,18 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
       toast.error("Sila pilih role")
       return
     }
+    if (conflict && !confirmReplace) {
+      toast.error("Sahkan dahulu bahawa akaun lama akan dinyahaktifkan")
+      return
+    }
     setLoading(true)
 
     try {
       const url = user ? `/api/auth?id=${user.id}` : "/api/auth"
       const method = user ? "PATCH" : "POST"
 
-      const body: Record<string, string | null> = {
-        username: formData.username,
+      const body: Record<string, string | boolean | null> = {
+        username: typedId,
         name: formData.name,
         role_id: formData.role_id,
         type: formData.type || null
@@ -102,6 +122,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
       if (formData.password) {
         body.password = formData.password
       }
+      if (!user && conflict && confirmReplace) body.replaceExisting = true
 
       const response = await fetch(url, {
         method,
@@ -110,9 +131,19 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
       })
 
       if (response.ok) {
-        toast.success(user ? "Pengguna dikemaskini" : "Pengguna baru dicipta")
+        const result = await response.json().catch(() => ({}))
+        toast.success(user ? "Pengguna dikemaskini" : "Pengguna baru dicipta", {
+          description: result.replaced
+            ? `Akaun lama ${result.replaced.name} (${result.replaced.role}) telah dinyahaktifkan.`
+            : undefined,
+        })
         onSuccess?.()
         onOpenChange(false)
+      } else if (response.status === 409) {
+        // The list was out of date: someone holds this staff ID after all
+        const error = await response.json().catch(() => ({}))
+        if (error.existing) setServerConflict({ name: error.existing.name, role: error.existing.role })
+        toast.error(error.error || "ID staf sudah digunakan")
       } else {
         const error = await response.json().catch(() => ({}))
         toast.error(error.error || "Gagal menyimpan pengguna")
@@ -138,31 +169,80 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className={dialogBodyClass}>
-            <FormField label="Username / ID" htmlFor="username" required={!user} hint={user ? "Username tidak boleh ditukar." : undefined}>
+            <FormField
+              label="ID Staf / Username"
+              htmlFor="username"
+              required={!user}
+              hint={user ? "ID staf tidak boleh ditukar." : "Pengguna log masuk dengan ID ini."}
+            >
               <Input
                 id="username"
                 autoComplete="off"
                 value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, username: e.target.value })
+                  setConfirmReplace(false)
+                  setServerConflict(null)
+                }}
                 required
                 disabled={!!user}
+                aria-invalid={Boolean(conflict) && !confirmReplace}
               />
+              {conflict && (
+                <div className="mt-1 flex flex-col gap-2 rounded-xl bg-status-yellow-background p-3 text-caption-1-regular text-status-yellow-text">
+                  <p>
+                    ID staf <b>{typedId}</b> sudah digunakan oleh <b>{conflict.name}</b> ({conflict.role}). Jika pegawai ini
+                    bertukar unit, akaun lama akan <b>dinyahaktifkan</b>: tidak boleh log masuk dan tidak boleh dipilih
+                    sebagai Penerima rekod bayaran baharu, tetapi rekod lama kekal.
+                  </p>
+                  <label className="flex cursor-pointer items-start gap-2 text-caption-1-medium">
+                    <Checkbox
+                      checked={confirmReplace}
+                      onCheckedChange={(checked) => {
+                        setConfirmReplace(checked === true)
+                        // Same person: carry over name and jenis (the role is what changes)
+                        if (checked === true)
+                          setFormData((prev) => ({
+                            ...prev,
+                            name: prev.name.trim() ? prev.name : conflict.name,
+                            type: prev.type || conflict.type || "",
+                          }))
+                      }}
+                      className="mt-0.5"
+                    />
+                    Nyahaktifkan akaun lama dan cipta akaun baharu untuk unit baharu
+                  </label>
+                </div>
+              )}
             </FormField>
-            <FormField
-              label="Kata Laluan"
-              htmlFor="password"
-              required={!user}
-              hint={user ? "Biarkan kosong jika tidak mahu ubah." : undefined}
-            >
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required={!user}
-              />
-            </FormField>
+            {user ? (
+              <FormField label="Kata Laluan" htmlFor="password" hint="Biarkan kosong jika tidak mahu ubah.">
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </FormField>
+            ) : (
+              // New accounts start with the staff ID as password and must change it on first login
+              <FormField label="Kata Laluan Awal">
+                <div className="flex items-start gap-2 rounded-xl bg-background-secondary-default p-3 text-caption-1-regular text-text-secondary">
+                  <RiLockPasswordLine className="mt-0.5 size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                  <p>
+                    Sama dengan ID staf
+                    {typedId && (
+                      <>
+                        {" "}
+                        (<span className="font-mono text-text-primary">{typedId}</span>)
+                      </>
+                    )}
+                    . Pengguna wajib menukar kata laluan semasa log masuk kali pertama.
+                  </p>
+                </div>
+              </FormField>
+            )}
             <FormField label="Nama Penuh" htmlFor="name" required>
               <Input
                 id="name"
@@ -212,7 +292,12 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
             <Button type="button" variant="secondary" size="small" onClick={() => onOpenChange(false)} disabled={loading} className="flex-1 sm:flex-none">
               Batal
             </Button>
-            <Button type="submit" size="small" disabled={loading} className="flex-1 sm:flex-none">
+            <Button
+              type="submit"
+              size="small"
+              disabled={loading || (Boolean(conflict) && !confirmReplace)}
+              className="flex-1 sm:flex-none"
+            >
               {loading ? (
                 <span className="inline-flex items-center gap-1.5">
                   <RiLoader4Line className="size-4 animate-spin" aria-hidden />
@@ -220,6 +305,8 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                 </span>
               ) : user ? (
                 "Kemaskini"
+              ) : conflict ? (
+                "Cipta & nyahaktif lama"
               ) : (
                 "Cipta"
               )}
