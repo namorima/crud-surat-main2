@@ -10,6 +10,7 @@ import { Pagination } from "@/components/base/pagination/pagination"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { useListPaging } from "@/hooks/use-list-paging"
+import { StageDots, isBayaranHold, isBayaranSelesai } from "@/components/bayaran/progress"
 
 interface BayaranTableProps {
   displayedBayaran: Bayaran[]
@@ -44,25 +45,6 @@ interface BayaranTableProps {
   pageSize: number
   totalPages: number
   onPageChange: (page: number) => void
-}
-
-const isSelesai = (item: Bayaran) => item.statusBayaran?.toLowerCase() === "selesai"
-const isBatal = (item: Bayaran) => item.statusBayaran?.toUpperCase() === "BATAL"
-
-/** ID pill: Hold/KIV black, Batal red, Selesai green, sent (tarikh hantar) orange. */
-function idPillClass(item: Bayaran) {
-  if (item.statusLadang === "Hold / KIV") return "bg-neutral-950 text-white dark:bg-neutral-50 dark:text-neutral-950"
-  if (isBatal(item)) return "bg-rose-600 text-white"
-  if (isSelesai(item)) return "bg-lime-600 text-white"
-  if (item.tarikhHantar) return "bg-orange-500 text-white"
-  return "border border-border-button-default bg-background-primary-default text-text-primary"
-}
-
-function rowSurface(item: Bayaran, includeSent = false) {
-  if (isBatal(item)) return "bg-status-surface-batal"
-  if (isSelesai(item)) return "bg-status-surface-selesai"
-  if (includeSent && item.tarikhHantar) return "bg-status-surface-hold"
-  return undefined
 }
 
 /** Used when status_config has no colour for a status (same hues as before). */
@@ -158,24 +140,30 @@ export function BayaranTable({
     </div>
   )
 
-  const IdPill = ({ item, className }: { item: Bayaran; className?: string }) => (
+  const IdButton = ({ item, className }: { item: Bayaran; className?: string }) => (
     <button
       type="button"
       onClick={() => openDetail(item)}
       className={cx(
-        "inline-flex w-fit cursor-pointer items-center rounded-full px-2 py-0.5 text-caption-1-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-        idPillClass(item),
+        "cursor-pointer rounded-md text-body-semibold text-text-primary tabular-nums outline-none hover:text-accent-600 focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:hover:text-accent-400",
         className,
       )}
     >
-      #{item.ids || item.id}
+      #{item.ids ?? item.id}
     </button>
   )
+
+  const HoldChip = ({ item }: { item: Bayaran }) =>
+    isBayaranHold(item) ? (
+      <Chip variant="caption" color="gray" className="bg-neutral-950 text-white dark:bg-neutral-50 dark:text-neutral-950">
+        HOLD / KIV
+      </Chip>
+    ) : null
 
   const KontrakChip = ({ item }: { item: Bayaran }) =>
     item.noKontrak ? (
       <button type="button" onClick={() => handleKontrakFilter(item.noKontrak || "")} className="cursor-pointer" title={item.noKontrak}>
-        <Chip variant="caption" color="gray" className="border border-border-button-default">
+        <Chip variant="caption" color="soft" className="border border-border-button-default tabular-nums">
           {item.noKontrak}
         </Chip>
       </button>
@@ -198,89 +186,90 @@ export function BayaranTable({
                   />
                 </th>
                 {columnVisibility.id && (
-                  <th className="w-[80px]">
-                    <SortHeader label="ID" onClick={() => handleSort("id")} />
+                  <th className="w-[68px]">
+                    <SortHeader label="ID" onClick={() => handleSort("ids")} />
                   </th>
                 )}
-                {columnVisibility.daripadaTarikh && <th className="w-[160px]">Daripada / Tarikh</th>}
+                {columnVisibility.daripadaTarikh && (
+                  <th className="w-[150px]">
+                    <SortHeader label="Terima" onClick={() => handleSort("tarikhTerima")} />
+                  </th>
+                )}
                 {columnVisibility.perkara && (
-                  <th className="min-w-[260px]">
+                  <th className="min-w-[240px]">
                     <SortHeader label="Perkara" onClick={() => handleSort("perkara")} />
                   </th>
                 )}
                 {columnVisibility.nilaiBayaran && (
-                  <th className="w-[140px] text-end">
+                  <th className="w-[132px] text-end">
                     <SortHeader label="Nilai" onClick={() => handleSort("nilaiBayaran")} end />
                   </th>
                 )}
-                {columnVisibility.bayaranKe && (
-                  <th className="hidden w-[90px] lg:table-cell">
-                    <SortHeader label="Ke" onClick={() => handleSort("bayaranKe")} />
-                  </th>
-                )}
                 {columnVisibility.noKontrak && (
-                  <th className="w-[140px] lg:w-[170px]">
+                  <th className="hidden w-[160px] lg:table-cell">
                     <SortHeader label="Kontraktor" onClick={() => handleSort("namaKontraktor")} />
                   </th>
                 )}
-                {columnVisibility.tarikhBayar && (
-                  <th className="hidden w-[120px] lg:table-cell">
-                    <SortHeader label="Tarikh Bayar" onClick={() => handleSort("tarikhBayar")} />
-                  </th>
-                )}
+                <th className="w-[150px]">Status</th>
               </tr>
             </thead>
             <tbody>
               {displayedBayaran.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>{empty}</td>
+                  <td colSpan={7}>{empty}</td>
                 </tr>
               ) : (
                 displayedBayaran.map((item) => (
                   <tr
                     key={item.id}
                     data-state={selectedRows.includes(item.id) ? "selected" : undefined}
-                    className={cx(
-                      "hover:bg-background-secondary-default data-[state=selected]:bg-accent-50 dark:data-[state=selected]:bg-accent-950/40",
-                      rowSurface(item),
-                    )}
+                    className="hover:bg-background-secondary-default data-[state=selected]:bg-accent-50 dark:data-[state=selected]:bg-accent-950/40"
                   >
                     <td className="align-top">
                       <Checkbox
                         size="sm"
-                        aria-label={`Pilih #${item.ids || item.id}`}
+                        aria-label={`Pilih #${item.ids ?? item.id}`}
                         isSelected={selectedRows.includes(item.id)}
                         onChange={(checked) => toggleRow(item.id, checked)}
                       />
                     </td>
                     {columnVisibility.id && (
                       <td className="align-top">
-                        <IdPill item={item} />
+                        <IdButton item={item} />
                       </td>
                     )}
                     {columnVisibility.daripadaTarikh && (
                       <td className="align-top">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-caption-1-regular text-text-tertiary tabular-nums">{item.tarikhTerima}</span>
-                          <span className="text-body-medium text-text-primary">{item.daripada}</span>
+                          <span className="text-body-regular text-text-primary tabular-nums">{item.tarikhTerima}</span>
+                          <span className="text-caption-1-regular text-text-tertiary">{item.daripada}</span>
                         </div>
                       </td>
                     )}
                     {columnVisibility.perkara && (
                       <td className="align-top">
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-body-medium text-text-primary">{item.perkara}</span>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openDetail(item)}
+                            className="cursor-pointer text-left text-body-medium text-text-primary outline-none hover:text-accent-600 focus-visible:underline dark:hover:text-accent-400"
+                          >
+                            {item.perkara}
+                          </button>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {item.kategori && (
                               <Chip variant="caption" color={bayaranKategoriChip(item.kategori)}>
                                 {item.kategori}
                               </Chip>
                             )}
-                            <StatusChip status={item.statusBayaran} hex={getStatusHex(item.statusBayaran)} />
                             <KontrakChip item={item} />
+                            {/* Kontraktor folds in here until its column appears at lg */}
+                            {columnVisibility.noKontrak && item.namaKontraktor && (
+                              <span className="text-caption-1-regular text-text-secondary lg:hidden">{item.namaKontraktor}</span>
+                            )}
                           </div>
                           {item.notaKaki && (
-                            <p className="text-caption-1-regular break-words text-text-error-primary">
+                            <p className="line-clamp-2 text-caption-1-regular break-words text-text-destructive">
                               {renderNotaKakiWithLinks(item.notaKaki)}
                             </p>
                           )}
@@ -288,26 +277,30 @@ export function BayaranTable({
                       </td>
                     )}
                     {columnVisibility.nilaiBayaran && (
-                      <td className="align-top text-end text-body-semibold whitespace-nowrap tabular-nums">
-                        {formatCurrency(item.nilaiBayaran)}
-                        {/* Below lg the Ke / Tarikh Bayar columns fold in under the amount. */}
-                        <span className="block text-caption-1-regular text-text-tertiary lg:hidden">
-                          {[
-                            columnVisibility.bayaranKe && item.bayaranKe ? `Ke-${item.bayaranKe}` : "",
-                            columnVisibility.tarikhBayar && item.tarikhBayar ? item.tarikhBayar : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
+                      <td className="align-top text-end whitespace-nowrap">
+                        <span className="text-body-semibold text-text-primary tabular-nums">{formatCurrency(item.nilaiBayaran)}</span>
+                        {columnVisibility.bayaranKe && item.bayaranKe && (
+                          <span className="block text-caption-1-regular text-text-tertiary">Bayaran ke-{item.bayaranKe}</span>
+                        )}
                       </td>
                     )}
-                    {columnVisibility.bayaranKe && <td className="hidden align-top tabular-nums lg:table-cell">{item.bayaranKe}</td>}
                     {columnVisibility.noKontrak && (
-                      <td className="align-top break-words text-text-secondary">{item.namaKontraktor || item.noKontrak || "-"}</td>
+                      <td className="hidden align-top break-words text-body-regular text-text-secondary lg:table-cell">
+                        {item.namaKontraktor || "-"}
+                      </td>
                     )}
-                    {columnVisibility.tarikhBayar && (
-                      <td className="hidden align-top text-text-secondary tabular-nums lg:table-cell">{item.tarikhBayar || "-"}</td>
-                    )}
+                    <td className="align-top">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          <StatusChip status={item.statusBayaran} hex={getStatusHex(item.statusBayaran)} />
+                          <HoldChip item={item} />
+                        </div>
+                        <StageDots item={item} />
+                        {columnVisibility.tarikhBayar && item.tarikhBayar && (
+                          <span className="text-caption-1-regular text-text-tertiary tabular-nums">Dibayar {item.tarikhBayar}</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -326,15 +319,13 @@ export function BayaranTable({
             return (
               <li
                 key={item.id}
-                className={cx(
-                  "flex flex-col gap-1.5 rounded-2xl border border-border-button-default bg-background-primary-default p-3 dark:bg-background-secondary-default",
-                  rowSurface(item, true),
-                )}
+                className="flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs"
               >
-                <div className="flex items-center gap-2">
-                  <IdPill item={item} />
-                  <span className="text-caption-1-regular text-text-secondary tabular-nums">{item.tarikhTerima}</span>
-                  <span className="ms-auto">
+                <div className="flex min-w-0 items-center gap-2">
+                  <IdButton item={item} className="shrink-0" />
+                  <span className="shrink-0 text-caption-1-regular text-text-secondary tabular-nums">{item.tarikhTerima}</span>
+                  <span className="ms-auto flex min-w-0 justify-end gap-1">
+                    <HoldChip item={item} />
                     <StatusChip status={item.statusBayaran} hex={getStatusHex(item.statusBayaran)} />
                   </span>
                   <button
@@ -351,9 +342,14 @@ export function BayaranTable({
                     )}
                   </button>
                 </div>
-                <p className="line-clamp-2 text-body-medium text-text-primary">{item.perkara}</p>
+                <button type="button" onClick={() => openDetail(item)} className="cursor-pointer text-left">
+                  <p className="line-clamp-2 text-body-medium text-text-primary">{item.perkara}</p>
+                </button>
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-caption-1-regular text-text-tertiary">{item.daripada}</span>
+                  <span className="min-w-0 truncate text-caption-1-regular text-text-tertiary">
+                    {item.daripada}
+                    {item.namaKontraktor ? ` · ${item.namaKontraktor}` : ""}
+                  </span>
                   <span className="shrink-0 text-body-semibold text-text-primary tabular-nums">
                     {formatCurrency(item.nilaiBayaran)}
                     {item.bayaranKe && (
@@ -369,13 +365,14 @@ export function BayaranTable({
                   )}
                   <KontrakChip item={item} />
                   {item.nomborBaucer && (
-                    <Chip variant="caption" color={isSelesai(item) ? "lime" : "gray"}>
+                    <Chip variant="caption" color={isBayaranSelesai(item) ? "lime" : "soft"}>
                       {item.nomborBaucer}
                     </Chip>
                   )}
+                  <StageDots item={item} className="ms-auto" />
                 </div>
                 {item.notaKaki && (
-                  <p className="line-clamp-2 text-caption-1-regular break-words text-text-error-primary">
+                  <p className="line-clamp-2 text-caption-1-regular break-words text-text-destructive">
                     {renderNotaKakiWithLinks(item.notaKaki)}
                   </p>
                 )}

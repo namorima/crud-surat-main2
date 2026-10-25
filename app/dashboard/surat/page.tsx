@@ -629,7 +629,16 @@ export default function SuratPage() {
 
     // Apply sorting
     if (sortField) {
+      // DD/MM/YYYY would sort by day as text; compare as YYYYMMDD instead
+      const dateKey = (value: unknown) => {
+        const m = String(value || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+        return m ? Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]) : 0
+      }
       filtered.sort((a, b) => {
+        if (sortField === "tarikh" || sortField === "tarikhSelesai") {
+          const diff = dateKey(a[sortField]) - dateKey(b[sortField])
+          return sortDirection === "asc" ? diff : -diff
+        }
         const aValue = a[sortField] || ""
         const bValue = b[sortField] || ""
 
@@ -1037,16 +1046,6 @@ export default function SuratPage() {
   // Get unit color
   const getUnitColor = (unit: string) => {
     return UNIT_COLORS[unit] || "#f3f4f6" // default light gray if no color defined
-  }
-
-  // Function to convert BIL references in text to clickable spans
-  const formatBilReferences = (text: string) => {
-    if (!text) return ""
-
-    // Replace #123 patterns with clickable spans
-    return text.replace(/#(\d+)/g, (match, bilNumber) => {
-      return `<span class="text-blue-600 cursor-pointer hover:underline" data-bil="${bilNumber}">${match}</span>`
-    })
   }
 
   const handleBilReferenceClick = (bilNumber: string) => {
@@ -2078,7 +2077,6 @@ export default function SuratPage() {
             canDelete={Boolean(canDelete)}
             generatingImage={generatingImage}
             sharingItemId={sharingItemId}
-            formatBilReferences={formatBilReferences}
             page={currentPage}
             pageSize={ITEMS_PER_PAGE}
             totalPages={totalPages}

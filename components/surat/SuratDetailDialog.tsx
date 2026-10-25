@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import {
   RiArrowDownLine,
   RiArrowUpLine,
@@ -16,6 +16,7 @@ import { Chip, type ChipProps } from "@/components/base/badges/chip"
 import { Button } from "@/components/base/buttons/button"
 import { suratStatusChip, unitChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
+import { TextWithBilLinks } from "@/components/surat/bil-links"
 
 type ChipColor = NonNullable<ChipProps["color"]>
 
@@ -33,29 +34,6 @@ function Field({ label, children, className }: { label: string; children: ReactN
       <dt className="text-caption-1-medium text-text-tertiary">{label}</dt>
       <dd className="min-w-0 text-body-regular text-text-primary break-words">{children}</dd>
     </div>
-  )
-}
-
-/** "#123" inside a note becomes a link to surat 123; the rest stays plain text. */
-function TextWithBilLinks({ text, onBilClick }: { text: string; onBilClick: (bil: string) => void }) {
-  const parts = text.split(/(#\d+)/g)
-  return (
-    <>
-      {parts.map((part, i) =>
-        /^#\d+$/.test(part) ? (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onBilClick(part.slice(1))}
-            className="cursor-pointer font-medium text-accent-600 underline-offset-2 hover:underline dark:text-accent-400"
-          >
-            {part}
-          </button>
-        ) : (
-          <Fragment key={i}>{part}</Fragment>
-        ),
-      )}
-    </>
   )
 }
 
