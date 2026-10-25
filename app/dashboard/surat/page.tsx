@@ -1,5 +1,6 @@
 "use client"
 
+import { PageLoader } from "@/components/dashboard/page-loader"
 import type React from "react"
 import type { FXNotification } from "@/types/fx-notification"
 
@@ -56,6 +57,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NavTrigger } from "@/components/dashboard/app-shell"
 import { SuratList } from "@/components/surat/SuratList"
+import { SuratDetailDialog } from "@/components/surat/SuratDetailDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 
 // Number of items per page
@@ -1172,9 +1174,7 @@ export default function SuratPage() {
 
   if (loading && surat.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
+      <PageLoader />
     )
   }
 
@@ -2466,197 +2466,26 @@ export default function SuratPage() {
       </Dialog>
 
       {/* Detail Modal */}
-<Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-3 md:p-6">
-    <DialogHeader className="p-0 md:p-2">
-      <DialogTitle className="text-base md:text-lg">Maklumat Surat #{detailSurat?.bil}</DialogTitle>
-      <DialogDescription className="text-xs md:text-sm">Maklumat terperinci untuk surat ini.</DialogDescription>
-    </DialogHeader>
-
-    {detailSurat && (
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-medium mb-1">Status</h3>
-            <Badge className={getStatusColor(detailSurat.status)}>{detailSurat.status}</Badge>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium mb-1">Kategori</h3>
-            <div className="flex items-center">
-              <span className={detailSurat.kategori === "MASUK" ? "text-red-600" : "text-blue-600"}>
-                {detailSurat.kategori}
-              </span>
-              {detailSurat.kategori === "MASUK" && <ArrowDown className="ml-1 h-4 w-4 text-red-600" />}
-              {detailSurat.kategori === "KELUAR" && <ArrowUp className="ml-1 h-4 w-4 text-blue-600" />}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-medium mb-1">Daripada/Kepada</h3>
-            <p className="text-sm">{detailSurat.daripadaKepada}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium mb-1">Tarikh</h3>
-            <p className="text-sm">{detailSurat.tarikh}</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium mb-1">Perkara</h3>
-          <p className="text-sm">{detailSurat.perkara}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-medium mb-1">Unit</h3>
-            <Badge
-              variant="outline"
-              className="text-neutral-900"
-              style={{
-                backgroundColor: getUnitColor(detailSurat.unit),
-                borderColor: getUnitColor(detailSurat.unit),
-              }}
-            >
-              {detailSurat.unit}
-            </Badge>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium mb-1">Tindakan PIC</h3>
-            <p className="text-sm">{detailSurat.tindakanPic || "-"}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-medium mb-1">Reference</h3>
-            {detailSurat.reference ? (
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-accent"
-                onClick={() => handleBilReferenceClick(detailSurat.reference)}
-              >
-                Respon : {detailSurat.reference}
-              </Badge>
-            ) : (
-              <p className="text-sm">-</p>
-            )}
-          </div>
-          <div>
-            <h3 className="text-sm font-medium mb-1">Tarikh Selesai</h3>
-            <p className="text-sm">{detailSurat.tarikhSelesai || "-"}</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium mb-1">Fail</h3>
-          {detailSurat.fail && detailSurat.fail !== "-" ? (
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="text-neutral-900"
-                style={{
-                  backgroundColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
-                  borderColor: getFailPartColor(getFailPartFromStoredValue(detailSurat.fail, failData)),
-                }}
-              >
-                {getFullFailDisplay(detailSurat.fail, failData)}
-              </Badge>
-            </div>
-          ) : (
-            <p className="text-sm">-</p>
-          )}
-        </div>
-
-        {detailSurat.nota && (
-          <div>
-            <h3 className="text-sm font-medium mb-1">Nota</h3>
-            <div
-              className="text-sm text-red-500"
-              dangerouslySetInnerHTML={{ __html: formatBilReferences(detailSurat.nota) }}
-              onClick={(e) => {
-                const target = e.target as HTMLElement
-                if (target.hasAttribute("data-bil")) {
-                  const bilNumber = target.getAttribute("data-bil")
-                  if (bilNumber) {
-                    handleBilReferenceClick(bilNumber)
-                  }
-                }
-              }}
-            />
-          </div>
-        )}
-
-        {detailSurat.komen && (
-          <div>
-            <h3 className="text-sm font-medium mb-1 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Komen Pengurus
-            </h3>
-            <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">{detailSurat.komen}</div>
-          </div>
-        )}
-      </div>
-    )}
-
-    <DialogFooter className="flex flex-row justify-center gap-2">
-      <Button
-        variant="outline"
-        onClick={() => setIsDetailModalOpen(false)}
-        className="p-2 w-[30%] sm:w-auto bg-red-600 text-white hover:bg-red-700 hover:text-white border-red-600"
-        title="Tutup"
-      >
-        <X className="h-4 w-4" />
-        <span className="hidden sm:inline">Tutup</span>
-      </Button>
-      {detailSurat && (
-        <Button
-          variant="outline"
-          onClick={() => {
-            setIsDetailModalOpen(false)
-            handleOpenAddDialog(detailSurat.bil)
-          }}
-          className="p-2 w-[30%] sm:w-auto"
-          title="Respon"
-          disabled={!!detailSurat.reference}
-        >
-          <Reply className="h-4 w-4" />
-          <span className="hidden sm:inline">Respon</span>
-        </Button>
-      )}
-      {canEditFull && detailSurat && (
-        <Button
-          onClick={() => {
-            setIsDetailModalOpen(false)
-            openEditDialog(detailSurat)
-          }}
-          className="p-2 w-[30%] sm:w-auto"
-          title="Edit"
-        >
-          <Edit className="h-4 w-4" />
-          <span className="hidden sm:inline">Edit</span>
-        </Button>
-      )}
-      {detailSurat && (
-        <Button
-          variant="outline"
-          onClick={() => handleShareToWhatsApp(detailSurat)}
-          disabled={generatingImage}
-          className="p-2 w-[30%] sm:w-auto"
-          title="Share"
-        >
-          {sharingItemId === detailSurat.id ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Share2 className="h-4 w-4" />
-          )}
-          <span className="hidden sm:inline">{sharingItemId === detailSurat.id ? "Generating..." : "Share"}</span>
-        </Button>
-      )}
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+      <SuratDetailDialog
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        surat={detailSurat}
+        failLabel={detailSurat ? getFullFailDisplay(detailSurat.fail, failData) : "-"}
+        failPart={detailSurat ? getFailPartFromStoredValue(detailSurat.fail, failData) : ""}
+        canEdit={!!canEditFull}
+        sharing={!!detailSurat && sharingItemId === detailSurat.id}
+        generatingImage={generatingImage}
+        onRespond={(item) => {
+          setIsDetailModalOpen(false)
+          handleOpenAddDialog(item.bil)
+        }}
+        onEdit={(item) => {
+          setIsDetailModalOpen(false)
+          openEditDialog(item)
+        }}
+        onShare={handleShareToWhatsApp}
+        onBilClick={handleBilReferenceClick}
+      />
 
       {/* Comment Dialog */}
       <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>

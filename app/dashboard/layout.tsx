@@ -24,7 +24,7 @@ export default function DashboardLayout({
   if (loading || !user) {
     return (
       <div className="flex h-dvh items-center justify-center bg-background-full">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="size-8 animate-spin rounded-full border-4 border-accent-500 border-t-transparent" role="status" aria-label="Memuatkan" />
       </div>
     )
   }

@@ -12,6 +12,7 @@ import {
 import type { Surat } from "@/types/surat"
 import type { Bayaran } from "@/types/bayaran"
 import { NavTrigger } from "@/components/dashboard/app-shell"
+import { PageLoader } from "@/components/dashboard/page-loader"
 import { useNavigation } from "@/components/dashboard/sidebar"
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control"
 import { BarList, ChartCard, KpiGrid, MonthlyStack, ORDINAL } from "@/components/dashboard/charts"
@@ -113,9 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
+        <PageLoader inline />
       ) : error ? (
         <p className="rounded-2xl border border-border-table bg-background-primary-default p-6 text-center text-body-regular text-text-secondary">{error}</p>
       ) : shown === "bayaran" ? (
