@@ -741,6 +741,8 @@ export async function getContractCategoryData() {
     const kontrakInfo: Record<string, { kerja: string; nilaiKontrak: number | null }> = {}
     const allContracts: string[] = []
     const allCategories: string[] = []
+    // A no kontrak with an AKTIF row stays selectable in Tambah Rekod Bayaran
+    const activeContracts = new Set<string>()
 
     data?.forEach((row) => {
       const kawasan = row.kawasan || ""
@@ -782,6 +784,8 @@ export async function getContractCategoryData() {
         }
       }
 
+      if (noKontrak && (row.status || "AKTIF") === "AKTIF") activeContracts.add(noKontrak)
+
       // Collect all contracts and categories for LADANG NEGERI
       if (noKontrak && !allContracts.includes(noKontrak)) {
         allContracts.push(noKontrak)
@@ -791,7 +795,10 @@ export async function getContractCategoryData() {
       }
     })
 
-    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo }
+    // SELESAI / TIDAK AKTIF: kept for old records and filters, hidden from new bayaran
+    const closedContracts = allContracts.filter((noKontrak) => !activeContracts.has(noKontrak))
+
+    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo, closedContracts }
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
     throw new Error(`Failed to fetch contract and category data from Supabase: ${error.message}`)
@@ -815,6 +822,7 @@ function mapKontrakRow(row: any): Kontrak {
     jenisKerja: row.jenis_kerja || "",
     kerja: row.kerja || "",
     nilaiKontrak: row.nilai_kontrak === null || row.nilai_kontrak === undefined ? null : Number(row.nilai_kontrak),
+    status: row.status || "AKTIF",
   }
 }
 
@@ -829,6 +837,7 @@ function kontrakToRow(input: KontrakInput) {
     jenis_kerja: input.jenisKerja || null,
     kerja: input.kerja || null,
     nilai_kontrak: input.nilaiKontrak,
+    status: input.status || "AKTIF",
   }
 }
 
@@ -919,6 +928,13 @@ export async function updateKontrak(
       .single()
 
     if (error) throw error
+    // Rows sharing this no kontrak (one per kategori) open and close together
+    const { error: statusError } = await supabaseAdmin
+      .from("kontrak")
+      .update({ status: input.status || "AKTIF" })
+      .eq("no_kontrak", input.noKontrak)
+      .neq("id", id)
+    if (statusError) throw statusError
     const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor)
     return { kontrak: mapKontrakRow(data), bayaranUpdated }
   } catch (error: any) {

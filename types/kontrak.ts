@@ -15,6 +15,10 @@ export interface Kontrak {
   kerja: string
   /** Contract value in RM, or null when not set */
   nilaiKontrak: number | null
+  /** Only AKTIF contracts are offered in Tambah Rekod Bayaran */
+  status: KontrakStatus
 }
+
+export type KontrakStatus = "AKTIF" | "SELESAI" | "TIDAK AKTIF"
 
 export type KontrakInput = Omit<Kontrak, "id" | "tahunKontrak">

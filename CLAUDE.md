@@ -60,8 +60,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `created_at`
-   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql) and [add-kontrak-nilai.sql](add-kontrak-nilai.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `status` (AKTIF | SELESAI | TIDAK AKTIF, default AKTIF), `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql), [add-kontrak-nilai.sql](add-kontrak-nilai.sql) and [add-kontrak-status.sql](add-kontrak-status.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`kontraktor`** - Contractor master data (vendor and bank details)
    - Columns: `id`, `nama_kontraktor` (unique, case-insensitive), `no_vendor`, `nama_akaun`, `nombor_akaun`, `jenis_bank`, `created_at`, `updated_at`
@@ -652,7 +652,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
    - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
-   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name). Status is shared by rows with the same `no_kontrak`; a no kontrak without an AKTIF row is in `closedContracts` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran (a record that already uses it keeps it)
 
 7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter

@@ -142,6 +142,7 @@ export default function BayaranPage() {
     allCategories: [] as string[],
     contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
     kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak
+    closedContracts: [] as string[], // SELESAI / TIDAK AKTIF: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -292,6 +293,7 @@ export default function BayaranPage() {
           allCategories: data.allCategories || [],
           contractorData: data.contractorData || {},
           kontrakInfo: data.kontrakInfo || {},
+          closedContracts: data.closedContracts || [],
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -498,10 +500,14 @@ export default function BayaranPage() {
   };
 
   const getAvailableKontraks = () => {
-    if (formData.daripada.toUpperCase() === "LADANG NEGERI") {
-      return formOptions.allContracts;
-    }
-    return formOptions.contractData[formData.daripada] || [];
+    const all =
+      formData.daripada.toUpperCase() === "LADANG NEGERI"
+        ? formOptions.allContracts
+        : formOptions.contractData[formData.daripada] || [];
+    // Closed contracts (SELESAI / TIDAK AKTIF) are hidden; a record that already
+    // uses one keeps showing it so editing does not wipe its no kontrak
+    const closed = new Set(formOptions.closedContracts);
+    return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === formData.noKontrak);
   };
 
   const getAvailableKategoris = () => {
