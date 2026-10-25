@@ -621,10 +621,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `PublicBayaranTable.tsx` - Public payment table
    - `FilterSummaryBadges.tsx` - Filter badges display
 
-3. **Pengguna Components** ([components/pengguna/](components/pengguna/))
-   - `UserForm.tsx` - User add/edit form
-   - `RoleManager.tsx` - RBAC role management
-   - `UnitPicManager.tsx` - Unit PIC management
+3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
+   - `UserForm.tsx` - User add/edit dialog
+   - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
+   - `UnitPicManager.tsx` - Unit PIC management with search
+   - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
    - `app-shell.tsx` - BoardUI page frame: sidebar from `lg`, drawer below, `NavTrigger` for iPad portrait
