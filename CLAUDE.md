@@ -649,7 +649,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
-   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit
+   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
    - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
 
