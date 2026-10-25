@@ -633,7 +633,9 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `header.tsx` - Page header
 
 5. **Surat Components** ([components/surat/](components/surat/))
-   - `SuratList.tsx` - BoardUI table (md+) and compact cards (phones) with pagination
+   - `SuratList.tsx` - BoardUI table (md+: Bil, Tarikh, Perkara, Unit/PIC from lg, Status, Ref) and compact neutral cards (phones) with pagination; status shows as a chip, rows are not tinted
+   - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share)
+   - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/))
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
