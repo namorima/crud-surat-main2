@@ -208,6 +208,14 @@ Located in `types/` directory:
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
 - **Charts**: Recharts + HTML bar lists on the Dashboard ([components/dashboard/charts.tsx](components/dashboard/charts.tsx)); chart colours are `--viz-*` tokens in [app/globals.css](app/globals.css)
 - **Notifications**: Sonner toast notifications ([hooks/use-toast.ts](hooks/use-toast.ts))
+- **Motion**: CSS-only, defined at the end of [app/globals.css](app/globals.css) (`--ease-out-soft`, `--ease-sheet`)
+  - `motion-page`: page rise, from [app/dashboard/template.tsx](app/dashboard/template.tsx)
+  - `motion-panel`: BoardUI tab panels
+  - `motion-stagger`: put on a list's `ul`/`tbody` and its first 12 children come in one by one (rows only fade)
+  - `motion-bar`: Dashboard bar lists
+  - `motion-press`: tap feedback
+  - Dialogs slide up as a sheet on phones and zoom on desktop; the nav drawer animates out
+  - Entrances use fill-mode `backwards` so no transform stays behind; `prefers-reduced-motion` turns all of it off except spinners
 
 ## Environment Setup
 
@@ -624,7 +632,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
    - `UserForm.tsx` - User add/edit dialog
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
-   - `UnitPicManager.tsx` - Unit PIC management with search
+   - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
@@ -641,7 +649,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
-   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit
+   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
    - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
 
@@ -687,7 +695,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 
 - `/api/daripada-kepada` - Fetch daripada/kepada options ([app/api/daripada-kepada/route.ts](app/api/daripada-kepada/route.ts))
 - `/api/bayaran-form-data` - Fetch form data for bayaran ([app/api/bayaran-form-data/route.ts](app/api/bayaran-form-data/route.ts))
-- `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts))
+- `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts)); GET is open to signed-in users (Surat form), writes need `pengguna:manage_roles`
 - `/api/kontraktor` - Kontraktor list/add; `/api/kontraktor/[id]` edit/delete ([app/api/kontraktor/route.ts](app/api/kontraktor/route.ts))
 - `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 

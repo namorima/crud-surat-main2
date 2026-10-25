@@ -4,7 +4,7 @@ import type React from "react"
 import type { ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { RiAddLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiSearchLine } from "@remixicon/react"
+import { RiAddLine, RiDeleteBinLine, RiEditLine, RiFilter3Line, RiLoader4Line, RiSearchLine } from "@remixicon/react"
 import type { Fail } from "@/types/fail"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,10 @@ import { RowActions } from "@/components/dashboard/row-actions"
 import { cx } from "@/utils/cx"
 
 const FAIL_PARTS = ["HASIL", "PERTANIAN AM", "KONTRAK"]
+
+const ALL_UNITS = "__all__"
+/** localStorage key for the Setup Fail unit filter (per browser). */
+const UNIT_FILTER_KEY = "tetapan:setup-fail:unit"
 
 /** Same hues as the fail dots in the Surat form. */
 const FAIL_PART_DOT: Record<string, string> = {
@@ -127,25 +131,58 @@ export function FailManager({
       .catch((error) => console.error("Error fetching units:", error))
   }, [canViewAll])
 
+  // Unit filter (users who see every unit only); remembered across reloads
+  const [unitFilter, setUnitFilterState] = useState(ALL_UNITS)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(UNIT_FILTER_KEY)
+      if (saved) setUnitFilterState(saved)
+    } catch {
+      // storage blocked (private mode): keep "Semua unit"
+    }
+  }, [])
+  const setUnitFilter = (value: string) => {
+    setUnitFilterState(value)
+    try {
+      if (value === ALL_UNITS) localStorage.removeItem(UNIT_FILTER_KEY)
+      else localStorage.setItem(UNIT_FILTER_KEY, value)
+    } catch {
+      // not persisted; the filter still applies for this visit
+    }
+  }
+  const activeUnit = canViewAll ? unitFilter : ALL_UNITS
+
   // Non-admin users only see their own unit's fails
   const visible = useMemo(
     () => (canViewAll ? items : items.filter((fail) => fail.unit === userUnit)),
     [items, canViewAll, userUnit],
   )
 
+  // Units from Unit PIC plus any unit already used by a fail (and the saved one, so it still shows)
+  const unitOptions = useMemo(() => {
+    const all = new Set([...units, ...items.map((fail) => fail.unit).filter(Boolean)])
+    if (unitFilter !== ALL_UNITS) all.add(unitFilter)
+    return Array.from(all).sort((a, b) => a.localeCompare(b))
+  }, [units, items, unitFilter])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return visible
-    return visible.filter((fail) =>
-      [fail.part, fail.noLocker, fail.noFail, fail.pecahan, fail.pecahanKecil, fail.unit].some((value) =>
-        (value || "").toLowerCase().includes(q),
-      ),
+    return visible.filter(
+      (fail) =>
+        (activeUnit === ALL_UNITS || fail.unit === activeUnit) &&
+        (!q ||
+          [fail.part, fail.noLocker, fail.noFail, fail.pecahan, fail.pecahanKecil, fail.unit].some((value) =>
+            (value || "").toLowerCase().includes(q),
+          )),
     )
-  }, [visible, query])
+  }, [visible, query, activeUnit])
+
+  const narrowed = Boolean(query.trim()) || activeUnit !== ALL_UNITS
 
   const openAdd = () => {
     setEditing(null)
-    setForm(empty)
+    // A unit picked in the filter is the likely unit for the new fail
+    setForm(activeUnit !== ALL_UNITS ? { ...empty, unit: activeUnit } : empty)
     setFormOpen(true)
   }
 
@@ -231,15 +268,41 @@ export function FailManager({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="relative">
-          <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari part, locker, no fail, pecahan atau unit…"
-            className="pl-8"
-            aria-label="Cari fail"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari part, locker, no fail, pecahan atau unit…"
+              className="pl-8"
+              aria-label="Cari fail"
+            />
+          </div>
+          {canViewAll && (
+            <Select value={unitFilter} onValueChange={setUnitFilter}>
+              <SelectTrigger
+                aria-label="Tapis unit"
+                className={cx("sm:w-52", unitFilter !== ALL_UNITS && "ring-border-button-active")}
+              >
+                {/* div, not span: the trigger line-clamps direct span children */}
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <RiFilter3Line className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                  <span className="truncate">
+                    <SelectValue />
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_UNITS}>Semua unit</SelectItem>
+                {unitOptions.map((unit) => (
+                  <SelectItem key={unit} value={unit}>
+                    {unit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {loading ? (
@@ -249,7 +312,11 @@ export function FailManager({
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-10 text-center text-body-regular text-text-secondary">
-            {visible.length === 0 ? "Tiada data fail" : "Tiada fail sepadan dengan carian"}
+            {visible.length === 0
+              ? "Tiada data fail"
+              : query.trim()
+                ? "Tiada fail sepadan dengan carian"
+                : `Tiada fail untuk unit ${activeUnit}`}
           </p>
         ) : (
           <>
@@ -272,7 +339,7 @@ export function FailManager({
                       )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="motion-stagger">
                     {filtered.map((fail) => (
                       <tr key={fail.id} className="hover:bg-background-secondary-default">
                         <td>
@@ -296,7 +363,7 @@ export function FailManager({
             </div>
 
             {/* Phones */}
-            <ul className="grid gap-2 md:hidden">
+            <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
               {filtered.map((fail) => (
                 <li key={fail.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -323,8 +390,9 @@ export function FailManager({
 
       <CardFooter>
         <p className="text-body-regular text-text-secondary">
-          Jumlah: {query ? `${filtered.length} / ` : ""}
+          Jumlah: {narrowed ? `${filtered.length} / ` : ""}
           {visible.length} fail
+          {activeUnit !== ALL_UNITS && ` · Unit ${activeUnit}`}
         </p>
       </CardFooter>
 

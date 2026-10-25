@@ -211,7 +211,7 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
                       )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="motion-stagger">
                     {filtered.map((item) => (
                       <tr key={item.id} className="hover:bg-background-secondary-default">
                         <td className="text-body-semibold">{item.namaKontraktor}</td>
@@ -232,7 +232,7 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
             </div>
 
             {/* Phones and iPad portrait */}
-            <ul className="grid gap-2 md:grid-cols-2 lg:hidden">
+            <ul className="motion-stagger grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden">
               {filtered.map((item) => (
                 <li key={item.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

@@ -106,7 +106,7 @@ export function ShareLinkTable({ shareLinks, onDelete, baseUrl }: ShareLinkTable
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="motion-stagger">
               {shareLinks.map((link) => {
                 const expired = isExpired(link.expiresAt)
                 return (
@@ -147,7 +147,7 @@ export function ShareLinkTable({ shareLinks, onDelete, baseUrl }: ShareLinkTable
       </div>
 
       {/* Phones and iPad portrait */}
-      <ul className="grid gap-2 md:grid-cols-2 lg:hidden">
+      <ul className="motion-stagger grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden">
         {shareLinks.map((link) => {
           const expired = isExpired(link.expiresAt)
           return (

@@ -52,7 +52,7 @@ export type Kpi = {
 /** Headline numbers: two per row on phones, four from `lg`. */
 export function KpiGrid({ items }: { items: Kpi[] }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+    <div className="motion-stagger grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
       {items.map((k) => (
         <div
           key={k.label}
@@ -112,8 +112,13 @@ export function BarList({
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-[var(--viz-track)]">
               <div
-                className="h-full rounded-full"
-                style={{ width: `${pct}%`, minWidth: row.value > 0 ? 4 : 0, background: colors?.[i] ?? "var(--viz-1)" }}
+                className="motion-bar h-full rounded-full transition-[width] duration-500 ease-[var(--ease-out-soft)]"
+                style={{
+                  width: `${pct}%`,
+                  minWidth: row.value > 0 ? 4 : 0,
+                  background: colors?.[i] ?? "var(--viz-1)",
+                  animationDelay: `${Math.min(i, 8) * 40}ms`,
+                }}
               />
             </div>
           </li>

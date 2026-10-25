@@ -308,7 +308,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="motion-stagger">
                     {filtered.map((item) => (
                       <tr key={item.id} className="hover:bg-background-secondary-default">
                         <td>
@@ -362,20 +362,23 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             </div>
 
             {/* Phones and iPads */}
-            <ul className="grid gap-2 md:grid-cols-2 xl:hidden">
+            <ul className="motion-stagger grid grid-cols-1 gap-2 md:grid-cols-2 xl:hidden">
               {filtered.map((item) => (
                 <li key={item.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-body-semibold text-text-primary">{item.noKontrak}</span>
+                      <span className="min-w-0 text-body-semibold text-text-primary [overflow-wrap:anywhere]">{item.noKontrak}</span>
                       {item.kategori && (
                         <Chip variant="caption" color={bayaranKategoriChip(item.kategori)}>
                           {item.kategori}
                         </Chip>
                       )}
                     </div>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="min-w-0 truncate text-body-medium text-text-primary">{item.namaKontraktor || "-"}</span>
+                    {/* The amount drops under the name when both do not fit */}
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                      <span className="min-w-0 flex-1 basis-40 line-clamp-2 text-body-medium text-text-primary [overflow-wrap:anywhere]">
+                        {item.namaKontraktor || "-"}
+                      </span>
                       {item.nilaiKontrak !== null && (
                         <span className="shrink-0 text-body-semibold text-text-primary tabular-nums">RM {formatNilai(item.nilaiKontrak)}</span>
                       )}

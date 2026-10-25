@@ -157,7 +157,7 @@ function BayaranSection({ stats }: { stats: ReturnType<typeof bayaranStats> }) {
         />
       </ChartCard>
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="motion-stagger grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <ChartCard title="Peringkat proses" caption="Berapa rekod sudah melepasi setiap peringkat">
           <BarList
             rows={stats.funnel}
@@ -224,7 +224,7 @@ function SuratSection({ stats }: { stats: ReturnType<typeof suratStats> }) {
         />
       </ChartCard>
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="motion-stagger grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <ChartCard title="Status surat">
           <BarList rows={stats.status} format={(v) => `${count(v)} surat`} />
         </ChartCard>
