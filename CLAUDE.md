@@ -59,8 +59,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `created_at`
-   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql) and [add-kontrak-kerja.sql](add-kontrak-kerja.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql) and [add-kontrak-nilai.sql](add-kontrak-nilai.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`kontraktor`** - Contractor master data (vendor and bank details)
    - Columns: `id`, `nama_kontraktor` (unique, case-insensitive), `no_vendor`, `nama_akaun`, `nombor_akaun`, `jenis_bank`, `created_at`, `updated_at`
@@ -616,8 +616,8 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `progress.tsx` - process steps (Memo → PPN(P) → PN → Hantar → Bayar) and the `StageDots` indicator
 
 2. **Share Components** ([components/share/](components/share/))
-   - `ShareLinkForm.tsx` - Create share link form
-   - `ShareLinkTable.tsx` - Share links management table
+   - `ShareLinkForm.tsx` - Create share link form (renders the dialog body and footer; the page owns the dialog header)
+   - `ShareLinkTable.tsx` - Share links management table (table from `lg`, cards below, RowActions)
    - `PublicBayaranTable.tsx` - Public payment table
    - `FilterSummaryBadges.tsx` - Filter badges display
 
@@ -639,7 +639,8 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
-6. **Tetapan Components** ([components/tetapan/](components/tetapan/))
+6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
+   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
    - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name)
 

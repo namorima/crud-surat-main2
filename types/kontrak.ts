@@ -13,6 +13,8 @@ export interface Kontrak {
   jenisKerja: string
   /** Name of the work, e.g. "Kerja Mengangkut BTS Di Ladang ..." */
   kerja: string
+  /** Contract value in RM, or null when not set */
+  nilaiKontrak: number | null
 }
 
 export type KontrakInput = Omit<Kontrak, "id" | "tahunKontrak">
