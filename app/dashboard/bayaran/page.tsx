@@ -389,10 +389,19 @@ export default function BayaranPage() {
         const aValue = a[sortField] || "";
         const bValue = b[sortField] || "";
 
-        // Special handling for IDS field to sort numerically
-        if (sortField === "ids") {
-          const aNum = Number(aValue) || 0;
-          const bNum = Number(bValue) || 0;
+        // Numbers and DD/MM/YYYY dates must not be compared as text
+        const numeric = (value: unknown): number | null => {
+          if (sortField === "ids") return Number(value) || 0;
+          if (sortField === "nilaiBayaran") return Number(String(value).replace(/[^\d.-]/g, "")) || 0;
+          if (String(sortField).startsWith("tarikh")) {
+            const m = String(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            return m ? Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]) : 0;
+          }
+          return null;
+        };
+        const aNum = numeric(aValue);
+        const bNum = numeric(bValue);
+        if (aNum !== null && bNum !== null) {
           return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
         }
 
