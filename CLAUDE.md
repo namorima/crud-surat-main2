@@ -59,8 +59,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `unit`, `pic`, `created_at`
 
 7. **`kontrak`** - Contract and category data
-   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `created_at`
-   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql) and [add-kontrak-kerja.sql](add-kontrak-kerja.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
+   - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `created_at`
+   - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql) and [add-kontrak-nilai.sql](add-kontrak-nilai.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`kontraktor`** - Contractor master data (vendor and bank details)
    - Columns: `id`, `nama_kontraktor` (unique, case-insensitive), `no_vendor`, `nama_akaun`, `nombor_akaun`, `jenis_bank`, `created_at`, `updated_at`

@@ -749,6 +749,7 @@ function mapKontrakRow(row: any): Kontrak {
     tahunKontrak: row.tahun_kontrak ?? null,
     jenisKerja: row.jenis_kerja || "",
     kerja: row.kerja || "",
+    nilaiKontrak: row.nilai_kontrak === null || row.nilai_kontrak === undefined ? null : Number(row.nilai_kontrak),
   }
 }
 
@@ -762,6 +763,7 @@ function kontrakToRow(input: KontrakInput) {
     tarikh_akhir: input.tarikhAkhir || null,
     jenis_kerja: input.jenisKerja || null,
     kerja: input.kerja || null,
+    nilai_kontrak: input.nilaiKontrak,
   }
 }
 
