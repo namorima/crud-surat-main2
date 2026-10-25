@@ -1,5 +1,6 @@
 "use client"
 
+import { PageLoader } from "@/components/dashboard/page-loader"
 import type React from "react"
 import type { FXNotification } from "@/types/fx-notification"
 
@@ -1172,9 +1173,7 @@ export default function SuratPage() {
 
   if (loading && surat.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
+      <PageLoader />
     )
   }
 

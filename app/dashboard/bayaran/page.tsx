@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoader } from "@/components/dashboard/page-loader"
 import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
@@ -1034,9 +1035,7 @@ Detail: ${directLink}
 
   if (loading && bayaran.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
+      <PageLoader />
     );
   }
 
