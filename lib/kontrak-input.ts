@@ -1,7 +1,8 @@
-import type { KontrakInput } from "@/types/kontrak"
+import type { KontrakInput, KontrakStatus } from "@/types/kontrak"
 
 export const KONTRAK_KATEGORI = ["KONTRAK", "PERTANIAN AM", "ANGKUT BTS", "KIMIA", "PIECERATE"] as const
 export const JENIS_KERJA = ["RUNDING TERUS", "SEBUTHARGA KAWASAN", "KUASA EKSEKUTIF", "KONTRAK HQ"] as const
+export const KONTRAK_STATUS: readonly KontrakStatus[] = ["AKTIF", "SELESAI", "TIDAK AKTIF"]
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -32,8 +33,10 @@ export function parseKontrakInput(body: any): KontrakInput | string {
     // Free text: kept as typed rather than upper-cased.
     kerja: text(body?.kerja).replace(/\s+/g, " "),
     nilaiKontrak: parseNilai(body?.nilaiKontrak),
+    status: (text(body?.status).toUpperCase() || "AKTIF") as KontrakStatus,
   }
   if (!input.kawasan || !input.noKontrak) return "Kawasan dan No Kontrak wajib diisi"
+  if (!KONTRAK_STATUS.includes(input.status)) return `Status tidak sah: ${input.status}`
   // Kategori is picked from KONTRAK_KATEGORI in the form; older rows may hold
   // other values, so the server does not reject them.
   if (Number.isNaN(input.nilaiKontrak)) return "Nilai kontrak tidak sah (contoh: 125000.00)"
