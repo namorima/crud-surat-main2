@@ -1,5 +1,6 @@
 "use client"
 
+import { PageLoader } from "@/components/dashboard/page-loader"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-provider"
 import { useRouter } from "next/navigation"
@@ -148,9 +149,7 @@ export default function PenggunaPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <PageLoader />
     )
   }
 
