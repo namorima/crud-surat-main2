@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { RiLoader4Line } from "@remixicon/react"
+import { RiLoader4Line, RiLockPasswordLine } from "@remixicon/react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -215,21 +215,34 @@ export function UserForm({ open, onOpenChange, user, users = [], onSuccess }: Us
                 </div>
               )}
             </FormField>
-            <FormField
-              label="Kata Laluan"
-              htmlFor="password"
-              required={!user}
-              hint={user ? "Biarkan kosong jika tidak mahu ubah." : undefined}
-            >
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required={!user}
-              />
-            </FormField>
+            {user ? (
+              <FormField label="Kata Laluan" htmlFor="password" hint="Biarkan kosong jika tidak mahu ubah.">
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </FormField>
+            ) : (
+              // New accounts start with the staff ID as password and must change it on first login
+              <FormField label="Kata Laluan Awal">
+                <div className="flex items-start gap-2 rounded-xl bg-background-secondary-default p-3 text-caption-1-regular text-text-secondary">
+                  <RiLockPasswordLine className="mt-0.5 size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                  <p>
+                    Sama dengan ID staf
+                    {typedId && (
+                      <>
+                        {" "}
+                        (<span className="font-mono text-text-primary">{typedId}</span>)
+                      </>
+                    )}
+                    . Pengguna wajib menukar kata laluan semasa log masuk kali pertama.
+                  </p>
+                </div>
+              </FormField>
+            )}
             <FormField label="Nama Penuh" htmlFor="name" required>
               <Input
                 id="name"

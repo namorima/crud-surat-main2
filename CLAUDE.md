@@ -631,7 +631,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `FilterSummaryBadges.tsx` - Filter badges display
 
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
-   - `UserForm.tsx` - User add/edit dialog
+   - `UserForm.tsx` - User add/edit dialog; a new account has no password field: its first password is the staff ID and `must_change_password` forces a change on first login
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
    - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)

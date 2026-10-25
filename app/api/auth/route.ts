@@ -46,9 +46,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    if (!body.username || !body.password || !body.name || !body.role_id) {
+    // No password: the first password is the staff ID; the user must change it on first login
+    if (!body.username || !body.name || !body.role_id) {
       return NextResponse.json(
-        { error: "username, password, name, and role_id are required" },
+        { error: "username, name, and role_id are required" },
         { status: 400 }
       )
     }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     try {
       user = await createUser({
         username: staffId,
-        password: body.password,
+        password: body.password || staffId,
         name: body.name,
         role_id: body.role_id,
         type: body.type
