@@ -11,7 +11,7 @@ const MAX_TABS = 4
 const tabClass = (selected: boolean) =>
   cx(
     "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 outline-none",
-    "transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+    "motion-press focus-visible:ring-2 focus-visible:ring-border-focus-ring",
     selected
       ? "bg-background-primary-default text-accent-600 shadow-card dark:text-accent-400"
       : "text-foreground-icon-secondary active:bg-background-secondary-hover",

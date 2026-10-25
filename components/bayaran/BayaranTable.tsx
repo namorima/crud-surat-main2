@@ -213,7 +213,7 @@ export function BayaranTable({
                 <th className="w-[150px]">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="motion-stagger">
               {displayedBayaran.length === 0 ? (
                 <tr>
                   <td colSpan={7}>{empty}</td>
@@ -310,7 +310,7 @@ export function BayaranTable({
       </div>
 
       {/* Phones: compact cards */}
-      <ul className="flex flex-col gap-2 md:hidden">
+      <ul className="motion-stagger flex flex-col gap-2 md:hidden">
         {displayedBayaran.length === 0 ? (
           <li>{empty}</li>
         ) : (

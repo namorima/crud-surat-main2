@@ -277,7 +277,7 @@ export function SuratList(props: SuratListProps) {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="motion-stagger">
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={7}>
@@ -350,7 +350,7 @@ export function SuratList(props: SuratListProps) {
       </div>
 
       {/* Phones: compact cards */}
-      <ul className="flex flex-col gap-2 md:hidden">
+      <ul className="motion-stagger flex flex-col gap-2 md:hidden">
         {items.length === 0 ? (
           <li>
             <EmptyState loading={props.loading} error={props.error} onReload={props.onReload} />
