@@ -682,6 +682,8 @@ export async function getContractCategoryData() {
     const contractData: Record<string, string[]> = {}
     const categoryData: Record<string, Record<string, string[]>> = {}
     const contractorData: Record<string, string> = {}
+    // Kerja and nilai per no kontrak (sibling rows share them; first filled value wins)
+    const kontrakInfo: Record<string, { kerja: string; nilaiKontrak: number | null }> = {}
     const allContracts: string[] = []
     const allCategories: string[] = []
 
@@ -717,6 +719,14 @@ export async function getContractCategoryData() {
         contractorData[noKontrak] = namaKontraktor
       }
 
+      if (noKontrak) {
+        const info = (kontrakInfo[noKontrak] ??= { kerja: "", nilaiKontrak: null })
+        if (!info.kerja && row.kerja) info.kerja = row.kerja
+        if (info.nilaiKontrak === null && row.nilai_kontrak !== null && row.nilai_kontrak !== undefined) {
+          info.nilaiKontrak = Number(row.nilai_kontrak)
+        }
+      }
+
       // Collect all contracts and categories for LADANG NEGERI
       if (noKontrak && !allContracts.includes(noKontrak)) {
         allContracts.push(noKontrak)
@@ -726,7 +736,7 @@ export async function getContractCategoryData() {
       }
     })
 
-    return { contractData, categoryData, allContracts, allCategories, contractorData }
+    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo }
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
     throw new Error(`Failed to fetch contract and category data from Supabase: ${error.message}`)

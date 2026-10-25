@@ -1,38 +1,57 @@
 "use client"
 
-import { PageLoader } from "@/components/dashboard/page-loader"
-import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-provider"
+import type React from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import type { User } from "@/types/user"
-import type { Role } from "@/types/rbac"
+import { toast } from "sonner"
+import { RiDeleteBinLine, RiEditLine, RiLoader4Line, RiLockPasswordLine, RiSearchLine, RiUserAddLine } from "@remixicon/react"
+import { useAuth } from "@/lib/auth-provider"
+import { hasPermission } from "@/lib/rbac"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/base/buttons/button"
+import { Chip } from "@/components/base/badges/chip"
+import { Tab, TabList, TabPanel, Tabs } from "@/components/base/tabs/tabs"
 import { NavTrigger } from "@/components/dashboard/app-shell"
+import { RowActions } from "@/components/dashboard/row-actions"
 import { RoleManager } from "@/components/pengguna/RoleManager"
 import { UnitPicManager } from "@/components/pengguna/UnitPicManager"
 import { UserForm } from "@/components/pengguna/UserForm"
-import { UserPlus, Edit, Trash2, Loader2, RotateCcw } from "lucide-react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { hasPermission } from "@/lib/rbac"
+import type { User } from "@/types/user"
+import type { Role } from "@/types/rbac"
+
+type Pending = { kind: "delete" | "reset"; user: User }
+
+function TypeChip({ type }: { type?: string }) {
+  if (!type) return <span className="text-text-tertiary">-</span>
+  return (
+    <Chip variant="caption" color={type === "PENERIMA" ? "purple" : "yellow"}>
+      {type}
+    </Chip>
+  )
+}
 
 export default function PenggunaPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [loadingUsers, setLoadingUsers] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
+  const [query, setQuery] = useState("")
   const [isUserFormOpen, setIsUserFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [pending, setPending] = useState<Pending | null>(null)
+  const [working, setWorking] = useState(false)
 
   useEffect(() => {
     // Check if user has permission to view pengguna
@@ -47,16 +66,18 @@ export default function PenggunaPage() {
 
     fetchUsers()
     fetchRoles()
-    setLoading(false)
   }, [user, router])
 
   const fetchUsers = async () => {
     try {
       const response = await fetch("/api/auth")
-      const data = await response.json()
-      setUsers(data)
+      if (!response.ok) throw new Error("Failed to fetch users")
+      setUsers(await response.json())
     } catch (error) {
       console.error("Error fetching users:", error)
+      toast.error("Gagal memuatkan senarai pengguna")
+    } finally {
+      setLoadingUsers(false)
     }
   }
 
@@ -80,45 +101,41 @@ export default function PenggunaPage() {
     setIsUserFormOpen(true)
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Adakah anda pasti mahu memadam pengguna ini?")) return
-
-    try {
-      const response = await fetch(`/api/auth?id=${userId}`, {
-        method: "DELETE"
-      })
-
-      if (response.ok) {
-        await fetchUsers()
-      } else {
-        alert("Gagal memadam pengguna")
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error)
-      alert("Gagal memadam pengguna")
-    }
+  const deleteUser = async (target: User) => {
+    const response = await fetch(`/api/auth?id=${target.id}`, { method: "DELETE" })
+    if (!response.ok) throw new Error("Gagal memadam pengguna")
+    toast.success(`${target.name} dipadam`)
   }
 
-  const handleResetPassword = async (userId: string, username: string) => {
-    if (!confirm(`Reset password untuk ${username}? Password akan dikembalikan ke username dan pengguna akan dipaksa tukar password pada login seterusnya.`)) return
+  const resetPassword = async (target: User) => {
+    const response = await fetch(`/api/auth/reset-password-admin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: target.id })
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      throw new Error(`Gagal reset kata laluan: ${error.error || "Ralat tidak diketahui"}`)
+    }
+    toast.success(`Kata laluan ${target.name} telah direset`, {
+      description: "Pengguna akan dipaksa tukar kata laluan pada log masuk seterusnya.",
+    })
+  }
 
+  const confirmPending = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!pending) return
+    setWorking(true)
     try {
-      const response = await fetch(`/api/auth/reset-password-admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
-      })
-
-      if (response.ok) {
-        alert(`Password untuk ${username} telah direset. Pengguna akan dipaksa tukar password pada login seterusnya.`)
-        await fetchUsers()
-      } else {
-        const error = await response.json()
-        alert(`Gagal reset password: ${error.error || "Unknown error"}`)
-      }
-    } catch (error) {
-      console.error("Error resetting password:", error)
-      alert("Gagal reset password")
+      if (pending.kind === "delete") await deleteUser(pending.user)
+      else await resetPassword(pending.user)
+      setPending(null)
+      await fetchUsers()
+    } catch (error: any) {
+      console.error("Error:", error)
+      toast.error(error.message || "Tindakan gagal")
+    } finally {
+      setWorking(false)
     }
   }
 
@@ -129,6 +146,15 @@ export default function PenggunaPage() {
     }
     return user.role
   }
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return users
+    return users.filter((u) =>
+      [u.id, u.name, getRoleName(u), u.type].some((value) => (value || "").toLowerCase().includes(q)),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, roles, query])
 
   // Check permissions
   const canManageRoles = user?.permissions && user.permissions.length > 0
@@ -147,133 +173,185 @@ export default function PenggunaPage() {
     ? hasPermission(user.permissions, { resource: 'pengguna', action: 'delete' })
     : (user?.role === "semua" || user?.role === "Super Admin" || user?.role === "admin")
 
-  if (loading) {
-    return (
-      <PageLoader />
-    )
-  }
+  const hasActions = Boolean(canEditUser || canDeleteUser)
+
+  const actionsFor = (u: User) => [
+    { label: "Edit", icon: RiEditLine, onSelect: () => handleEditUser(u), hidden: !canEditUser },
+    { label: "Reset Kata Laluan", icon: RiLockPasswordLine, onSelect: () => setPending({ kind: "reset", user: u }), hidden: !canEditUser },
+    { label: "Padam", icon: RiDeleteBinLine, onSelect: () => setPending({ kind: "delete", user: u }), danger: true, hidden: !canDeleteUser },
+  ]
 
   return (
-    <div className="space-y-6">
-      <Card className="card-hover transition-all duration-300 ease-in-out hover:shadow-md">
-        <CardHeader className="pb-3 sticky top-0 z-10 bg-card">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <NavTrigger />
-              <CardTitle className="text-base md:text-xl">Pengurusan Pengguna & Role</CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="users">Pengguna</TabsTrigger>
-              {canManageRoles && <TabsTrigger value="roles">Role & Permissions</TabsTrigger>}
-              {canManageRoles && <TabsTrigger value="unit-pic">UNIT PIC</TabsTrigger>}
-            </TabsList>
+    <div className="flex flex-col gap-3 pb-2 sm:gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <NavTrigger />
+          <h1 className="truncate px-1 text-title-2-medium text-text-primary">Pengguna</h1>
+        </div>
+      </header>
 
-            <TabsContent value="users" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                  Jumlah pengguna: {users.length}
-                </p>
-                {canCreateUser && (
-                  <Button onClick={handleAddUser}>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Tambah Pengguna
-                  </Button>
-                )}
+      <Tabs defaultSelectedKey="users" className="gap-3 sm:gap-4">
+        {/* Scrolls sideways on narrow phones instead of wrapping */}
+        <div className="-mx-2 overflow-x-auto px-2 sm:mx-0 sm:px-0">
+          <TabList aria-label="Pengguna" className="w-max min-w-full">
+            <Tab id="users" count={loadingUsers ? undefined : users.length}>
+              Pengguna
+            </Tab>
+            {canManageRoles && <Tab id="roles">Role & Permissions</Tab>}
+            {canManageRoles && <Tab id="unit-pic">Unit PIC</Tab>}
+          </TabList>
+        </div>
+
+        <TabPanel id="users">
+          <Card>
+            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1">
+                <CardTitle>Senarai Pengguna</CardTitle>
+                <CardDescription>Akaun yang boleh log masuk ke sistem, beserta role dan jenis akses.</CardDescription>
               </div>
+              {canCreateUser && (
+                <Button size="small" leadingIcon={RiUserAddLine} onClick={handleAddUser} className="shrink-0 self-start">
+                  Tambah Pengguna
+                </Button>
+              )}
+            </CardHeader>
 
-              <div className="relative overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Tindakan</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">{u.id}</TableCell>
-                        <TableCell>{u.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{getRoleName(u)}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {u.type ? (
-                            <Badge variant="outline">{u.type}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right space-x-2">
-                          {canEditUser && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditUser(u)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canEditUser && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResetPassword(u.id, u.name)}
-                              title="Reset Password"
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDeleteUser && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-
-            {canManageRoles && (
-              <TabsContent value="roles" className="space-y-4">
-                <RoleManager
-                  onRoleCreated={fetchRoles}
-                  onRoleUpdated={fetchRoles}
-                  onRoleDeleted={fetchRoles}
+            <CardContent className="space-y-3">
+              <div className="relative">
+                <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-icon-tertiary" aria-hidden />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cari username, nama, role atau jenis…"
+                  className="pl-8"
+                  aria-label="Cari pengguna"
                 />
-              </TabsContent>
-            )}
+              </div>
 
-            {canManageRoles && (
-              <TabsContent value="unit-pic" className="space-y-4">
-                <UnitPicManager />
-              </TabsContent>
-            )}
-          </Tabs>
-        </CardContent>
-      </Card>
+              {loadingUsers ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-body-regular text-text-secondary">
+                  <RiLoader4Line className="size-5 animate-spin" aria-hidden />
+                  Memuatkan...
+                </div>
+              ) : filtered.length === 0 ? (
+                <p className="py-10 text-center text-body-regular text-text-secondary">
+                  {users.length === 0 ? "Tiada pengguna" : "Tiada pengguna sepadan dengan carian"}
+                </p>
+              ) : (
+                <>
+                  {/* iPad landscape and desktop */}
+                  <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
+                    <div className="relative max-h-[60dvh] overflow-auto">
+                      <table className="bui-table">
+                        <thead className="sticky top-0 z-10">
+                          <tr>
+                            <th>Username</th>
+                            <th>Nama</th>
+                            <th>Role</th>
+                            <th>Jenis</th>
+                            {hasActions && (
+                              <th className="w-[56px]">
+                                <span className="sr-only">Tindakan</span>
+                              </th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filtered.map((u) => (
+                            <tr key={u.id} className="hover:bg-background-secondary-default">
+                              <td className="font-mono text-body-regular">{u.id}</td>
+                              <td className="text-body-semibold">{u.name}</td>
+                              <td>
+                                <Chip variant="caption" color="soft">
+                                  {getRoleName(u)}
+                                </Chip>
+                              </td>
+                              <td>
+                                <TypeChip type={u.type} />
+                              </td>
+                              {hasActions && (
+                                <td className="text-end">
+                                  <RowActions actions={actionsFor(u)} />
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
 
-      <UserForm
-        open={isUserFormOpen}
-        onOpenChange={setIsUserFormOpen}
-        user={editingUser}
-        onSuccess={fetchUsers}
-      />
+                  {/* Phones */}
+                  <ul className="grid gap-2 md:hidden">
+                    {filtered.map((u) => (
+                      <li key={u.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                          <span className="text-body-semibold text-text-primary">{u.name}</span>
+                          <span className="font-mono text-caption-1-regular text-text-tertiary">{u.id}</span>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Chip variant="caption" color="soft">
+                              {getRoleName(u)}
+                            </Chip>
+                            {u.type && <TypeChip type={u.type} />}
+                          </div>
+                        </div>
+                        {hasActions && <RowActions className="-me-1.5 size-7" actions={actionsFor(u)} />}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </CardContent>
+
+            <CardFooter>
+              <p className="text-body-regular text-text-secondary">
+                Jumlah: {query ? `${filtered.length} / ` : ""}
+                {users.length} pengguna
+              </p>
+            </CardFooter>
+          </Card>
+        </TabPanel>
+
+        {canManageRoles && (
+          <TabPanel id="roles">
+            <RoleManager onRoleCreated={fetchRoles} onRoleUpdated={fetchRoles} onRoleDeleted={fetchRoles} />
+          </TabPanel>
+        )}
+
+        {canManageRoles && (
+          <TabPanel id="unit-pic">
+            <UnitPicManager />
+          </TabPanel>
+        )}
+      </Tabs>
+
+      <UserForm open={isUserFormOpen} onOpenChange={setIsUserFormOpen} user={editingUser} onSuccess={fetchUsers} />
+
+      <AlertDialog open={Boolean(pending)} onOpenChange={(open) => !open && !working && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pending?.kind === "delete" ? `Padam ${pending.user.name}?` : `Reset kata laluan ${pending?.user.name}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pending?.kind === "delete"
+                ? `Akaun ${pending.user.id} akan dipadam dan tidak boleh log masuk lagi. Tindakan ini tidak boleh dibatalkan.`
+                : "Kata laluan akan dikembalikan kepada username, dan pengguna dipaksa tukar kata laluan pada log masuk seterusnya."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={working}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPending}
+              disabled={working}
+              className={pending?.kind === "delete" ? "bg-button-danger" : undefined}
+            >
+              {working && <RiLoader4Line className="animate-spin" />}
+              {pending?.kind === "delete" ? (working ? "Memadam..." : "Padam") : working ? "Mereset..." : "Reset"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

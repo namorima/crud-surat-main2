@@ -612,7 +612,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
-   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields, tracking timeline; Padam / Tutup / Edit / Share
+   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields (incl. Kerja and Nilai Kontrak of its kontrak, from `kontrakInfo` in `/api/bayaran-form-data`, loaded on first open), tracking timeline; Padam / Tutup / Edit / Share
    - `progress.tsx` - process steps (Memo → PPN(P) → PN → Hantar → Bayar) and the `StageDots` indicator
 
 2. **Share Components** ([components/share/](components/share/))
@@ -621,10 +621,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `PublicBayaranTable.tsx` - Public payment table
    - `FilterSummaryBadges.tsx` - Filter badges display
 
-3. **Pengguna Components** ([components/pengguna/](components/pengguna/))
-   - `UserForm.tsx` - User add/edit form
-   - `RoleManager.tsx` - RBAC role management
-   - `UnitPicManager.tsx` - Unit PIC management
+3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
+   - `UserForm.tsx` - User add/edit dialog
+   - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
+   - `UnitPicManager.tsx` - Unit PIC management with search
+   - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
    - `app-shell.tsx` - BoardUI page frame: sidebar from `lg`, drawer below, `NavTrigger` for iPad portrait
