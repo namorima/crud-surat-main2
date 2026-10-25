@@ -609,10 +609,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 1. **Bayaran Components** ([components/bayaran/](components/bayaran/))
    - `AddEditForm.tsx` - Add/Edit payment form
-   - `BayaranTable.tsx` - Payment table with filters
+   - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
-   - `DetailDialog.tsx` - Payment detail view
+   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields, tracking timeline; Padam / Tutup / Edit / Share
+   - `progress.tsx` - process steps (Memo → PPN(P) → PN → Hantar → Bayar) and the `StageDots` indicator
 
 2. **Share Components** ([components/share/](components/share/))
    - `ShareLinkForm.tsx` - Create share link form

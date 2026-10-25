@@ -1,16 +1,40 @@
-
 "use client"
 
+import type { ComponentType, ReactNode } from "react"
+import {
+  RiCheckLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiFileEditLine,
+  RiInboxArchiveLine,
+  RiLoader4Line,
+  RiMoneyDollarCircleLine,
+  RiQuillPenLine,
+  RiSendPlaneLine,
+  RiShareLine,
+} from "@remixicon/react"
 import type { Bayaran } from "@/types/bayaran"
 import type { User } from "@/types/user"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Edit, Share2, X, Trash2, DollarSign, Send, FilePen, FilePenLineIcon as Signature } from "lucide-react"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Chip } from "@/components/base/badges/chip"
+import { Button } from "@/components/base/buttons/button"
+import { bayaranKategoriChip } from "@/lib/ui-status"
 import { hasPermission } from "@/lib/rbac"
+import { cx } from "@/utils/cx"
+import { StageDots, isBayaranBatal, isBayaranHold, isBayaranSelesai } from "@/components/bayaran/progress"
+
+type IconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
 
 interface DetailDialogProps {
   showDetailDialog: boolean
@@ -25,17 +49,75 @@ interface DetailDialogProps {
   setShowDeleteConfirm: (show: boolean) => void
   handleDelete: () => void
   isDeleting: boolean
-  getKategoriColor: (kategori: string) => string
+  /** Legacy class map; kategori now uses BoardUI chips. */
+  getKategoriColor?: (kategori: string) => string
   formatCurrency: (value: string) => string
   formatDate: (dateString: string) => string
   extractPenerimaWithUnit: (penerima: string) => string
-  renderNotaKakiWithLinks: (notaKaki: string) => React.ReactNode
+  renderNotaKakiWithLinks: (notaKaki: string) => ReactNode
 }
 
+function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cx("flex min-w-0 flex-col gap-1", className)}>
+      <dt className="text-caption-1-medium text-text-tertiary">{label}</dt>
+      <dd className="min-w-0 text-body-regular text-text-primary break-words">{children}</dd>
+    </div>
+  )
+}
+
+type Step = { label: string; date: string; pending: string; icon: IconComponent; extra?: ReactNode }
+
+/** Vertical timeline, newest step first (same order as before). */
+function Timeline({ steps, cancelled, formatDate }: { steps: Step[]; cancelled: boolean; formatDate: (d: string) => string }) {
+  return (
+    <ol className="relative flex flex-col">
+      {steps.map((step, i) => {
+        const done = !!step.date
+        const last = i === steps.length - 1
+        return (
+          <li key={step.label} className="relative flex gap-3 pb-4 last:pb-0">
+            {!last && <span className="absolute top-8 bottom-0 left-[15px] w-px bg-border-table" aria-hidden />}
+            <span
+              className={cx(
+                "relative z-[1] flex size-8 shrink-0 items-center justify-center rounded-full",
+                done && cancelled
+                  ? "bg-rose-500 text-white"
+                  : done
+                    ? "bg-lime-600 text-white"
+                    : "border border-border-table bg-background-primary-default text-foreground-icon-tertiary",
+              )}
+              aria-hidden
+            >
+              {done && cancelled ? (
+                <RiCloseLine className="size-4" />
+              ) : done ? (
+                <RiCheckLine className="size-4" />
+              ) : (
+                <step.icon className="size-4" />
+              )}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col gap-1 pt-1">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span className={cx("text-body-medium", done ? "text-text-primary" : "text-text-secondary")}>{step.label}</span>
+                <span className={cx("text-caption-1-regular tabular-nums", done ? "text-text-primary" : "text-text-tertiary")}>
+                  {done ? formatDate(step.date) : step.pending}
+                </span>
+              </div>
+              {step.extra}
+            </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+/** "Detail Rekod Bayaran": compact BoardUI view with Tutup / Edit / Share / Padam. */
 export function DetailDialog({
   showDetailDialog,
   setShowDetailDialog,
-  selectedBayaran,
+  selectedBayaran: b,
   handleEdit,
   handleShare,
   isSharing,
@@ -45,431 +127,217 @@ export function DetailDialog({
   setShowDeleteConfirm,
   handleDelete,
   isDeleting,
-  getKategoriColor,
   formatCurrency,
   formatDate,
   extractPenerimaWithUnit,
   renderNotaKakiWithLinks,
 }: DetailDialogProps) {
-  // Permission checks
-  const canEdit = user?.permissions && user.permissions.length > 0
-    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'edit' })
-    : (user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && selectedBayaran?.statusBayaran === "KEWANGAN"))
-  
-  const canDelete = user?.permissions && user.permissions.length > 0
-    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'delete' })
-    : (user?.role === "semua")
-  
+  const canEdit =
+    user?.permissions && user.permissions.length > 0
+      ? hasPermission(user.permissions, { resource: "bayaran", action: "edit" })
+      : user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && b?.statusBayaran === "KEWANGAN")
+
+  const canDelete =
+    user?.permissions && user.permissions.length > 0
+      ? hasPermission(user.permissions, { resource: "bayaran", action: "delete" })
+      : user?.role === "semua"
+
+  const cancelled = !!b && isBayaranBatal(b)
+
+  const steps: Step[] = b
+    ? [
+        {
+          label: "Dibayar",
+          date: b.tarikhBayar,
+          pending: "Belum dibayar",
+          icon: RiMoneyDollarCircleLine,
+          extra: b.nomborBaucer ? (
+            <Chip variant="caption" color={isBayaranSelesai(b) ? "lime" : "soft"} className="w-fit">
+              Baucer {b.nomborBaucer}
+            </Chip>
+          ) : undefined,
+        },
+        {
+          label: "Hantar ke Kewangan",
+          date: b.tarikhHantar,
+          pending: "Belum dihantar",
+          icon: RiSendPlaneLine,
+          extra: b.penerima ? (
+            <span className="text-caption-1-regular text-text-secondary">Kepada: {extractPenerimaWithUnit(b.penerima)}</span>
+          ) : undefined,
+        },
+        { label: "PN", date: b.tarikhPn, pending: "Belum diproses", icon: RiFileEditLine },
+        { label: "PPN (P)", date: b.tarikhPpnP, pending: "Belum diproses", icon: RiQuillPenLine },
+        {
+          label: "Memo Ladang",
+          date: b.tarikhMemoLadang,
+          pending: "Belum dibuat",
+          icon: RiFileEditLine,
+          extra: b.statusLadang ? (
+            <Chip
+              variant="caption"
+              color="soft"
+              className={cx("w-fit", isBayaranHold(b) && "bg-neutral-950 text-white dark:bg-neutral-50 dark:text-neutral-950")}
+            >
+              {b.statusLadang}
+            </Chip>
+          ) : undefined,
+        },
+        {
+          label: "Diterima",
+          date: b.tarikhTerima,
+          pending: "-",
+          icon: RiInboxArchiveLine,
+          extra: <span className="text-caption-1-regular text-text-secondary">Daripada: {b.daripada}</span>,
+        },
+      ]
+    : []
+
   return (
     <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Badge
-              variant={selectedBayaran?.statusBayaran?.toLowerCase() === "selesai" ? "default" : "outline"}
-              className={cn(
-                selectedBayaran?.statusBayaran?.toLowerCase() === "selesai"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "",
-              )}
-            >
-              #{selectedBayaran?.ids || selectedBayaran?.id}
-            </Badge>
-            Detail Rekod Bayaran
-          </DialogTitle>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[760px] sm:p-0">
+        <DialogHeader className="space-y-1 border-b border-border-table px-4 pt-4 pb-3 text-left sm:px-6 sm:pt-5">
+          <div className="flex flex-wrap items-center gap-2 pr-8">
+            <DialogTitle className="text-headline-semibold text-text-primary">Rekod Bayaran #{b?.ids ?? b?.id}</DialogTitle>
+            {b?.statusBayaran && (
+              <Chip variant="caption" color={isBayaranSelesai(b) ? "lime" : cancelled ? "rose" : "neutral"}>
+                {b.statusBayaran}
+              </Chip>
+            )}
+            {b && isBayaranHold(b) && (
+              <Chip variant="caption" color="gray" className="bg-neutral-950 text-white dark:bg-neutral-50 dark:text-neutral-950">
+                HOLD / KIV
+              </Chip>
+            )}
+          </div>
+          <DialogDescription className="text-caption-1-regular text-text-secondary">
+            {b ? `Diterima ${b.tarikhTerima} · ${b.daripada}` : "Detail rekod bayaran."}
+          </DialogDescription>
         </DialogHeader>
-        {selectedBayaran && (
-          <div className="space-y-6">
-            {/* Basic Info Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-2xl bg-background-secondary-default p-4">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Daripada</Label>
-                  <p className="text-sm font-medium">{selectedBayaran.daripada}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Perkara</Label>
-                  <p className="text-sm whitespace-normal break-words">{selectedBayaran.perkara}</p>
-                </div>
-                {/* Mobile layout: Kategori and No Kontrak in one line */}
-                <div className="md:hidden flex gap-2">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">Kategori</Label>
-                    <div className="mt-1">
-                      <Badge
-                        variant="outline"
-                        className={cn("text-xs", getKategoriColor(selectedBayaran.kategori || ""))}
-                      >
-                        {selectedBayaran.kategori}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">Nama Kontraktor</Label>
-                    <p className="text-sm mt-1">
-                      {selectedBayaran.namaKontraktor && selectedBayaran.noKontrak
-                        ? `${selectedBayaran.namaKontraktor} (${selectedBayaran.noKontrak})`
-                        : selectedBayaran.namaKontraktor || selectedBayaran.noKontrak || "-"}
-                    </p>
-                  </div>
-                </div>
-                {/* Desktop layout: Kategori only */}
-                <div className="hidden md:block">
-                  <Label className="text-sm font-medium text-muted-foreground">Kategori</Label>
-                  <div className="ml-2">
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs", getKategoriColor(selectedBayaran.kategori || ""))}
-                    >
-                      {selectedBayaran.kategori}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {/* Mobile layout: Nilai Bayaran and Bayaran Ke in one line */}
-                <div className="md:hidden flex gap-2">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">Nilai Bayaran</Label>
-                    <p className="text-sm font-medium">{formatCurrency(selectedBayaran.nilaiBayaran)}</p>
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">Bayaran Ke</Label>
-                    <p className="text-sm">{selectedBayaran.bayaranKe}</p>
-                  </div>
-                </div>
-                {/* Desktop layout: Separate rows */}
-                <div className="hidden md:block">
-                  <Label className="text-sm font-medium text-muted-foreground">Nilai Bayaran</Label>
-                  <p className="text-sm font-medium">{formatCurrency(selectedBayaran.nilaiBayaran)}</p>
-                </div>
-                <div className="hidden md:block">
-                  <Label className="text-sm font-medium text-muted-foreground">Bayaran Ke</Label>
-                  <p className="text-sm">{selectedBayaran.bayaranKe}</p>
-                </div>
-                <div className="hidden md:block">
-                  <Label className="text-sm font-medium text-muted-foreground">Nama Kontraktor</Label>
-                  <p className="text-sm">
-                    {selectedBayaran.namaKontraktor && selectedBayaran.noKontrak
-                      ? `${selectedBayaran.namaKontraktor} (${selectedBayaran.noKontrak})`
-                      : selectedBayaran.namaKontraktor || selectedBayaran.noKontrak || "-"}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            {/* Timeline Tracking Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Tracking Bayaran</h3>
-              <div className="relative">
-                {/* Timeline Line - Behind icons and semi-transparent */}
-                <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-border-button-default -z-10"></div>
+        {b && (
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+            <p className="text-body-semibold text-text-primary break-words">{b.perkara}</p>
 
-                {/* Timeline Items */}
-                <div className="space-y-6">
-                  {/* Tarikh Bayar */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar
-                          ? "bg-red-500 text-white"
-                          : selectedBayaran.tarikhBayar
-                            ? "bg-green-500 text-white"
-                            : "bg-background-tertiary-default text-foreground-icon-secondary",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhBayar ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : selectedBayaran.tarikhBayar ? (
-                        <span className="text-white">✓</span>
-                      ) : (
-                        <DollarSign className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh Bayar</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBayaran.tarikhBayar ? formatDate(selectedBayaran.tarikhBayar) : "Belum dibayar"}
-                        </p>
-                      </div>
-                      {selectedBayaran.nomborBaucer && (
-                        <div className="mt-1 ml-2">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              selectedBayaran.statusBayaran?.toLowerCase() === "selesai"
-                                ? "bg-green-100 text-green-800 border-green-300"
-                                : "",
-                            )}
-                          >
-                            {selectedBayaran.nomborBaucer}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1.1fr] md:gap-4">
+              <div className="flex flex-col gap-3">
+                {/* Amount */}
+                <div className="flex items-end justify-between gap-3 rounded-2xl bg-background-secondary-default p-3 sm:p-4 dark:bg-background-primary-default">
+                  <div className="min-w-0">
+                    <p className="text-caption-1-medium text-text-tertiary">Nilai Bayaran</p>
+                    <p className="text-title-2-semibold text-text-primary tabular-nums">{formatCurrency(b.nilaiBayaran)}</p>
                   </div>
-
-                  {/* Tarikh Hantar */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar
-                          ? "bg-red-500 text-white"
-                          : selectedBayaran.tarikhHantar
-                            ? "bg-green-500 text-white"
-                            : "bg-background-tertiary-default text-foreground-icon-secondary",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhHantar ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : selectedBayaran.tarikhHantar ? (
-                        <span className="text-white">✓</span>
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh Hantar</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBayaran.tarikhHantar ? formatDate(selectedBayaran.tarikhHantar) : "Belum dihantar"}
-                        </p>
-                      </div>
-                      {selectedBayaran.penerima && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Kepada: {extractPenerimaWithUnit(selectedBayaran.penerima)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Tarikh PN */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn
-                          ? "bg-red-500 text-white"
-                          : selectedBayaran.tarikhPn
-                            ? "bg-green-500 text-white"
-                            : "bg-background-tertiary-default text-foreground-icon-secondary",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPn ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : selectedBayaran.tarikhPn ? (
-                        <span className="text-white">✓</span>
-                      ) : (
-                        <FilePen className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh PN</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBayaran.tarikhPn ? formatDate(selectedBayaran.tarikhPn) : "Belum diproses"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tarikh PPN (P) */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP
-                          ? "bg-red-500 text-white"
-                          : selectedBayaran.tarikhPpnP
-                            ? "bg-green-500 text-white"
-                            : "bg-background-tertiary-default text-foreground-icon-secondary",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhPpnP ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : selectedBayaran.tarikhPpnP ? (
-                        <span className="text-white">✓</span>
-                      ) : (
-                        <Signature className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh PPN (P)</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBayaran.tarikhPpnP ? formatDate(selectedBayaran.tarikhPpnP) : "Belum diproses"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tarikh Memo Ladang */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang
-                          ? "bg-red-500 text-white"
-                          : selectedBayaran.tarikhMemoLadang
-                            ? "bg-green-500 text-white"
-                            : "bg-background-tertiary-default text-foreground-icon-secondary",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && selectedBayaran.tarikhMemoLadang ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : selectedBayaran.tarikhMemoLadang ? (
-                        <span className="text-white">✓</span>
-                      ) : (
-                        <DollarSign className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh Memo Ladang</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedBayaran.tarikhMemoLadang
-                            ? formatDate(selectedBayaran.tarikhMemoLadang)
-                            : "Belum dibuat"}
-                        </p>
-                      </div>
-                      {selectedBayaran.statusLadang && (
-                        <div className="mt-1">
-                          <Badge 
-                            variant="outline" 
-                            className={cn(
-                              "text-xs",
-                              selectedBayaran.statusLadang === "Hold / KIV" 
-                                ? "bg-black text-white border-black hover:bg-gray-800" 
-                                : ""
-                            )}
-                          >
-                            {selectedBayaran.statusLadang}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Tarikh Terima */}
-                  <div className="flex items-start space-x-4 relative z-10">
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedBayaran.statusBayaran?.toUpperCase() === "BATAL"
-                          ? "bg-red-500 text-white"
-                          : "bg-green-500 text-white",
-                      )}
-                    >
-                      {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" ? (
-                        <span className="text-white font-bold text-lg">!</span>
-                      ) : (
-                        <span className="text-white">✓</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Tarikh Terima</p>
-                        <p className="text-sm text-muted-foreground">{formatDate(selectedBayaran.tarikhTerima)}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">Daripada: {selectedBayaran.daripada}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Nota Kaki Section */}
-            {selectedBayaran.notaKaki && (
-              <div className="rounded-2xl bg-background-secondary-default p-4">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Nota Kaki</Label>
-                  {selectedBayaran.statusBayaran?.toUpperCase() === "BATAL" && (
-                    <Badge variant="destructive" className="text-xs">
-                      BATAL
-                    </Badge>
+                  {b.bayaranKe && (
+                    <Chip variant="caption" color="soft" className="shrink-0 border border-border-button-default">
+                      Bayaran ke-{b.bayaranKe}
+                    </Chip>
                   )}
                 </div>
-                <div className="mt-1">
-                  <p className="text-xs text-red-500 whitespace-normal break-words">
-                    {renderNotaKakiWithLinks(selectedBayaran.notaKaki)}
-                  </p>
-                </div>
+
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl border border-border-table p-3 sm:p-4">
+                  <Field label="Kategori">
+                    {b.kategori ? (
+                      <Chip variant="caption" color={bayaranKategoriChip(b.kategori)}>
+                        {b.kategori}
+                      </Chip>
+                    ) : (
+                      "-"
+                    )}
+                  </Field>
+                  <Field label="No Kontrak">{b.noKontrak || "-"}</Field>
+                  <Field label="Nama Kontraktor" className="col-span-2">
+                    {b.namaKontraktor || "-"}
+                  </Field>
+                  <Field label="Peringkat" className="col-span-2">
+                    <StageDots item={b} />
+                  </Field>
+                </dl>
+
+                {b.notaKaki && (
+                  <section className="rounded-2xl border border-border-table p-3 sm:p-4">
+                    <h3 className="text-caption-1-medium text-text-tertiary">Nota Kaki</h3>
+                    <p className="mt-1 text-body-regular text-text-destructive break-words whitespace-pre-wrap">
+                      {renderNotaKakiWithLinks(b.notaKaki)}
+                    </p>
+                  </section>
+                )}
               </div>
-            )}
+
+              <section className="rounded-2xl border border-border-table p-3 sm:p-4">
+                <h3 className="mb-3 text-body-semibold text-text-primary">Tracking Bayaran</h3>
+                <Timeline steps={steps} cancelled={cancelled} formatDate={formatDate} />
+              </section>
+            </div>
           </div>
         )}
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <div className="flex flex-row gap-2 w-full sm:w-auto justify-between sm:justify-start">
-            {canEdit && (
+
+        {b && (
+          <footer className="flex items-center gap-2 border-t border-border-table px-4 py-3 sm:px-6">
+            {canDelete && (
               <Button
-                variant="outline"
-                onClick={() => selectedBayaran && handleEdit(selectedBayaran)}
-                className="flex-1 sm:flex-none"
+                variant="danger"
+                size="small"
+                leadingIcon={RiDeleteBinLine}
+                onClick={() => setShowDeleteConfirm(true)}
+                aria-label="Padam"
+                title="Padam"
               >
-                <Edit className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Edit</span>
+                <span className="hidden min-[400px]:inline">Padam</span>
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => selectedBayaran && handleShare(selectedBayaran)}
-              disabled={isSharing || isGeneratingImage}
-              className="flex-1 sm:flex-none"
-            >
-              {isSharing ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                  <span className="hidden sm:inline">Sharing...</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Share</span>
-                </>
+            <div className="ms-auto flex items-center gap-2">
+              <Button variant="secondary" size="small" onClick={() => setShowDetailDialog(false)}>
+                Tutup
+              </Button>
+              {canEdit && (
+                <Button variant="secondary" size="small" leadingIcon={RiEditLine} onClick={() => {
+                    setShowDetailDialog(false)
+                    handleEdit(b)
+                  }}
+                  aria-label="Edit" title="Edit">
+                  <span className="hidden min-[400px]:inline">Edit</span>
+                </Button>
               )}
-            </Button>
-            <Button onClick={() => setShowDetailDialog(false)} className="flex-1 sm:flex-none">
-              <span className="hidden sm:inline mr-2">Tutup</span>
-              <X className="h-4 w-4 sm:hidden" />
-            </Button>
-            {canDelete && (
-              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex-1 sm:flex-none">
-                    <Trash2 className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Padam</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Adakah anda pasti?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tindakan ini tidak boleh dibuat asal. Ini akan memadamkan rekod bayaran secara kekal.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                      {isDeleting ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
-                          Memadam...
-                        </>
-                      ) : (
-                        "Padam"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-        </DialogFooter>
+              <Button
+                variant="primary"
+                size="small"
+                leadingIcon={isSharing ? undefined : RiShareLine}
+                onClick={() => handleShare(b)}
+                disabled={isSharing || isGeneratingImage}
+                aria-label="Share"
+                title="Share"
+              >
+                {isSharing ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <RiLoader4Line className="size-4 animate-spin" aria-hidden />
+                    <span className="hidden min-[400px]:inline">Menjana…</span>
+                  </span>
+                ) : (
+                  <span className="hidden min-[400px]:inline">Share</span>
+                )}
+              </Button>
+            </div>
+          </footer>
+        )}
+        {/* Inside the content so clicks in the confirm do not count as outside the detail */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Padam rekod #{b?.ids ?? b?.id}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tindakan ini tidak boleh dibuat asal. Ini akan memadamkan rekod bayaran secara kekal.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting ? "Memadam..." : "Padam"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
+
     </Dialog>
   )
 }
