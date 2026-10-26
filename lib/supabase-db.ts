@@ -862,21 +862,26 @@ export async function getAllKontrak(): Promise<Kontrak[]> {
  * bayaran rows look the name up by contract number alone. Keep every sibling
  * row and every bayaran on the same name; returns the bayaran rows updated.
  */
-async function applyNamaKontraktor(noKontrak: string, namaKontraktor: string): Promise<number> {
+async function applyNamaKontraktor(
+  noKontrak: string,
+  namaKontraktor: string,
+  siblingFields: { status?: string } = {},
+  exceptId?: string,
+): Promise<number> {
   if (!noKontrak) return 0
   const nama = namaKontraktor || null
 
-  const { error: siblingError } = await supabaseAdmin
+  // Both updates go out together: each is a round trip to the database
+  let siblings = supabaseAdmin
     .from("kontrak")
-    .update({ nama_kontraktor: nama })
+    .update({ nama_kontraktor: nama, ...siblingFields })
     .eq("no_kontrak", noKontrak)
+  if (exceptId) siblings = siblings.neq("id", exceptId)
+  const [{ error: siblingError }, { data, error }] = await Promise.all([
+    siblings,
+    supabaseAdmin.from("bayaran").update({ nama_kontraktor: nama }).eq("no_kontrak", noKontrak).select("id"),
+  ])
   if (siblingError) throw siblingError
-
-  const { data, error } = await supabaseAdmin
-    .from("bayaran")
-    .update({ nama_kontraktor: nama })
-    .eq("no_kontrak", noKontrak)
-    .select("id")
   if (error) throw error
   return data?.length || 0
 }
@@ -929,13 +934,7 @@ export async function updateKontrak(
 
     if (error) throw error
     // Rows sharing this no kontrak (one per kategori) open and close together
-    const { error: statusError } = await supabaseAdmin
-      .from("kontrak")
-      .update({ status: input.status || "AKTIF" })
-      .eq("no_kontrak", input.noKontrak)
-      .neq("id", id)
-    if (statusError) throw statusError
-    const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor)
+    const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor, { status: input.status || "AKTIF" }, id)
     return { kontrak: mapKontrakRow(data), bayaranUpdated }
   } catch (error: any) {
     console.error("Error updating kontrak in Supabase:", error)

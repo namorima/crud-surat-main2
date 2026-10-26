@@ -254,41 +254,43 @@ export async function getUserPermissions(userIdOrUsername: string): Promise<Perm
   try {
     // Try to determine if input is UUID or username
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdOrUsername)
-    
-    // Get user's role_id - try by id first if UUID, otherwise by username
-    let user
-    let userError
-    
-    if (isUUID) {
-      const result = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('id', userIdOrUsername)
-        .single()
-      user = result.data
-      userError = result.error
-    } else {
-      // Lookup by username
-      const result = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('username', userIdOrUsername)
-        .single()
-      user = result.data
-      userError = result.error
-    }
 
-    if (userError || !user?.role_id) {
+    // One round trip: user → role → role_permissions → permissions. Every
+    // guarded API route runs this, and each query crosses to the database.
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('role_id, roles(role_permissions(permissions(id, resource, action, display_name, description)))')
+      .eq(isUUID ? 'id' : 'username', userIdOrUsername)
+      .single()
+
+    if (userError && userError.code !== 'PGRST116') {
+      // Not "no such user": fall back to the step-by-step lookup rather than deny access
+      console.error('Error fetching user permissions in one query:', userError)
+      return await getUserPermissionsStepwise(userIdOrUsername, isUUID)
+    }
+    if (!user?.role_id) {
       console.error('Error fetching user or no role_id:', userError)
       return []
     }
 
-    // Get role with permissions
-    const role = await getRoleWithPermissions(user.role_id)
-    
-    return role?.permissions || []
+    const role: any = Array.isArray(user.roles) ? user.roles[0] : user.roles
+    return (role?.role_permissions || []).map((rp: any) => rp.permissions).filter(Boolean)
   } catch (error) {
     console.error('getUserPermissions error:', error)
     return []
   }
+}
+
+async function getUserPermissionsStepwise(userIdOrUsername: string, isUUID: boolean): Promise<Permission[]> {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('role_id')
+    .eq(isUUID ? 'id' : 'username', userIdOrUsername)
+    .single()
+  if (error || !user?.role_id) {
+    console.error('Error fetching user or no role_id:', error)
+    return []
+  }
+  const role = await getRoleWithPermissions(user.role_id)
+  return role?.permissions || []
 }
