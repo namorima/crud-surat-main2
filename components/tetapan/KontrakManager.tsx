@@ -82,6 +82,11 @@ function Tempoh({ item }: { item: Kontrak }) {
   )
 }
 
+/** Same order as GET /api/kontrak (kawasan, then no kontrak). */
+function sortKontrak(list: Kontrak[]) {
+  return [...list].sort((a, b) => a.kawasan.localeCompare(b.kawasan) || a.noKontrak.localeCompare(b.noKontrak))
+}
+
 async function readError(response: Response, fallback: string) {
   try {
     const body = await response.json()
@@ -208,12 +213,28 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(form),
       })
       if (!response.ok) throw new Error(await readError(response, "Gagal menyimpan kontrak"))
-      const { bayaranUpdated } = (await response.json()) as { bayaranUpdated: number }
+      const { kontrak: saved, bayaranUpdated } = (await response.json()) as { kontrak: Kontrak; bayaranUpdated: number }
+      // Apply the save locally instead of reloading the list: rows sharing the
+      // no kontrak take its contractor name and status, as the server did
+      setItems((prev) =>
+        sortKontrak([
+          ...prev
+            .filter((item) => item.id !== saved.id)
+            .map((item) =>
+              item.noKontrak !== saved.noKontrak
+                ? item
+                : editing
+                  ? { ...item, namaKontraktor: saved.namaKontraktor, status: saved.status }
+                  : // A new row only renames its siblings when it names a contractor
+                    { ...item, namaKontraktor: saved.namaKontraktor || item.namaKontraktor },
+            ),
+          saved,
+        ]),
+      )
       toast.success(editing ? "Kontrak dikemas kini" : "Kontrak ditambah", {
         description: bayaranUpdated > 0 ? `${bayaranUpdated} rekod bayaran dikemas kini dengan nama kontraktor ini.` : undefined,
       })
       setFormOpen(false)
-      await load()
     } catch (error: any) {
       toast.error(error.message)
     } finally {
@@ -227,8 +248,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       const response = await fetch(`/api/kontrak/${deleting.id}`, { method: "DELETE" })
       if (!response.ok) throw new Error(await readError(response, "Gagal memadam kontrak"))
       toast.success(`Kontrak ${deleting.noKontrak} dipadam`)
+      setItems((prev) => prev.filter((item) => item.id !== deleting.id))
       setDeleting(null)
-      await load()
     } catch (error: any) {
       toast.error(error.message)
     }
