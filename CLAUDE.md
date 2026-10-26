@@ -750,7 +750,11 @@ The application is deployed on Vercel at: https://crudladang.vercel.app
    - Build Command: `pnpm build`
    - Output Directory: `.next`
 
-3. **Domain Configuration**
+3. **Function Region**
+   - [vercel.json](vercel.json) runs functions in `syd1` (Sydney), next to the Supabase project (`ap-southeast-2`). Every API route makes several sequential database calls, so a far region (the default `iad1`) adds ~200 ms to each one
+   - `getUserPermissions()` ([lib/supabase-rbac.ts](lib/supabase-rbac.ts)) loads user → role → permissions in one query (falls back to step-by-step on error), since every guarded route calls it
+
+4. **Domain Configuration**
    - Custom domain: crudladang.vercel.app
    - SSL certificate automatically managed
 
