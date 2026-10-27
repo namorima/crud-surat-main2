@@ -143,7 +143,10 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
   const [perkaraFocused, setPerkaraFocused] = useState(false)
   const isKeluar = formData.kategori === "KELUAR"
   const selectedFail = failOptions.find((fail) => fail.id === selectedFailId)
-  const pics = (formData.unit && unitPicMap[formData.unit]) || []
+  const activePics = (formData.unit && unitPicMap[formData.unit]) || []
+  // A surat being edited keeps its PIC even if that PIC was disabled (or moved) since
+  const keepsOldPic = mode === "edit" && !!formData.tindakanPic && !activePics.includes(formData.tindakanPic)
+  const pics = keepsOldPic ? [...activePics, formData.tindakanPic] : activePics
 
   const suggestions = (list: string[], value: string) =>
     list.filter((p) => p.toLowerCase().includes((value || "").toLowerCase())).slice(0, 5)
@@ -316,6 +319,9 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                         pics.map((pic) => (
                           <SelectItem key={pic} value={pic || "unknown"}>
                             {pic || "Unknown"}
+                            {keepsOldPic && pic === formData.tindakanPic && (
+                              <span className="ms-1.5 text-caption-1-regular text-text-tertiary">tiada dalam senarai PIC</span>
+                            )}
                           </SelectItem>
                         ))
                       ) : (
