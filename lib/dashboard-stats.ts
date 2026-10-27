@@ -184,6 +184,25 @@ export function bayaranStats(all: Bayaran[], period: Period, now = new Date()) {
 const isDone = (s: Surat) => s.status === "SELESAI"
 const isOpen = (s: Surat) => s.status !== "SELESAI" && s.status !== "BATAL"
 
+export type Tertunggak = { surat: Surat; hari: number }
+
+/**
+ * Surat Tertunggak: open surat (not SELESAI or BATAL) whose tarikh is more than
+ * minDays days ago, oldest first. Surat without a readable tarikh are left out.
+ */
+export function suratTertunggak(all: Surat[], now = new Date(), minDays = 30): Tertunggak[] {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const rows: Tertunggak[] = []
+  for (const surat of all) {
+    if (!isOpen(surat)) continue
+    const tarikh = parseDate(surat.tarikh)
+    if (!tarikh) continue
+    const hari = Math.round((today - tarikh.getTime()) / DAY)
+    if (hari > minDays) rows.push({ surat, hari })
+  }
+  return rows.sort((a, b) => b.hari - a.hari || b.surat.bil - a.surat.bil)
+}
+
 export const SURAT_STATUS_ORDER = ["BELUM PROSES", "DALAM TINDAKAN", "HOLD / KIV", "SELESAI", "BATAL"]
 
 export function suratStats(all: Surat[], period: Period, now = new Date()) {
