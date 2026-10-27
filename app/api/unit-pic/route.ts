@@ -31,11 +31,12 @@ export async function GET(request: Request) {
     }
 
     // Default: return formatted data for Surat page compatibility
-    // Extract unique units and create unitPicMap
+    // Extract unique units and create unitPicMap. Every unit is listed, but a
+    // disabled PIC is left out of the map so the Surat form does not offer them.
     const units = Array.from(new Set(unitPics.map(item => item.unit)))
     const unitPicMap: Record<string, string[]> = {}
     
-    unitPics.forEach(item => {
+    unitPics.filter(item => item.is_active !== false).forEach(item => {
       if (!unitPicMap[item.unit]) {
         unitPicMap[item.unit] = []
       }
@@ -88,13 +89,26 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH - Update existing unit-pic mapping
+// PATCH - Update existing unit-pic mapping, or { pic, isActive } to disable / enable a PIC in every unit
 export async function PATCH(request: Request) {
   const guard = await guardWrite(request)
   if (guard.denied) return guard.denied
   try {
     const body = await request.json()
     const { id, unit, pic } = body
+
+    if (!id && typeof body.isActive === 'boolean') {
+      if (!pic) {
+        return NextResponse.json({ error: 'PIC diperlukan' }, { status: 400 })
+      }
+      const { data, error } = await supabase
+        .from('unit_pic')
+        .update({ is_active: body.isActive, disabled_at: body.isActive ? null : new Date().toISOString() })
+        .eq('pic', pic)
+        .select('id')
+      if (error) throw error
+      return NextResponse.json({ pic, isActive: body.isActive, updated: data?.length || 0 })
+    }
 
     // Validation
     if (!id) {
@@ -200,7 +214,9 @@ export async function PUT(request: Request) {
       }
     }
 
-    const toInsert = units.filter((unit) => !kept.has(unit)).map((unit) => ({ unit, pic }))
+    // New unit rows take the PIC's status, so a disabled PIC stays disabled in every unit
+    const isActive = (existing || []).length === 0 || (existing || []).some((row) => row.is_active !== false)
+    const toInsert = units.filter((unit) => !kept.has(unit)).map((unit) => ({ unit, pic, is_active: isActive }))
     if (toInsert.length > 0) {
       const { error: insertError } = await supabase.from('unit_pic').insert(toInsert)
       if (insertError) throw insertError

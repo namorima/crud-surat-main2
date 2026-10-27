@@ -1131,7 +1131,8 @@ export async function getUnitAndPicData() {
 
     data?.forEach((row) => {
       const unit = row.unit || ""
-      const pic = row.pic || ""
+      // A disabled PIC is not offered (the unit still is)
+      const pic = row.is_active === false ? "" : row.pic || ""
 
       if (unit) {
         if (!unitPicMap[unit]) {

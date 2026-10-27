@@ -6,9 +6,11 @@ import { toast } from "sonner"
 import {
   RiAddLine,
   RiArrowDownSLine,
+  RiCheckboxCircleLine,
   RiCheckLine,
   RiDeleteBinLine,
   RiEditLine,
+  RiForbidLine,
   RiLoader4Line,
   RiSearchLine,
   RiUserLine,
@@ -43,7 +45,7 @@ import type { User } from "@/types/user"
 import { cx } from "@/utils/cx"
 
 /** One PIC with every unit they are PIC of (unit_pic keeps one row per pair). */
-type PicGroup = { pic: string; units: string[]; user?: User }
+type PicGroup = { pic: string; units: string[]; user?: User; isActive: boolean }
 
 const norm = (s: string) => s.trim().toUpperCase()
 
@@ -54,6 +56,14 @@ async function readError(response: Response, fallback: string) {
   } catch {
     return fallback
   }
+}
+
+function InactiveChip() {
+  return (
+    <Chip variant="caption" color="neutral">
+      Tidak aktif
+    </Chip>
+  )
 }
 
 function UnitChips({ units }: { units: string[] }) {
@@ -124,15 +134,19 @@ export function UnitPicManager() {
 
   const groups = useMemo<PicGroup[]>(() => {
     const map = new Map<string, Set<string>>()
+    const active = new Set<string>()
     unitPics.forEach((row) => {
       if (!map.has(row.pic)) map.set(row.pic, new Set())
       map.get(row.pic)!.add(row.unit)
+      if (row.is_active !== false) active.add(row.pic)
     })
+    // Disabled PICs go last
     return Array.from(map, ([name, units]) => ({
       pic: name,
       units: Array.from(units).sort((a, b) => a.localeCompare(b)),
       user: userByName.get(norm(name)),
-    })).sort((a, b) => a.pic.localeCompare(b.pic))
+      isActive: active.has(name),
+    })).sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.pic.localeCompare(b.pic))
   }, [unitPics, userByName])
 
   const allUnits = useMemo(
@@ -150,6 +164,9 @@ export function UnitPicManager() {
         g.units.some((unit) => unit.toLowerCase().includes(q)),
     )
   }, [groups, query])
+
+  const inactiveCount = groups.filter((g) => !g.isActive).length
+  const editingGroup = editingPic ? groups.find((g) => g.pic === editingPic) : undefined
 
   const unitsOf = (name: string) => groups.find((g) => norm(g.pic) === norm(name))?.units ?? []
 
@@ -254,8 +271,35 @@ export function UnitPicManager() {
     }
   }
 
+  const setActive = async (name: string, isActive: boolean) => {
+    setSubmitting(true)
+    try {
+      const response = await fetch("/api/unit-pic", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pic: name, isActive }),
+      })
+      if (!response.ok) throw new Error(await readError(response, "Gagal menukar status PIC"))
+      setUnitPics((prev) => prev.map((row) => (row.pic === name ? { ...row, is_active: isActive } : row)))
+      toast.success(isActive ? `${name} diaktifkan semula` : `${name} dinyahaktifkan`, {
+        description: isActive
+          ? "Boleh dipilih semula sebagai Tindakan PIC."
+          : "Tidak lagi dipaparkan dalam borang Surat baharu. Surat sedia ada tidak berubah.",
+      })
+      setDialogOpen(false)
+    } catch (error: any) {
+      console.error("Error changing PIC status:", error)
+      toast.error(error.message || "Gagal menukar status PIC")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const actionsFor = (group: PicGroup) => [
     { label: "Atur Unit", icon: RiEditLine, onSelect: () => openEdit(group) },
+    group.isActive
+      ? { label: "Nyahaktif", icon: RiForbidLine, onSelect: () => setActive(group.pic, false) }
+      : { label: "Aktifkan", icon: RiCheckboxCircleLine, onSelect: () => setActive(group.pic, true) },
     { label: "Buang dari semua unit", icon: RiDeleteBinLine, onSelect: () => setDeleting(group), danger: true },
   ]
 
@@ -318,10 +362,13 @@ export function UnitPicManager() {
                   </thead>
                   <tbody className="motion-stagger">
                     {filtered.map((group) => (
-                      <tr key={group.pic} className="hover:bg-background-secondary-default">
+                      <tr key={group.pic} className={cx("hover:bg-background-secondary-default", !group.isActive && "opacity-60")}>
                         <td>
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-body-semibold text-text-primary">{group.pic}</span>
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-body-semibold text-text-primary">{group.pic}</span>
+                              {!group.isActive && <InactiveChip />}
+                            </span>
                             <span className="text-caption-1-regular text-text-tertiary">
                               {group.user ? group.user.id : "Bukan pengguna sistem"}
                             </span>
@@ -343,7 +390,10 @@ export function UnitPicManager() {
             {/* Phones: compact cards, tap the card to set units */}
             <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
               {filtered.map((group) => (
-                <li key={group.pic} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+                <li
+                  key={group.pic}
+                  className={cx("flex items-start gap-2 rounded-2xl border border-border-button-default p-3", !group.isActive && "border-dashed opacity-70")}
+                >
                   <button
                     type="button"
                     onClick={() => openEdit(group)}
@@ -354,6 +404,7 @@ export function UnitPicManager() {
                       <span className="shrink-0 text-caption-1-regular text-text-tertiary">
                         {group.units.length} unit{!group.user && " · bukan pengguna"}
                       </span>
+                      {!group.isActive && <InactiveChip />}
                     </span>
                     <UnitChips units={group.units} />
                   </button>
@@ -368,6 +419,7 @@ export function UnitPicManager() {
       <CardFooter>
         <p className="text-body-regular text-text-secondary">
           Jumlah: {groups.length} PIC dalam {allUnits.length - extraUnits.length} unit
+          {inactiveCount > 0 && ` · ${inactiveCount} tidak aktif`}
         </p>
       </CardFooter>
 
@@ -379,7 +431,9 @@ export function UnitPicManager() {
               {editingPic ? `Atur Unit · ${editingPic}` : "Tambah PIC"}
             </DialogTitle>
             <DialogDescription className="text-caption-1-regular text-text-secondary">
-              Pilih pegawai, kemudian tandakan semua unit yang dijaganya.
+              {editingGroup && !editingGroup.isActive
+                ? "PIC ini tidak aktif: tidak dipaparkan dalam borang Surat baharu."
+                : "Pilih pegawai, kemudian tandakan semua unit yang dijaganya."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
@@ -505,6 +559,19 @@ export function UnitPicManager() {
               </FormField>
             </div>
             <div className={dialogFooterClass}>
+              {editingGroup && (
+                <Button
+                  type="button"
+                  variant={editingGroup.isActive ? "danger" : "secondary"}
+                  size="small"
+                  leadingIcon={editingGroup.isActive ? RiForbidLine : RiCheckboxCircleLine}
+                  onClick={() => setActive(editingGroup.pic, !editingGroup.isActive)}
+                  disabled={submitting}
+                  className="flex-1 sm:me-auto sm:flex-none"
+                >
+                  {editingGroup.isActive ? "Nyahaktif" : "Aktifkan"}
+                </Button>
+              )}
               <Button type="button" variant="secondary" size="small" onClick={() => setDialogOpen(false)} disabled={submitting} className="flex-1 sm:flex-none">
                 Batal
               </Button>
