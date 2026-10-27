@@ -1905,7 +1905,12 @@ export default function SuratPage() {
       </Dialog>
 
       {shareItem && (
-        <ShareImageGenerator surat={shareItem} onImageGenerated={handleImageGenerated} onError={handleShareError} />
+        <ShareImageGenerator
+          surat={shareItem}
+          failLabel={getFullFailDisplay(shareItem.fail, failData)}
+          onImageGenerated={handleImageGenerated}
+          onError={handleShareError}
+        />
       )}
       {shareError && (
         <Alert variant="destructive" className="fixed bottom-4 right-4 w-auto max-w-md">
