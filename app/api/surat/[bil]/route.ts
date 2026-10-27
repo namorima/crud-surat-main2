@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllSurat } from "@/lib/supabase-db"
 
-export async function GET(request: NextRequest, { params }: { params: { bil: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ bil: string }> }) {
   try {
-    const bil = Number.parseInt(params.bil)
+    const bil = Number.parseInt((await params).bil)
 
     if (isNaN(bil)) {
       return NextResponse.json({ error: "Invalid BIL number" }, { status: 400 })

@@ -32,3 +32,22 @@ export async function requirePermission(
 
 /** Legacy roles with full access (CLAUDE.md "Legacy Role Access Matrix"). */
 export const ADMIN_ROLES = ["semua", "Super Admin", "admin"]
+
+/**
+ * Tetapan writes scoped to a unit: needs tetapan:edit, and a user without
+ * tetapan:manage_all_units may only touch their own unit (their role).
+ */
+export async function requireUnitEdit(request: Request, units: string[]): Promise<Guard> {
+  const guard = await requirePermission(request, { resource: "tetapan", action: "edit" }, ["semua", "Super Admin"])
+  if (guard.denied) return guard
+  const { session } = guard
+  const permissions = session.roleId ? await getUserPermissions(session.uid) : []
+  const allUnits =
+    permissions.length > 0
+      ? hasPermission(permissions, { resource: "tetapan", action: "manage_all_units" })
+      : ["semua", "Super Admin"].includes(session.role)
+  if (!allUnits && units.some((unit) => unit.toUpperCase() !== session.role.toUpperCase())) {
+    return { denied: NextResponse.json({ error: "Anda hanya boleh mengurus locker unit anda sendiri" }, { status: 403 }) }
+  }
+  return guard
+}

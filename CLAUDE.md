@@ -87,6 +87,11 @@ The application uses a **dual-database architecture**:
 14. **`password_reset_tokens`** - One-time reset links (SHA-256 of the token only)
     - Columns: `id`, `user_id`, `token_hash`, `expires_at`, `used_at`, `created_at`
 
+15. **`locker`** - Part / No. Locker choices per unit for Setup Fail, and the Part badge colour
+    - Columns: `id`, `unit`, `part`, `no_locker`, `warna` (`#rrggbb`), `created_at`, `updated_at`; unique on (unit, part, no_locker), case-insensitive
+    - Created and seeded from existing fails by [create-locker.sql](create-locker.sql); RLS enabled with no policies (service role only)
+    - `fail.part` / `fail.no_locker` stay text: editing a locker moves its fails to the new values, and a locker with fails cannot be deleted
+
 ### Core Data Types
 
 Located in `types/` directory:
@@ -650,7 +655,9 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
-   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit
+   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit. Fail ids are the row UUIDs; `PUT`/`DELETE /api/fail/[id]` update by that id. The form starts with Unit, then Part and No. Locker as dropdowns from Setup Locker (a part with one locker fills it in; an older value not in Setup Locker stays selectable). Its Selects ignore the `""` Radix reports for a value set before the list was opened
+   - `LockerManager.tsx` - Tetapan → Setup Locker tab (right of Setup Fail): Unit, Part, No. Locker and the Part badge colour (preset swatches or any colour). Writes go through `requireUnitEdit()` ([lib/server-auth.ts](lib/server-auth.ts)): `tetapan:edit`, and only the user's own unit without `tetapan:manage_all_units`
+   - `part-badge.tsx` - `PartBadge` and `partWarna()`: a fail's badge colour comes from its locker (else the same part in the unit, anywhere, then the old fixed hues)
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
    - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name). Status is shared by rows with the same `no_kontrak`; a no kontrak without an AKTIF row is in `closedContracts` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran (a record that already uses it keeps it)
 
@@ -697,6 +704,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 - `/api/daripada-kepada` - Fetch daripada/kepada options ([app/api/daripada-kepada/route.ts](app/api/daripada-kepada/route.ts))
 - `/api/bayaran-form-data` - Fetch form data for bayaran ([app/api/bayaran-form-data/route.ts](app/api/bayaran-form-data/route.ts))
 - `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts)); GET is open to signed-in users (Surat form), writes need `pengguna:manage_roles`
+- `/api/locker` - Locker list (signed-in users) / add; `/api/locker/[id]` edit/delete ([app/api/locker/route.ts](app/api/locker/route.ts))
 - `/api/kontraktor` - Kontraktor list/add; `/api/kontraktor/[id]` edit/delete ([app/api/kontraktor/route.ts](app/api/kontraktor/route.ts))
 - `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 
