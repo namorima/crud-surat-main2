@@ -9,7 +9,6 @@ import {
 import {
   Search,
   X,
-  Calendar,
   SlidersHorizontal,
   ArrowDown,
   Edit,
@@ -19,7 +18,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { DateRangeFilter } from "@/components/dashboard/date-range-filter"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -158,29 +157,8 @@ export function BayaranHeader({
             </Button>
           )}
 
-          {/* Date Filter - Icon Only */}
-          {!showSearchInput && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(dateFilter[0] && "text-primary", "h-8 w-8")}
-                >
-                  <Calendar className="h-3 w-3 md:h-4 md:w-4" />
-                  <span className="sr-only">Filter Tarikh</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <CalendarComponent
-                  mode="range"
-                  selected={{ from: dateFilter[0], to: dateFilter[1] }}
-                  onSelect={(range) => setDateFilter([range?.from, range?.to])}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          )}
+          {/* Date range filter (tarikh terima) */}
+          {!showSearchInput && <DateRangeFilter value={dateFilter} onChange={setDateFilter} aria-label="Tapis tarikh terima" />}
 
           {/* Combined Filters */}
           {!showSearchInput && (

@@ -1,12 +1,18 @@
 "use client"
 
+import { useEffect, useMemo, useState } from "react"
 import { RiCheckboxCircleLine, RiTimeLine } from "@remixicon/react"
 import type { Surat } from "@/types/surat"
 import type { Tertunggak } from "@/lib/dashboard-stats"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Chip } from "@/components/base/badges/chip"
 import { Button } from "@/components/base/buttons/button"
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control"
 import { suratStatusChip, unitChip } from "@/lib/ui-status"
+
+type Order = "baru" | "lama"
+/** localStorage key for the chosen order (per browser). */
+const ORDER_KEY = "surat:tertunggak:order"
 
 /** Older is redder: more than 90 days rose, otherwise orange. */
 function HariChip({ hari }: { hari: number }) {
@@ -20,7 +26,7 @@ function HariChip({ hari }: { hari: number }) {
 export interface TertunggakDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** From suratTertunggak(): open surat older than 30 days, oldest first. */
+  /** From suratTertunggak(): open surat older than 30 days, oldest first (the dialog can show newest first). */
   items: Tertunggak[]
   /** Opens Maklumat Surat for one of them. */
   onOpenSurat: (surat: Surat) => void
@@ -28,6 +34,25 @@ export interface TertunggakDialogProps {
 
 /** "Surat Tertunggak": open letters older than 30 days, worked out from the surat records. */
 export function TertunggakDialog({ open, onOpenChange, items, onOpenSurat }: TertunggakDialogProps) {
+  // Newest first by default; remembered across visits
+  const [order, setOrderState] = useState<Order>("baru")
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(ORDER_KEY) === "lama") setOrderState("lama")
+    } catch {
+      // storage blocked: keep newest first
+    }
+  }, [])
+  const setOrder = (value: Order) => {
+    setOrderState(value)
+    try {
+      localStorage.setItem(ORDER_KEY, value)
+    } catch {
+      // not persisted; the order still applies for this visit
+    }
+  }
+  const rows = useMemo(() => (order === "lama" ? items : [...items].reverse()), [items, order])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[760px] sm:p-0">
@@ -39,11 +64,27 @@ export function TertunggakDialog({ open, onOpenChange, items, onOpenSurat }: Ter
             </Chip>
           </div>
           <DialogDescription className="text-caption-1-regular text-text-secondary">
-            Surat yang belum selesai (bukan SELESAI atau BATAL) dan melebihi 30 hari dari tarikh surat. Yang paling lama di atas.
+            Surat yang belum selesai (bukan SELESAI atau BATAL) dan melebihi 30 hari dari tarikh surat.
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          {items.length > 1 && (
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-caption-1-medium text-text-tertiary">Susunan</span>
+              <SegmentedControl
+                aria-label="Susunan surat tertunggak"
+                selectedKeys={[order]}
+                onSelectionChange={(keys) => {
+                  const key = [...keys][0]
+                  if (key) setOrder(key as Order)
+                }}
+              >
+                <SegmentedControlItem id="baru">Paling baru</SegmentedControlItem>
+                <SegmentedControlItem id="lama">Paling lama</SegmentedControlItem>
+              </SegmentedControl>
+            </div>
+          )}
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <RiCheckboxCircleLine className="size-10 text-status-lime-text" aria-hidden />
@@ -64,7 +105,7 @@ export function TertunggakDialog({ open, onOpenChange, items, onOpenSurat }: Ter
                     </tr>
                   </thead>
                   <tbody className="motion-stagger">
-                    {items.map(({ surat, hari }) => (
+                    {rows.map(({ surat, hari }) => (
                       <tr key={surat.id} className="hover:bg-background-secondary-default">
                         <td>
                           <button
@@ -110,7 +151,7 @@ export function TertunggakDialog({ open, onOpenChange, items, onOpenSurat }: Ter
 
               {/* Phones: tap a card to open the surat */}
               <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
-                {items.map(({ surat, hari }) => (
+                {rows.map(({ surat, hari }) => (
                   <li key={surat.id}>
                     <button
                       type="button"

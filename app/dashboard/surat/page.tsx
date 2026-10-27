@@ -30,7 +30,6 @@ import {
   Settings,
   Search,
   X,
-  Calendar,
   SlidersHorizontal,
   ArrowDown,
   ArrowUp,
@@ -47,8 +46,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NavTrigger } from "@/components/dashboard/app-shell"
 import { SuratList } from "@/components/surat/SuratList"
@@ -56,7 +53,8 @@ import { SuratDetailDialog } from "@/components/surat/SuratDetailDialog"
 import { SuratFormDialog } from "@/components/surat/SuratFormDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
-import { suratTertunggak } from "@/lib/dashboard-stats"
+import { parseDate, suratTertunggak } from "@/lib/dashboard-stats"
+import { DateRangeFilter, inRange, type DateRange } from "@/components/dashboard/date-range-filter"
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15
@@ -137,7 +135,7 @@ export default function SuratPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [unitFilter, setUnitFilter] = useState<string>("all")
   const [kategoriFilter, setKategoriFilter] = useState<string>("all")
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
+  const [dateFilter, setDateFilter] = useState<DateRange>([undefined, undefined])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -603,9 +601,8 @@ export default function SuratPage() {
     }
 
     // Apply date filter
-    if (dateFilter) {
-      const filterDate = format(dateFilter, "dd/MM/yyyy")
-      filtered = filtered.filter((item) => item.tarikh === filterDate)
+    if (dateFilter[0]) {
+      filtered = filtered.filter((item) => inRange(parseDate(item.tarikh), dateFilter))
     }
 
     // Apply sorting
@@ -669,16 +666,12 @@ export default function SuratPage() {
     setKategoriFilter(kategori)
   }
 
-  const handleDateFilter = (date: Date | undefined) => {
-    setDateFilter(date)
-  }
-
   const clearAllFilters = () => {
     setSearchQuery("")
     setStatusFilter("all")
     setUnitFilter("all")
     setKategoriFilter("all")
-    setDateFilter(undefined)
+    setDateFilter([undefined, undefined])
     setShowSearchInput(false)
   }
 
@@ -1153,7 +1146,7 @@ export default function SuratPage() {
             </div>
             <div className="flex items-center gap-1 flex-wrap justify-end">
               {/* Clear Filter Button - Only shows when filters are applied */}
-              {(statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all" || dateFilter) && (
+              {(statusFilter !== "all" || unitFilter !== "all" || kategoriFilter !== "all" || dateFilter[0]) && (
                 <Button
                   variant="outline"
                   size="icon"
@@ -1203,25 +1196,8 @@ export default function SuratPage() {
                 </Button>
               )}
 
-              {/* Date Filter - Icon Only */}
-              {!showSearchInput && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    {/* Phones pick the date from the Tarikh tab in the filter popover instead. */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={cn(dateFilter && "text-primary", "hidden h-8 w-8 md:inline-flex")}
-                    >
-                      <Calendar className="h-4 w-4" />
-                      <span className="sr-only">Filter Tarikh</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateFilter} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              )}
+              {/* Date range filter */}
+              {!showSearchInput && <DateRangeFilter value={dateFilter} onChange={setDateFilter} />}
 
               {/* Combined Filters */}
               {!showSearchInput && (
@@ -1241,13 +1217,10 @@ export default function SuratPage() {
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="end">
                     <Tabs defaultValue="status" className="w-full">
-                      <TabsList className="m-2 mb-0 grid w-[calc(100%-1rem)] grid-cols-4 md:grid-cols-3">
+                      <TabsList className="m-2 mb-0 grid w-[calc(100%-1rem)] grid-cols-3">
                         <TabsTrigger value="status">Status</TabsTrigger>
                         <TabsTrigger value="unit">Unit</TabsTrigger>
                         <TabsTrigger value="kategori">Kategori</TabsTrigger>
-                        <TabsTrigger value="tarikh" className="md:hidden">
-                          Tarikh
-                        </TabsTrigger>
                       </TabsList>
                       <TabsContent value="status" className="p-4 space-y-4">
                         <div className="space-y-2">
@@ -1300,9 +1273,6 @@ export default function SuratPage() {
                           </Select>
                         </div>
                       </TabsContent>
-                      <TabsContent value="tarikh" className="flex justify-center p-2 md:hidden">
-                        <CalendarComponent mode="single" selected={dateFilter} onSelect={handleDateFilter} />
-                      </TabsContent>
                     </Tabs>
                     <div className="flex items-center justify-between p-4 border-t">
                       <Button
@@ -1313,7 +1283,7 @@ export default function SuratPage() {
                           statusFilter === "all" &&
                           unitFilter === "all" &&
                           kategoriFilter === "all" &&
-                          !dateFilter &&
+                          !dateFilter[0] &&
                           !searchQuery
                         }
                       >

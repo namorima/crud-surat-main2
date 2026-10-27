@@ -210,7 +210,7 @@ Located in `types/` directory:
 
 - **Styling**: Tailwind CSS v4 (CSS-first config in [app/globals.css](app/globals.css)) with BoardUI design tokens ([styles/theme.css](styles/theme.css), [styles/typography.css](styles/typography.css))
 - **BoardUI**: source-owned components in [components/base/](components/base/), [components/application/](components/application/), [components/foundations/](components/foundations/); merge classes with `cx()` from [utils/cx.ts](utils/cx.ts). The dashboard frame is [components/dashboard/app-shell.tsx](components/dashboard/app-shell.tsx)
-- **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/))
+- **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/)); [components/ui/calendar.tsx](components/ui/calendar.tsx) is styled for react-day-picker v9 (its class-name keys differ from v8) and defaults to the date-fns `ms` locale
 - **Forms**: React Hook Form with Zod validation ([types/bayaran-schema.ts](types/bayaran-schema.ts))
 - **State Management**: React Context for authentication
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
@@ -648,6 +648,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bottom-tab-bar.tsx` - iPhone (below `sm`) bottom tab bar; "Lagi" opens the drawer
    - `sidebar.tsx` - Navigation sidebar and `useNavigation()` (RBAC-filtered nav items)
    - `row-actions.tsx` - "…" row menu (BoardUI Dropdown)
+   - `date-range-filter.tsx` - `DateRangeFilter`: header calendar button for Surat (tarikh) and Rekod Bayaran (tarikh terima). A one-month react-aria `RangeCalendar` (BoardUI `MonthPanel`, Malay via the app's `ms-MY` I18nProvider) with quick ranges (Hari ini, 7 hari lepas, Bulan ini, Bulan lepas, Tahun ini) and Kosongkan / Guna; `inRange()` compares whole days. Pages keep the range as `[from, to]`
    - `header.tsx` - Page header
 
 5. **Surat Components** ([components/surat/](components/surat/))
@@ -655,7 +656,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share); the Daripada / Kepada field is labelled "Daripada" for MASUK and "Kepada" for KELUAR
    - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving. Perkara is a wrapping textarea with its own suggestion list. A Respon starts as the opposite kategori of the surat it answers (MASUK → KELUAR, status SELESAI) and offers "Salin perkara surat #N"
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
-   - `TertunggakDialog.tsx` - "Surat Tertunggak" (bell button): open surat (not SELESAI or BATAL) whose tarikh is more than 30 days ago, oldest first, computed by `suratTertunggak()` in [lib/dashboard-stats.ts](lib/dashboard-stats.ts) from the loaded surat (users limited to their unit see only that unit). It used to read the Google Sheets `FX` tab
+   - `TertunggakDialog.tsx` - "Surat Tertunggak" (bell button): open surat (not SELESAI or BATAL) whose tarikh is more than 30 days ago, computed by `suratTertunggak()` in [lib/dashboard-stats.ts](lib/dashboard-stats.ts) from the loaded surat (users limited to their unit see only that unit). A Paling baru (default) / Paling lama switch orders it, remembered in localStorage (`surat:tertunggak:order`). It used to read the Google Sheets `FX` tab
    - Share (WhatsApp) image: [components/share-image-generator.tsx](components/share-image-generator.tsx) draws a BoardUI card like Maklumat Surat (status chip, kategori arrow, Daripada/Kepada, perkara, Unit/PIC/Tarikh Selesai/Reference/Fail, Nota, Komen) at 2× with a measure-then-paint layout; canvas helpers and chip hex colours are shared with the Bayaran image in [lib/share-canvas.ts](lib/share-canvas.ts). Both generators run once per record (callbacks are read through a ref) so a re-render does not upload again
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
