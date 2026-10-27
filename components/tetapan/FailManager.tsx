@@ -4,11 +4,22 @@ import type React from "react"
 import type { ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { RiAddLine, RiDeleteBinLine, RiEditLine, RiFilter3Line, RiLoader4Line, RiSearchLine } from "@remixicon/react"
+import {
+  RiAddLine,
+  RiCheckboxCircleLine,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiFilter3Line,
+  RiForbidLine,
+  RiLoader4Line,
+  RiSearchLine,
+} from "@remixicon/react"
 import type { Fail } from "@/types/fail"
 import type { Locker } from "@/types/locker"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Chip } from "@/components/base/badges/chip"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -31,7 +42,11 @@ const ALL_UNITS = "__all__"
 /** localStorage key for the Setup Fail unit filter (per browser). */
 const UNIT_FILTER_KEY = "tetapan:setup-fail:unit"
 
-type FailForm = Omit<Fail, "id">
+type FailForm = Omit<Fail, "id" | "isActive">
+
+/** Same unit, part, locker and no fail, ignoring case and spacing. */
+const sameFail = (a: FailForm, b: FailForm) =>
+  (["unit", "part", "noLocker", "noFail"] as const).every((key) => (a[key] || "").trim().toUpperCase() === (b[key] || "").trim().toUpperCase())
 
 /** Radix Select cannot hold "", so an unset field uses this value. */
 const NONE = "__none"
@@ -43,6 +58,14 @@ const NONE = "__none"
  */
 const onPick = (apply: (value: string) => void) => (value: string) => {
   if (value !== "") apply(value === NONE ? "" : value)
+}
+
+function InactiveChip() {
+  return (
+    <Chip variant="caption" color="neutral">
+      Tidak aktif
+    </Chip>
+  )
 }
 
 function Dash() {
@@ -103,6 +126,10 @@ export function FailManager({
   const [deleting, setDeleting] = useState<Fail | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [lockers, setLockers] = useState<Locker[]>([])
+  // Disabled fails are hidden from the list until asked for
+  const [showInactive, setShowInactive] = useState(false)
+  // Adding a fail that repeats an active one: disable the old one (asked in the form)
+  const [disableOld, setDisableOld] = useState(true)
 
   useEffect(() => {
     const load = async () => {
@@ -159,10 +186,12 @@ export function FailManager({
   const activeUnit = canViewAll ? unitFilter : ALL_UNITS
 
   // Non-admin users only see their own unit's fails
-  const visible = useMemo(
+  const ownUnit = useMemo(
     () => (canViewAll ? items : items.filter((fail) => fail.unit === userUnit)),
     [items, canViewAll, userUnit],
   )
+  const inactiveCount = useMemo(() => ownUnit.filter((fail) => !fail.isActive).length, [ownUnit])
+  const visible = useMemo(() => (showInactive ? ownUnit : ownUnit.filter((fail) => fail.isActive)), [ownUnit, showInactive])
 
   // Units from Unit PIC plus any unit already used by a fail (and the saved one, so it still shows)
   const unitOptions = useMemo(() => {
@@ -184,6 +213,12 @@ export function FailManager({
   }, [visible, query, activeUnit])
 
   const narrowed = Boolean(query.trim()) || activeUnit !== ALL_UNITS
+
+  // Active fails the new one repeats (Tambah Fail only)
+  const duplicates = useMemo(
+    () => (editing || !form.noFail.trim() || !form.noLocker ? [] : items.filter((fail) => fail.isActive && sameFail(fail, form))),
+    [editing, items, form],
+  )
 
   // The form offers the parts set up for its unit, then the lockers of that part.
   // A value no longer in Setup Locker (an older fail) stays selectable so editing keeps it.
@@ -211,6 +246,7 @@ export function FailManager({
     setEditing(null)
     // A unit picked in the filter is the likely unit for the new fail
     setForm(activeUnit !== ALL_UNITS ? { ...empty, unit: activeUnit } : empty)
+    setDisableOld(true)
     setFormOpen(true)
   }
 
@@ -241,12 +277,18 @@ export function FailManager({
       const response = await fetch(editing ? `/api/fail/${editing.id}` : "/api/fail", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(editing ? form : { ...form, disableExisting: duplicates.length > 0 && disableOld }),
       })
       if (!response.ok) throw new Error("Failed to save fail")
-      const saved: Fail = await response.json()
-      setItems((prev) => (editing ? prev.map((f) => (f.id === editing.id ? saved : f)) : [...prev, saved]))
-      toast.success(editing ? "Fail telah dikemaskini" : "Fail baru telah ditambah")
+      const { disabledIds = [], ...saved }: Fail & { disabledIds?: string[] } = await response.json()
+      setItems((prev) =>
+        editing
+          ? prev.map((f) => (f.id === editing.id ? saved : f))
+          : [...prev.map((f) => (disabledIds.includes(f.id) ? { ...f, isActive: false } : f)), saved],
+      )
+      toast.success(editing ? "Fail telah dikemaskini" : "Fail baru telah ditambah", {
+        description: disabledIds.length > 0 ? `${disabledIds.length} fail lama yang sama telah dinyahaktifkan.` : undefined,
+      })
       setFormOpen(false)
     } catch (error) {
       console.error("Error saving fail:", error)
@@ -274,8 +316,30 @@ export function FailManager({
     }
   }
 
+  const setActive = async (fail: Fail, isActive: boolean) => {
+    try {
+      const response = await fetch(`/api/fail/${fail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!response.ok) throw new Error("Failed to change fail status")
+      const saved: Fail = await response.json()
+      setItems((prev) => prev.map((f) => (f.id === saved.id ? saved : f)))
+      toast.success(isActive ? `Fail ${fail.noFail} diaktifkan semula` : `Fail ${fail.noFail} dinyahaktifkan`, {
+        description: isActive ? undefined : "Ia tidak lagi muncul dalam borang Surat baharu. Surat lama tidak berubah.",
+      })
+    } catch (error) {
+      console.error("Error changing fail status:", error)
+      toast.error("Gagal menukar status fail")
+    }
+  }
+
   const actionsFor = (fail: Fail) => [
     { label: "Edit", icon: RiEditLine, onSelect: () => openEdit(fail) },
+    fail.isActive
+      ? { label: "Nyahaktif", icon: RiForbidLine, onSelect: () => setActive(fail, false) }
+      : { label: "Aktifkan", icon: RiCheckboxCircleLine, onSelect: () => setActive(fail, true) },
     { label: "Padam", icon: RiDeleteBinLine, onSelect: () => setDeleting(fail), danger: true },
   ]
 
@@ -331,6 +395,19 @@ export function FailManager({
               </SelectContent>
             </Select>
           )}
+          {inactiveCount > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="small"
+              leadingIcon={RiForbidLine}
+              aria-pressed={showInactive}
+              onClick={() => setShowInactive((value) => !value)}
+              className={cx("shrink-0", showInactive && "ring-2 ring-inset ring-border-button-active")}
+            >
+              Tidak aktif ({inactiveCount})
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -370,12 +447,17 @@ export function FailManager({
                   </thead>
                   <tbody className="motion-stagger">
                     {filtered.map((fail) => (
-                      <tr key={fail.id} className="hover:bg-background-secondary-default">
+                      <tr key={fail.id} className={cx("hover:bg-background-secondary-default", !fail.isActive && "text-text-tertiary")}>
                         <td>
                           <PartBadge part={fail.part} warna={partWarna(lockers, fail)} />
                         </td>
                         <td className="tabular-nums">{fail.noLocker || <Dash />}</td>
-                        <td className="text-body-semibold tabular-nums">{fail.noFail}</td>
+                        <td className="tabular-nums">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-body-semibold">{fail.noFail}</span>
+                            {!fail.isActive && <InactiveChip />}
+                          </span>
+                        </td>
                         <td>{fail.pecahan || <Dash />}</td>
                         <td className="text-text-secondary">{fail.pecahanKecil || <Dash />}</td>
                         <td className="text-text-secondary">{fail.unit}</td>
@@ -394,11 +476,12 @@ export function FailManager({
             {/* Phones */}
             <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
               {filtered.map((fail) => (
-                <li key={fail.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+                <li key={fail.id} className={cx("flex items-start gap-2 rounded-2xl border border-border-button-default p-3", !fail.isActive && "border-dashed")}>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-body-semibold text-text-primary tabular-nums">Fail {fail.noFail}</span>
+                      <span className={cx("text-body-semibold tabular-nums", fail.isActive ? "text-text-primary" : "text-text-tertiary")}>Fail {fail.noFail}</span>
                       <PartBadge part={fail.part} warna={partWarna(lockers, fail)} />
+                      {!fail.isActive && <InactiveChip />}
                     </div>
                     {(fail.pecahan || fail.pecahanKecil) && (
                       <span className="text-body-regular text-text-secondary">
@@ -422,6 +505,7 @@ export function FailManager({
           Jumlah: {narrowed ? `${filtered.length} / ` : ""}
           {visible.length} fail
           {activeUnit !== ALL_UNITS && ` · Unit ${activeUnit}`}
+          {!showInactive && inactiveCount > 0 && ` · ${inactiveCount} tidak aktif disembunyikan`}
         </p>
       </CardFooter>
 
@@ -527,8 +611,24 @@ export function FailManager({
                 </p>
               )}
               <Field label="No. Fail" htmlFor="fail-no" required>
-                <Input id="fail-no" value={form.noFail} onChange={setField("noFail")} placeholder="2" />
+                <Input id="fail-no" value={form.noFail} onChange={setField("noFail")} placeholder="2" aria-describedby={duplicates.length > 0 ? "fail-duplicate" : undefined} />
               </Field>
+              {duplicates.length > 0 && (
+                <div id="fail-duplicate" className="-mt-1 flex flex-col gap-2 rounded-xl bg-status-yellow-background p-3 text-caption-1-regular text-status-yellow-text">
+                  <p>
+                    Fail <b>{form.part} · Locker {form.noLocker} · No. {form.noFail}</b> untuk unit {form.unit} sudah wujud
+                    {duplicates[0].pecahan || duplicates[0].pecahanKecil
+                      ? ` (${[duplicates[0].pecahan, duplicates[0].pecahanKecil].filter(Boolean).join(" · ")})`
+                      : ""}
+                    {duplicates.length > 1 ? ` dan ${duplicates.length - 1} lagi` : ""}. Adakah anda mahu menyahaktifkan fail lama?
+                    Fail lama tidak akan muncul dalam borang Surat baharu, tetapi surat lama tidak berubah.
+                  </p>
+                  <label className="flex cursor-pointer items-start gap-2 text-caption-1-medium">
+                    <Checkbox checked={disableOld} onCheckedChange={(checked) => setDisableOld(checked === true)} className="mt-0.5" />
+                    Ya, nyahaktifkan fail lama
+                  </label>
+                </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Pecahan" htmlFor="fail-pecahan">
                   <Input id="fail-pecahan" value={form.pecahan} onChange={setField("pecahan")} />
@@ -551,6 +651,8 @@ export function FailManager({
                   </span>
                 ) : editing ? (
                   "Kemaskini"
+                ) : duplicates.length > 0 && disableOld ? (
+                  "Simpan & nyahaktif lama"
                 ) : (
                   "Simpan"
                 )}

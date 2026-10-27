@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllFail, addFail } from "@/lib/supabase-db"
+import { getAllFail, addFail, disableMatchingFails } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
@@ -24,7 +24,9 @@ export async function POST(request: Request) {
     }
 
     const newFail = await addFail(body)
-    return NextResponse.json(newFail, { status: 201 })
+    // The new fail replaces older ones with the same unit, part, locker and no fail
+    const disabledIds = body.disableExisting ? await disableMatchingFails(newFail) : []
+    return NextResponse.json({ ...newFail, disabledIds }, { status: 201 })
   } catch (error) {
     console.error("Error adding FAIL:", error)
     return NextResponse.json(

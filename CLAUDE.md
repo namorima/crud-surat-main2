@@ -44,7 +44,8 @@ The application uses a **dual-database architecture**:
    - Auto-populated: `nama_kontraktor` via trigger function
 
 3. **`fail`** - File/document management
-   - Columns: `id`, `part`, `no_locker`, `no_fail`, `pecahan`, `pecahan_kecil`, `unit`, `created_at`
+   - Columns: `id`, `part`, `no_locker`, `no_fail`, `pecahan`, `pecahan_kecil`, `unit`, `is_active` (default true), `disabled_at`, `created_at`
+   - `is_active`/`disabled_at` from [add-fail-active.sql](add-fail-active.sql): a disabled fail is not offered in the Surat form; `surat.fail` stores the text `"<no_locker> <no_fail>"`, so old surat are unchanged
    - Parts: "HASIL", "PERTANIAN AM", "KONTRAK"
 
 4. **`users`** - User authentication and profile
@@ -655,7 +656,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
-   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit. Fail ids are the row UUIDs; `PUT`/`DELETE /api/fail/[id]` update by that id. The form starts with Unit, then Part and No. Locker as dropdowns from Setup Locker (a part with one locker fills it in; an older value not in Setup Locker stays selectable). Its Selects ignore the `""` Radix reports for a value set before the list was opened
+   - `FailManager.tsx` - Tetapan → Setup Fail tab: fail list (table from `md`, cards below), one add/edit dialog; non-admin users see and add only their own unit. Users who see all units get a Unit filter, saved in localStorage (`tetapan:setup-fail:unit`) so it survives reloads; Tambah Fail prefills the filtered unit. Fail ids are the row UUIDs; `PUT`/`DELETE /api/fail/[id]` update by that id. The form starts with Unit, then Part and No. Locker as dropdowns from Setup Locker (a part with one locker fills it in; an older value not in Setup Locker stays selectable). Its Selects ignore the `""` Radix reports for a value set before the list was opened. Fails can be disabled / enabled from the row menu (`PATCH /api/fail/[id]` `{ isActive }`); disabled ones are hidden until "Tidak aktif (n)" is on. Tambah Fail warns when an active fail has the same unit, part, locker and no fail and, if confirmed, `POST /api/fail` with `disableExisting: true` disables those (`disabledIds` in the reply)
    - `LockerManager.tsx` - Tetapan → Setup Locker tab (right of Setup Fail): Unit, Part, No. Locker and the Part badge colour (preset swatches or any colour). Writes go through `requireUnitEdit()` ([lib/server-auth.ts](lib/server-auth.ts)): `tetapan:edit`, and only the user's own unit without `tetapan:manage_all_units`
    - `part-badge.tsx` - `PartBadge` and `partWarna()`: a fail's badge colour comes from its locker (else the same part in the unit, anywhere, then the old fixed hues)
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
