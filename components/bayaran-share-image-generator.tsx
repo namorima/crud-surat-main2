@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react"
 import type { Bayaran } from "@/types/bayaran"
 import { uploadToImgBB } from "@/lib/imgbb-service"
+import { roundRect, wrapLines } from "@/lib/share-canvas"
 
 interface BayaranShareImageGeneratorProps {
   bayaran: Bayaran
@@ -49,43 +50,6 @@ function formatCurrency(value: string | number | null | undefined) {
   const numericValue = String(value).replace(/[^\d.-]/g, "")
   if (numericValue === "" || isNaN(Number(numericValue))) return String(value)
   return `RM ${Number(numericValue).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-/** Split text into lines that fit maxWidth (long words are broken by character). */
-function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const lines: string[] = []
-  for (const paragraph of (text || "").split(/\n/)) {
-    let line = ""
-    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
-      const test = line ? `${line} ${word}` : word
-      if (ctx.measureText(test).width <= maxWidth) {
-        line = test
-        continue
-      }
-      if (line) lines.push(line)
-      // A single word wider than the box: hard-break it
-      let rest = word
-      while (ctx.measureText(rest).width > maxWidth && rest.length > 1) {
-        let cut = rest.length - 1
-        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--
-        lines.push(rest.slice(0, cut))
-        rest = rest.slice(cut)
-      }
-      line = rest
-    }
-    lines.push(line)
-  }
-  return lines.length ? lines : [""]
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y, x + w, y + h, r)
-  ctx.arcTo(x + w, y + h, x, y + h, r)
-  ctx.arcTo(x, y + h, x, y, r)
-  ctx.arcTo(x, y, x + w, y, r)
-  ctx.closePath()
 }
 
 /**
@@ -318,6 +282,8 @@ export function BayaranShareImageGenerator({ bayaran, kontrakInfo, onImageGenera
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // Read once: info arriving later must not regenerate (and re-upload) the image
   const infoRef = useRef(kontrakInfo)
+  const callbacks = useRef({ onImageGenerated, onError })
+  callbacks.current = { onImageGenerated, onError }
 
   useEffect(() => {
     const generateImage = async () => {
@@ -345,14 +311,14 @@ export function BayaranShareImageGenerator({ bayaran, kontrakInfo, onImageGenera
       try {
         const imageUrl = canvas.toDataURL("image/png")
         const directLink = await uploadToImgBB(imageUrl)
-        onImageGenerated(imageUrl, directLink)
+        callbacks.current.onImageGenerated(imageUrl, directLink)
       } catch (error) {
-        onError(error as Error)
+        callbacks.current.onError(error as Error)
       }
     }
 
     generateImage()
-  }, [bayaran, onImageGenerated, onError])
+  }, [bayaran])
 
   return <canvas ref={canvasRef} style={{ display: "none" }} />
 }
