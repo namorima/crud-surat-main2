@@ -655,6 +655,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share); the Daripada / Kepada field is labelled "Daripada" for MASUK and "Kepada" for KELUAR
    - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving. Perkara is a wrapping textarea with its own suggestion list. A Respon starts as the opposite kategori of the surat it answers (MASUK → KELUAR, status SELESAI) and offers "Salin perkara surat #N"
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
+   - `TertunggakDialog.tsx` - "Surat Tertunggak" (bell button): open surat (not SELESAI or BATAL) whose tarikh is more than 30 days ago, oldest first, computed by `suratTertunggak()` in [lib/dashboard-stats.ts](lib/dashboard-stats.ts) from the loaded surat (users limited to their unit see only that unit). It used to read the Google Sheets `FX` tab
    - Share (WhatsApp) image: [components/share-image-generator.tsx](components/share-image-generator.tsx) draws a BoardUI card like Maklumat Surat (status chip, kategori arrow, Daripada/Kepada, perkara, Unit/PIC/Tarikh Selesai/Reference/Fail, Nota, Komen) at 2× with a measure-then-paint layout; canvas helpers and chip hex colours are shared with the Bayaran image in [lib/share-canvas.ts](lib/share-canvas.ts). Both generators run once per record (callbacks are read through a ref) so a re-render does not upload again
 
 6. **Tetapan Components** ([components/tetapan/](components/tetapan/)) — the page uses BoardUI underline `Tabs` ([components/base/tabs/tabs.tsx](components/base/tabs/tabs.tsx)); tab items are `[role=tab]` divs, not buttons
@@ -725,7 +726,6 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 ### Utility Routes
 
 - `/api/upload-image` - ImgBB image upload ([app/api/upload-image/route.ts](app/api/upload-image/route.ts))
-- `/api/fx-notifications` - FX notifications ([app/api/fx-notifications/route.ts](app/api/fx-notifications/route.ts))
 - `/api/debug/rbac` - RBAC debug endpoint ([app/api/debug/rbac/route.ts](app/api/debug/rbac/route.ts))
 
 ## Testing and Debugging

@@ -2,7 +2,6 @@
 
 import { PageLoader } from "@/components/dashboard/page-loader"
 import type React from "react"
-import type { FXNotification } from "@/types/fx-notification"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import Link from "next/link"
@@ -12,7 +11,6 @@ import type { Surat } from "@/types/surat"
 import type { Fail } from "@/types/fail"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -21,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -35,7 +32,6 @@ import {
   X,
   Calendar,
   SlidersHorizontal,
-  CheckCircle,
   ArrowDown,
   ArrowUp,
   Loader2,
@@ -48,7 +44,6 @@ import {
 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
@@ -60,18 +55,11 @@ import { SuratList } from "@/components/surat/SuratList"
 import { SuratDetailDialog } from "@/components/surat/SuratDetailDialog"
 import { SuratFormDialog } from "@/components/surat/SuratFormDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
+import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
+import { suratTertunggak } from "@/lib/dashboard-stats"
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15
-
-// Unit color mapping
-const UNIT_COLORS = {
-  PERLADANGAN: "#ffe5a0", // light yellow
-  PERANCANG: "#bfe1f6", // light blue
-  TKA: "#ffcfc9", // light red/pink
-  MSPO: "#ffcfc9", // light red/pink
-  PEMASARAN: "#d4edbc", // light green
-}
 
 // FAIL part color mapping
 const FAIL_PART_COLORS = {
@@ -192,10 +180,7 @@ export default function SuratPage() {
   }, [units, user])
 
   // FX Notifications state
-  const [fxNotifications, setFxNotifications] = useState<FXNotification[]>([])
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
-  const [notificationLoading, setNotificationLoading] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(0)
 
   // Add these state variables inside the component
   const [generatingImage, setGeneratingImage] = useState(false)
@@ -500,43 +485,34 @@ export default function SuratPage() {
     }
   }, [])
 
-  // Fetch FX notifications
-  const fetchFXNotifications = useCallback(async () => {
-    setNotificationLoading(true)
-    try {
-      const response = await fetch("/api/fx-notifications")
-      if (!response.ok) {
-        throw new Error(`Error fetching FX notifications: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      setFxNotifications(data || [])
-      setNotificationCount(data?.length || 0)
-    } catch (error) {
-      console.error("Error fetching FX notifications:", error)
-    } finally {
-      setNotificationLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
     fetchWithCache()
     fetchUnitAndPicData()
     fetchFailData()
     fetchDaripadaKepadaSuggestions()
-    fetchFXNotifications()
 
     // Set up periodic refresh
     const intervalId = setInterval(
       () => {
         fetchWithCache()
-        fetchFXNotifications()
       },
       10 * 60 * 1000,
     ) // Refresh every 10 minutes
 
     return () => clearInterval(intervalId)
-  }, [fetchWithCache, fetchUnitAndPicData, fetchDaripadaKepadaSuggestions, fetchFXNotifications])
+  }, [fetchWithCache, fetchUnitAndPicData, fetchDaripadaKepadaSuggestions])
+
+  // Surat Tertunggak: worked out from the surat records (was the Google Sheets FX tab).
+  // Users who only see their unit's surat only count their unit's.
+  const tertunggak = useMemo(() => {
+    const seesAll = !user || user.role === "semua" || user.role === "PENGURUS"
+    const visibleSurat = seesAll
+      ? surat
+      : surat.filter((item) => item.unit.toLowerCase().trim() === user.role.toLowerCase().trim())
+    return suratTertunggak(visibleSurat)
+  }, [surat, user])
+  const notificationCount = tertunggak.length
 
   useEffect(() => {
     filterSurat()
@@ -1040,27 +1016,6 @@ export default function SuratPage() {
     setShowSearchInput(!showSearchInput)
   }
 
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "HOLD / KIV":
-        return "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-200"
-      case "DALAM TINDAKAN":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200"
-      case "SELESAI":
-        return "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200"
-      case "BATAL":
-        return "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200"
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
-    }
-  }
-
-  // Get unit color
-  const getUnitColor = (unit: string) => {
-    return UNIT_COLORS[unit] || "#f3f4f6" // default light gray if no color defined
-  }
-
   const handleBilReferenceClick = (bilNumber: string) => {
     // Find the surat with the matching BIL
     const foundSurat = surat.find((item) => item.bil === Number.parseInt(bilNumber))
@@ -1171,17 +1126,6 @@ export default function SuratPage() {
     setGeneratingImage(false)
     setSharingItemId(null)
     setShareItem(null)
-  }
-
-  // Add this function after the handleShareError function
-  const handleNotificationBilClick = (bilNumber: number) => {
-    // Find the surat with the matching BIL
-    const foundSurat = surat.find((item) => item.bil === bilNumber)
-    if (foundSurat) {
-      setDetailSurat(foundSurat)
-      setIsDetailModalOpen(true)
-      setIsNotificationModalOpen(false) // Close notification modal
-    }
   }
 
   if (loading && surat.length === 0) {
@@ -1497,16 +1441,16 @@ export default function SuratPage() {
 
               {/* Notification Button */}
               {!showSearchInput && (
-                <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button
+                <>
+                  <Button
                       variant="outline"
                       size="icon"
                       className={cn(
                         "relative h-8 w-8",
                         notificationCount > 0 && "text-red-500 border-red-200",
                       )}
-                      onClick={fetchFXNotifications}
+                      onClick={() => setIsNotificationModalOpen(true)}
+                      aria-label={`Surat Tertunggak (${notificationCount})`}
                     >
                       <Bell className="h-4 w-4" />
                       {notificationCount > 0 && (
@@ -1516,159 +1460,17 @@ export default function SuratPage() {
                       )}
                       <span className="sr-only">Notifications</span>
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden p-3 md:p-6">
-                    <DialogHeader className="p-0 md:p-2">
-                      <DialogTitle className="text-base md:text-lg flex items-center gap-2">
-                        <Bell className="h-4 w-4 text-red-500" />
-                        Surat Tertunggak ({notificationCount})
-                      </DialogTitle>
-                      <DialogDescription className="text-xs md:text-sm">
-                        Surat yang belum selesai dan melebihi 30 hari
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="overflow-hidden">
-                      {notificationLoading ? (
-                        <div className="flex justify-center py-8">
-                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                        </div>
-                      ) : fxNotifications.length === 0 ? (
-                        <div className="text-center py-8">
-                          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                          <p className="text-muted-foreground">Tiada surat tertunggak</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-                          {/* Desktop view */}
-                          <div className="hidden md:block">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-[80px]">Bil</TableHead>
-                                  <TableHead className="w-[300px]">Perkara</TableHead>
-                                  <TableHead className="w-[180px]">Unit / Tindakan</TableHead>
-                                  <TableHead className="w-[100px]">Status</TableHead>
-                                  <TableHead className="w-[80px] text-right">Hari</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {fxNotifications.map((item) => (
-                                  <TableRow key={item.id} className="hover:bg-muted/50">
-                                    <TableCell className="font-medium">
-                                      <span
-                                        className="cursor-pointer hover:text-blue-600 hover:underline"
-                                        onClick={() => handleNotificationBilClick(item.bil)}
-                                      >
-                                        #{item.bil}
-                                      </span>
-                                    </TableCell>
-                                    <TableCell className="max-w-[300px]">
-                                      <div className="whitespace-normal break-words" title={item.perkara}>
-                                        {item.perkara}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="space-y-1">
-                                        <Badge
-                                          variant="outline"
-                                          style={{
-                                            backgroundColor: getUnitColor(item.unit),
-                                            borderColor: getUnitColor(item.unit),
-                                          }}
-                                          className="text-xs block w-fit text-neutral-900"
-                                        >
-                                          {item.unit}
-                                        </Badge>
-                                        <div className="text-xs text-muted-foreground">{item.tindakan}</div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge className={`text-xs ${getStatusColor(item.status)}`}>{item.status}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <Badge variant="destructive" className="text-xs">
-                                        {item.hari} hari
-                                      </Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          {/* Mobile view */}
-                          <div className="md:hidden space-y-3">
-                            {fxNotifications.map((item) => (
-                              <Card key={item.id} className="p-3 border-l-4 border-l-red-500">
-                                <div className="flex justify-between items-start mb-2">
-                                  <span
-                                    className="font-bold text-sm cursor-pointer hover:text-blue-600 hover:underline"
-                                    onClick={() => handleNotificationBilClick(item.bil)}
-                                  >
-                                    #{item.bil}
-                                  </span>
-                                  <Badge variant="destructive" className="text-xs">
-                                    {item.hari} hari
-                                  </Badge>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <div>
-                                    <h3 className="font-medium text-xs whitespace-normal break-words">
-                                      {item.perkara}
-                                    </h3>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex flex-col gap-1">
-                                      <Badge
-                                        variant="outline"
-                                        style={{
-                                          backgroundColor: getUnitColor(item.unit),
-                                          borderColor: getUnitColor(item.unit),
-                                        }}
-                                        className="text-xs w-fit text-neutral-900"
-                                      >
-                                        {item.unit}
-                                      </Badge>
-                                      <Badge className={`text-xs w-fit ${getStatusColor(item.status)}`}>
-                                        {item.status}
-                                      </Badge>
-                                    </div>
-
-                                    <div className="text-xs text-muted-foreground">
-                                      <span className="font-medium">Tindakan:</span> {item.tindakan}
-                                    </div>
-                                  </div>
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <DialogFooter className="flex justify-between">
-                      <Button variant="outline" onClick={() => setIsNotificationModalOpen(false)}>
-                        Tutup
-                      </Button>
-                      <Button onClick={fetchFXNotifications} disabled={notificationLoading}>
-                        {notificationLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Memuat...
-                          </>
-                        ) : (
-                          <>
-                            <Bell className="mr-2 h-4 w-4" />
-                            Muat Semula
-                          </>
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                  <TertunggakDialog
+                    open={isNotificationModalOpen}
+                    onOpenChange={setIsNotificationModalOpen}
+                    items={tertunggak}
+                    onOpenSurat={(item) => {
+                      setDetailSurat(item)
+                      setIsDetailModalOpen(true)
+                      setIsNotificationModalOpen(false)
+                    }}
+                  />
+                </>
               )}
 
               {/* Add Button */}
