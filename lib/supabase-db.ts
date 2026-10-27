@@ -6,6 +6,7 @@ import type { Fail } from "@/types/fail"
 import type { ShareLink } from "@/types/share-link"
 import type { Kontrak, KontrakInput } from "@/types/kontrak"
 import type { Kontraktor, KontraktorInput } from "@/types/kontraktor"
+import type { Locker, LockerInput } from "@/types/locker"
 import { hashPassword, isHashedPassword } from "./password"
 
 // ===== SURAT FUNCTIONS =====
@@ -1245,6 +1246,92 @@ export async function deleteFail(id: string): Promise<void> {
     console.error("Error deleting fail from Supabase:", error)
     throw new Error(`Failed to delete fail from Supabase: ${error.message}`)
   }
+}
+
+// ===== LOCKER FUNCTIONS =====
+// The Part / No. Locker pairs per unit that Setup Fail picks from. fail keeps
+// part and no_locker as text, so editing a locker rewrites its fails.
+
+function mapLockerRow(row: any): Locker {
+  return { id: row.id, unit: row.unit || "", part: row.part || "", noLocker: row.no_locker || "", warna: row.warna || "#a3a3a3" }
+}
+
+function lockerError(error: any, input: LockerInput): Error {
+  // 23505: locker_unit_part_no_unique
+  if (error?.code === "23505") return new Error(`Locker ${input.noLocker} (${input.part}) sudah wujud untuk unit ${input.unit}`)
+  return new Error(error?.message || String(error))
+}
+
+export async function getAllLocker(): Promise<Locker[]> {
+  const { data, error } = await supabaseAdmin.from("locker").select("*").order("unit").order("part").order("no_locker")
+  if (error) {
+    console.error("Error fetching locker from Supabase:", error)
+    throw new Error(`Failed to fetch locker from Supabase: ${error.message}`)
+  }
+  return (data || []).map(mapLockerRow)
+}
+
+export async function getLockerById(id: string): Promise<Locker | null> {
+  const { data, error } = await supabaseAdmin.from("locker").select("*").eq("id", id).maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ? mapLockerRow(data) : null
+}
+
+export async function addLocker(input: LockerInput): Promise<Locker> {
+  const { data, error } = await supabaseAdmin
+    .from("locker")
+    .insert({ unit: input.unit, part: input.part, no_locker: input.noLocker, warna: input.warna })
+    .select()
+    .single()
+  if (error) {
+    console.error("Error adding locker to Supabase:", error)
+    throw lockerError(error, input)
+  }
+  return mapLockerRow(data)
+}
+
+/** Also moves the fails filed under the old unit / part / locker to the new values. */
+export async function updateLocker(existing: Locker, input: LockerInput): Promise<{ locker: Locker; failUpdated: number }> {
+  const { data, error } = await supabaseAdmin
+    .from("locker")
+    .update({ unit: input.unit, part: input.part, no_locker: input.noLocker, warna: input.warna, updated_at: new Date().toISOString() })
+    .eq("id", existing.id)
+    .select()
+    .single()
+  if (error) {
+    console.error("Error updating locker in Supabase:", error)
+    throw lockerError(error, input)
+  }
+
+  let failUpdated = 0
+  if (existing.unit !== input.unit || existing.part !== input.part || existing.noLocker !== input.noLocker) {
+    const fail = await supabaseAdmin
+      .from("fail")
+      .update({ unit: input.unit, part: input.part, no_locker: input.noLocker })
+      .eq("unit", existing.unit)
+      .eq("part", existing.part)
+      .eq("no_locker", existing.noLocker)
+      .select("id")
+    if (fail.error) throw new Error(fail.error.message)
+    failUpdated = fail.data?.length || 0
+  }
+  return { locker: mapLockerRow(data), failUpdated }
+}
+
+/** Refuses while a fail is still filed in this locker. */
+export async function deleteLocker(existing: Locker): Promise<void> {
+  const { count, error: countError } = await supabaseAdmin
+    .from("fail")
+    .select("id", { count: "exact", head: true })
+    .eq("unit", existing.unit)
+    .eq("part", existing.part)
+    .eq("no_locker", existing.noLocker)
+  if (countError) throw new Error(countError.message)
+  if (count && count > 0) {
+    throw new Error(`Locker ini masih digunakan oleh ${count} fail. Pindahkan atau padam fail tersebut dahulu.`)
+  }
+  const { error } = await supabaseAdmin.from("locker").delete().eq("id", existing.id)
+  if (error) throw new Error(error.message)
 }
 
 // ===== SHARE LINK FUNCTIONS =====

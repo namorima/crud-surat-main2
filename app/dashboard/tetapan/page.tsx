@@ -16,6 +16,7 @@ import type { ShareLink, ShareLinkFilter } from "@/types/share-link"
 import { ShareLinkForm } from "@/components/share/ShareLinkForm"
 import { ShareLinkTable } from "@/components/share/ShareLinkTable"
 import { FailManager } from "@/components/tetapan/FailManager"
+import { LockerManager } from "@/components/tetapan/LockerManager"
 import { KontrakManager } from "@/components/tetapan/KontrakManager"
 import { KontraktorManager } from "@/components/tetapan/KontraktorManager"
 
@@ -39,6 +40,8 @@ export default function TetapanPage() {
 
   // Get user's unit - use role as unit for non-admin users
   const userUnit = user?.role || ""
+
+  const [tab, setTab] = useState<string>("setup-fail")
 
   // Share Link state
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([])
@@ -170,11 +173,12 @@ export default function TetapanPage() {
         )}
       </header>
 
-      <Tabs defaultSelectedKey="setup-fail" className="gap-3 sm:gap-4">
+      <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key))} className="gap-3 sm:gap-4">
         {/* Scrolls sideways on narrow phones instead of wrapping */}
         <div className="-mx-2 overflow-x-auto px-2 sm:mx-0 sm:px-0">
           <TabList aria-label="Tetapan" className="w-max min-w-full">
             <Tab id="setup-fail">Setup Fail</Tab>
+            <Tab id="setup-locker">Setup Locker</Tab>
             {canViewAll && (
               <Tab id="pautan-kongsi" count={loadingShareLinks ? undefined : shareLinks.length}>
                 Pautan Kongsi
@@ -186,7 +190,16 @@ export default function TetapanPage() {
         </div>
 
         <TabPanel id="setup-fail">
-          <FailManager canEdit={Boolean(canEditTetapan)} canViewAll={Boolean(canViewAll)} userUnit={userUnit} />
+          <FailManager
+            canEdit={Boolean(canEditTetapan)}
+            canViewAll={Boolean(canViewAll)}
+            userUnit={userUnit}
+            onOpenLocker={() => setTab("setup-locker")}
+          />
+        </TabPanel>
+
+        <TabPanel id="setup-locker">
+          <LockerManager canEdit={Boolean(canEditTetapan)} canViewAll={Boolean(canViewAll)} userUnit={userUnit} />
         </TabPanel>
 
         {canViewAll && (
