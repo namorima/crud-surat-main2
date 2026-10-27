@@ -104,7 +104,8 @@ export function SuratDetailDialog({
               </Field>
               <Field label="Tarikh">{surat.tarikh || "-"}</Field>
               <Field label="Tarikh Selesai">{surat.tarikhSelesai || "-"}</Field>
-              <Field label="Daripada / Kepada" className="col-span-2 sm:col-span-3">
+              {/* A surat masuk comes from someone; a surat keluar goes to someone */}
+              <Field label={surat.kategori === "KELUAR" ? "Kepada" : surat.kategori === "MASUK" ? "Daripada" : "Daripada / Kepada"} className="col-span-2 sm:col-span-3">
                 {surat.daripadaKepada || "-"}
               </Field>
               <Field label="Unit">

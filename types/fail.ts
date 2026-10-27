@@ -6,6 +6,8 @@ export interface Fail {
   pecahan: string
   pecahanKecil: string
   unit: string
+  /** false: disabled, not offered in the Surat form (old surat keep their fail text) */
+  isActive: boolean
 }
 
 export type FailPart = "HASIL" | "PERTANIAN AM" | "KONTRAK"

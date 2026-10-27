@@ -479,8 +479,11 @@ export default function SuratPage() {
       filtered = filtered.filter((fail) => fail.unit === formData.unit)
     }
 
+    // Disabled fails (Setup Fail) are not offered, except the one a surat being edited already uses
+    filtered = filtered.filter((fail) => fail.isActive || fail.id === selectedFailId)
+
     setFilteredFailData(filtered)
-  }, [failData, user, formData.unit])
+  }, [failData, user, formData.unit, selectedFailId])
 
   // Fetch DaripadaKepada suggestions
   const fetchDaripadaKepadaSuggestions = useCallback(async () => {
@@ -903,8 +906,10 @@ export default function SuratPage() {
       reference: surat.reference || "",
     })
 
-    // Find the fail object that matches the stored value
-    const matchingFail = filteredFailData.find((fail) => getFailValue(fail) === surat.fail)
+    // Find the fail object that matches the stored value (an active one first: a
+    // disabled fail and its replacement can share the same locker and no fail)
+    const unitFails = failData.filter((fail) => fail.unit === surat.unit && getFailValue(fail) === surat.fail)
+    const matchingFail = unitFails.find((fail) => fail.isActive) ?? unitFails[0]
     if (matchingFail) {
       setSelectedFailId(matchingFail.id)
     } else {

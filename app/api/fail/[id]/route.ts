@@ -1,19 +1,10 @@
 import { NextResponse } from "next/server"
-import { updateFail, deleteFail } from "@/lib/supabase-db"
+import { updateFail, deleteFail, setFailActive } from "@/lib/supabase-db"
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Check if environment variables are set
-    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.error("Missing required environment variables for Google Sheets API")
-      return NextResponse.json(
-        { error: "Server configuration error: Missing Google Sheets credentials" },
-        { status: 500 },
-      )
-    }
-
     const body = await request.json()
-    const { id } = params
+    const { id } = await params
 
     // Validation
     if (!body.part || !body.noFail || !body.unit) {
@@ -25,31 +16,40 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   } catch (error) {
     console.error("Error updating FAIL:", error)
     return NextResponse.json(
-      { error: "Failed to update FAIL in Google Sheets", details: error.message },
+      { error: "Failed to update FAIL in Supabase", details: error instanceof Error ? error.message : String(error) },
       { status: 500 },
     )
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+/** { isActive: boolean }: disable a fail (hidden from the Surat form) or enable it again. */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Check if environment variables are set
-    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.error("Missing required environment variables for Google Sheets API")
-      return NextResponse.json(
-        { error: "Server configuration error: Missing Google Sheets credentials" },
-        { status: 500 },
-      )
+    const { id } = await params
+    const body = await request.json()
+    if (typeof body?.isActive !== "boolean") {
+      return NextResponse.json({ error: "isActive must be true or false" }, { status: 400 })
     }
+    return NextResponse.json(await setFailActive(id, body.isActive))
+  } catch (error) {
+    console.error("Error changing FAIL status:", error)
+    return NextResponse.json(
+      { error: "Failed to change FAIL status in Supabase", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    )
+  }
+}
 
-    const { id } = params
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
 
     await deleteFail(id)
     return NextResponse.json({ success: true, message: "Fail deleted successfully" })
   } catch (error) {
     console.error("Error deleting FAIL:", error)
     return NextResponse.json(
-      { error: "Failed to delete FAIL from Google Sheets", details: error.message },
+      { error: "Failed to delete FAIL from Supabase", details: error instanceof Error ? error.message : String(error) },
       { status: 500 },
     )
   }

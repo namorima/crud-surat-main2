@@ -739,6 +739,7 @@ export async function getAllFail(): Promise<Fail[]> {
       pecahan: row[3] || "",
       pecahanKecil: row[4] || "",
       unit: row[6] || "", // Column G (index 6)
+      isActive: true,
     }))
   } catch (error) {
     console.error("Error fetching FAIL data from Google Sheets:", error)

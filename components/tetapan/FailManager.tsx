@@ -4,10 +4,22 @@ import type React from "react"
 import type { ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { RiAddLine, RiDeleteBinLine, RiEditLine, RiFilter3Line, RiLoader4Line, RiSearchLine } from "@remixicon/react"
+import {
+  RiAddLine,
+  RiCheckboxCircleLine,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiFilter3Line,
+  RiForbidLine,
+  RiLoader4Line,
+  RiSearchLine,
+} from "@remixicon/react"
 import type { Fail } from "@/types/fail"
+import type { Locker } from "@/types/locker"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Chip } from "@/components/base/badges/chip"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -22,31 +34,36 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/base/buttons/button"
-import { Chip } from "@/components/base/badges/chip"
+import { PartBadge, partWarna } from "@/components/tetapan/part-badge"
 import { RowActions } from "@/components/dashboard/row-actions"
 import { cx } from "@/utils/cx"
-
-const FAIL_PARTS = ["HASIL", "PERTANIAN AM", "KONTRAK"]
 
 const ALL_UNITS = "__all__"
 /** localStorage key for the Setup Fail unit filter (per browser). */
 const UNIT_FILTER_KEY = "tetapan:setup-fail:unit"
 
-/** Same hues as the fail dots in the Surat form. */
-const FAIL_PART_DOT: Record<string, string> = {
-  HASIL: "bg-yellow-400",
-  "PERTANIAN AM": "bg-lime-500",
-  KONTRAK: "bg-orange-400",
-  PERLADANGAN: "bg-pink-400",
+type FailForm = Omit<Fail, "id" | "isActive">
+
+/** Same unit, part, locker and no fail, ignoring case and spacing. */
+const sameFail = (a: FailForm, b: FailForm) =>
+  (["unit", "part", "noLocker", "noFail"] as const).every((key) => (a[key] || "").trim().toUpperCase() === (b[key] || "").trim().toUpperCase())
+
+/** Radix Select cannot hold "", so an unset field uses this value. */
+const NONE = "__none"
+
+/**
+ * Radix Select inside a form reports "" when its value is set before the
+ * list was ever opened (its hidden native select has no such option yet).
+ * Real choices are never "" here (clearing uses NONE), so drop those calls.
+ */
+const onPick = (apply: (value: string) => void) => (value: string) => {
+  if (value !== "") apply(value === NONE ? "" : value)
 }
 
-type FailForm = Omit<Fail, "id">
-
-function PartChip({ part }: { part: string }) {
+function InactiveChip() {
   return (
-    <Chip variant="caption" color="soft" className="gap-1.5">
-      <span className={cx("size-2 shrink-0 rounded-full", FAIL_PART_DOT[part] ?? "bg-neutral-400")} aria-hidden />
-      {part}
+    <Chip variant="caption" color="neutral">
+      Tidak aktif
     </Chip>
   )
 }
@@ -87,11 +104,14 @@ export function FailManager({
   canEdit,
   canViewAll,
   userUnit,
+  onOpenLocker,
 }: {
   canEdit: boolean
   /** Sees and manages every unit; otherwise only the user's own unit. */
   canViewAll: boolean
   userUnit: string
+  /** Switches to the Setup Locker tab (from the form's "no locker" hint). */
+  onOpenLocker?: () => void
 }) {
   const empty: FailForm = { part: "", noLocker: "", noFail: "", pecahan: "", pecahanKecil: "", unit: canViewAll ? "" : userUnit }
 
@@ -105,6 +125,11 @@ export function FailManager({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Fail | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [lockers, setLockers] = useState<Locker[]>([])
+  // Disabled fails are hidden from the list until asked for
+  const [showInactive, setShowInactive] = useState(false)
+  // Adding a fail that repeats an active one: disable the old one (asked in the form)
+  const [disableOld, setDisableOld] = useState(true)
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +146,14 @@ export function FailManager({
       }
     }
     load()
+  }, [])
+
+  // Part and No. Locker choices, and the Part badge colours (Tetapan → Setup Locker)
+  useEffect(() => {
+    fetch("/api/locker")
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("Failed to fetch locker"))))
+      .then(setLockers)
+      .catch((error) => console.error("Error fetching locker:", error))
   }, [])
 
   useEffect(() => {
@@ -153,10 +186,12 @@ export function FailManager({
   const activeUnit = canViewAll ? unitFilter : ALL_UNITS
 
   // Non-admin users only see their own unit's fails
-  const visible = useMemo(
+  const ownUnit = useMemo(
     () => (canViewAll ? items : items.filter((fail) => fail.unit === userUnit)),
     [items, canViewAll, userUnit],
   )
+  const inactiveCount = useMemo(() => ownUnit.filter((fail) => !fail.isActive).length, [ownUnit])
+  const visible = useMemo(() => (showInactive ? ownUnit : ownUnit.filter((fail) => fail.isActive)), [ownUnit, showInactive])
 
   // Units from Unit PIC plus any unit already used by a fail (and the saved one, so it still shows)
   const unitOptions = useMemo(() => {
@@ -179,10 +214,39 @@ export function FailManager({
 
   const narrowed = Boolean(query.trim()) || activeUnit !== ALL_UNITS
 
+  // Active fails the new one repeats (Tambah Fail only)
+  const duplicates = useMemo(
+    () => (editing || !form.noFail.trim() || !form.noLocker ? [] : items.filter((fail) => fail.isActive && sameFail(fail, form))),
+    [editing, items, form],
+  )
+
+  // The form offers the parts set up for its unit, then the lockers of that part.
+  // A value no longer in Setup Locker (an older fail) stays selectable so editing keeps it.
+  const unitLockers = useMemo(() => lockers.filter((locker) => locker.unit === form.unit), [lockers, form.unit])
+  const partChoices = useMemo(() => {
+    const parts = Array.from(new Set(unitLockers.map((locker) => locker.part))).sort((a, b) => a.localeCompare(b))
+    return form.part && !parts.includes(form.part) ? [...parts, form.part] : parts
+  }, [unitLockers, form.part])
+  const lockerChoices = useMemo(() => {
+    const nos = unitLockers.filter((locker) => locker.part === form.part).map((locker) => locker.noLocker).sort((a, b) => a.localeCompare(b))
+    return form.noLocker && !nos.includes(form.noLocker) ? [...nos, form.noLocker] : nos
+  }, [unitLockers, form.part, form.noLocker])
+  const isListedPart = (part: string) => unitLockers.some((locker) => locker.part === part)
+  const isListedLocker = (noLocker: string) => unitLockers.some((locker) => locker.part === form.part && locker.noLocker === noLocker)
+
+  const setUnit = (unit: string) => setForm((prev) => (prev.unit === unit ? prev : { ...prev, unit, part: "", noLocker: "" }))
+  const setPart = (part: string) =>
+    setForm((prev) => {
+      // A part kept in a single locker fills it in
+      const nos = lockers.filter((locker) => locker.unit === prev.unit && locker.part === part).map((locker) => locker.noLocker)
+      return { ...prev, part, noLocker: nos.length === 1 ? nos[0] : nos.includes(prev.noLocker) ? prev.noLocker : "" }
+    })
+
   const openAdd = () => {
     setEditing(null)
     // A unit picked in the filter is the likely unit for the new fail
     setForm(activeUnit !== ALL_UNITS ? { ...empty, unit: activeUnit } : empty)
+    setDisableOld(true)
     setFormOpen(true)
   }
 
@@ -204,8 +268,8 @@ export function FailManager({
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.part.trim() || !form.noFail.trim() || !form.unit) {
-      toast.error("Sila isi Part, No. Fail dan Unit")
+    if (!form.unit || !form.part.trim() || !form.noLocker.trim() || !form.noFail.trim()) {
+      toast.error("Sila isi Unit, Part, No. Locker dan No. Fail")
       return
     }
     setSaving(true)
@@ -213,12 +277,18 @@ export function FailManager({
       const response = await fetch(editing ? `/api/fail/${editing.id}` : "/api/fail", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(editing ? form : { ...form, disableExisting: duplicates.length > 0 && disableOld }),
       })
       if (!response.ok) throw new Error("Failed to save fail")
-      const saved: Fail = await response.json()
-      setItems((prev) => (editing ? prev.map((f) => (f.id === editing.id ? saved : f)) : [...prev, saved]))
-      toast.success(editing ? "Fail telah dikemaskini" : "Fail baru telah ditambah")
+      const { disabledIds = [], ...saved }: Fail & { disabledIds?: string[] } = await response.json()
+      setItems((prev) =>
+        editing
+          ? prev.map((f) => (f.id === editing.id ? saved : f))
+          : [...prev.map((f) => (disabledIds.includes(f.id) ? { ...f, isActive: false } : f)), saved],
+      )
+      toast.success(editing ? "Fail telah dikemaskini" : "Fail baru telah ditambah", {
+        description: disabledIds.length > 0 ? `${disabledIds.length} fail lama yang sama telah dinyahaktifkan.` : undefined,
+      })
       setFormOpen(false)
     } catch (error) {
       console.error("Error saving fail:", error)
@@ -246,8 +316,30 @@ export function FailManager({
     }
   }
 
+  const setActive = async (fail: Fail, isActive: boolean) => {
+    try {
+      const response = await fetch(`/api/fail/${fail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      })
+      if (!response.ok) throw new Error("Failed to change fail status")
+      const saved: Fail = await response.json()
+      setItems((prev) => prev.map((f) => (f.id === saved.id ? saved : f)))
+      toast.success(isActive ? `Fail ${fail.noFail} diaktifkan semula` : `Fail ${fail.noFail} dinyahaktifkan`, {
+        description: isActive ? undefined : "Ia tidak lagi muncul dalam borang Surat baharu. Surat lama tidak berubah.",
+      })
+    } catch (error) {
+      console.error("Error changing fail status:", error)
+      toast.error("Gagal menukar status fail")
+    }
+  }
+
   const actionsFor = (fail: Fail) => [
     { label: "Edit", icon: RiEditLine, onSelect: () => openEdit(fail) },
+    fail.isActive
+      ? { label: "Nyahaktif", icon: RiForbidLine, onSelect: () => setActive(fail, false) }
+      : { label: "Aktifkan", icon: RiCheckboxCircleLine, onSelect: () => setActive(fail, true) },
     { label: "Padam", icon: RiDeleteBinLine, onSelect: () => setDeleting(fail), danger: true },
   ]
 
@@ -303,6 +395,19 @@ export function FailManager({
               </SelectContent>
             </Select>
           )}
+          {inactiveCount > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="small"
+              leadingIcon={RiForbidLine}
+              aria-pressed={showInactive}
+              onClick={() => setShowInactive((value) => !value)}
+              className={cx("shrink-0", showInactive && "ring-2 ring-inset ring-border-button-active")}
+            >
+              Tidak aktif ({inactiveCount})
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -322,7 +427,8 @@ export function FailManager({
           <>
             {/* iPad landscape and desktop */}
             <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
-              <div className="relative max-h-[60dvh] overflow-auto">
+              {/* No inner vertical scroll: a nested scroll area traps touch scrolling on iPad; the page scrolls */}
+              <div className="relative overflow-x-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
@@ -341,12 +447,17 @@ export function FailManager({
                   </thead>
                   <tbody className="motion-stagger">
                     {filtered.map((fail) => (
-                      <tr key={fail.id} className="hover:bg-background-secondary-default">
+                      <tr key={fail.id} className={cx("hover:bg-background-secondary-default", !fail.isActive && "text-text-tertiary")}>
                         <td>
-                          <PartChip part={fail.part} />
+                          <PartBadge part={fail.part} warna={partWarna(lockers, fail)} />
                         </td>
                         <td className="tabular-nums">{fail.noLocker || <Dash />}</td>
-                        <td className="text-body-semibold tabular-nums">{fail.noFail}</td>
+                        <td className="tabular-nums">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="text-body-semibold">{fail.noFail}</span>
+                            {!fail.isActive && <InactiveChip />}
+                          </span>
+                        </td>
                         <td>{fail.pecahan || <Dash />}</td>
                         <td className="text-text-secondary">{fail.pecahanKecil || <Dash />}</td>
                         <td className="text-text-secondary">{fail.unit}</td>
@@ -365,11 +476,12 @@ export function FailManager({
             {/* Phones */}
             <ul className="motion-stagger grid grid-cols-1 gap-2 md:hidden">
               {filtered.map((fail) => (
-                <li key={fail.id} className="flex items-start gap-2 rounded-2xl border border-border-button-default p-3">
+                <li key={fail.id} className={cx("flex items-start gap-2 rounded-2xl border border-border-button-default p-3", !fail.isActive && "border-dashed")}>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-body-semibold text-text-primary tabular-nums">Fail {fail.noFail}</span>
-                      <PartChip part={fail.part} />
+                      <span className={cx("text-body-semibold tabular-nums", fail.isActive ? "text-text-primary" : "text-text-tertiary")}>Fail {fail.noFail}</span>
+                      <PartBadge part={fail.part} warna={partWarna(lockers, fail)} />
+                      {!fail.isActive && <InactiveChip />}
                     </div>
                     {(fail.pecahan || fail.pecahanKecil) && (
                       <span className="text-body-regular text-text-secondary">
@@ -393,6 +505,7 @@ export function FailManager({
           Jumlah: {narrowed ? `${filtered.length} / ` : ""}
           {visible.length} fail
           {activeUnit !== ALL_UNITS && ` · Unit ${activeUnit}`}
+          {!showInactive && inactiveCount > 0 && ` · ${inactiveCount} tidak aktif disembunyikan`}
         </p>
       </CardFooter>
 
@@ -409,30 +522,6 @@ export function FailManager({
 
           <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
             <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-4 py-4 sm:px-6">
-              <Field label="Part" htmlFor="fail-part" required>
-                <Input id="fail-part" list="fail-part-options" value={form.part} onChange={setField("part")} placeholder="PERTANIAN AM" />
-                <datalist id="fail-part-options">
-                  {FAIL_PARTS.map((part) => (
-                    <option key={part} value={part} />
-                  ))}
-                </datalist>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="No. Locker" htmlFor="fail-locker">
-                  <Input id="fail-locker" value={form.noLocker} onChange={setField("noLocker")} placeholder="B1" />
-                </Field>
-                <Field label="No. Fail" htmlFor="fail-no" required>
-                  <Input id="fail-no" value={form.noFail} onChange={setField("noFail")} placeholder="2" />
-                </Field>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Pecahan" htmlFor="fail-pecahan">
-                  <Input id="fail-pecahan" value={form.pecahan} onChange={setField("pecahan")} />
-                </Field>
-                <Field label="Pecahan Kecil" htmlFor="fail-pecahan-kecil">
-                  <Input id="fail-pecahan-kecil" value={form.pecahanKecil} onChange={setField("pecahanKecil")} />
-                </Field>
-              </div>
               <Field
                 label="Unit"
                 htmlFor="fail-unit"
@@ -440,7 +529,7 @@ export function FailManager({
                 hint={canViewAll ? undefined : "Unit diisi automatik berdasarkan role anda"}
               >
                 {canViewAll ? (
-                  <Select value={form.unit} onValueChange={(value) => setForm((prev) => ({ ...prev, unit: value }))}>
+                  <Select value={form.unit} onValueChange={onPick(setUnit)}>
                     <SelectTrigger id="fail-unit">
                       <SelectValue placeholder="Pilih unit" />
                     </SelectTrigger>
@@ -456,6 +545,98 @@ export function FailManager({
                   <Input id="fail-unit" value={form.unit} disabled />
                 )}
               </Field>
+              <div className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[1fr_140px]">
+                <Field label="Part" htmlFor="fail-part" required>
+                  <Select value={form.part || NONE} onValueChange={onPick(setPart)} disabled={!form.unit}>
+                    <SelectTrigger id="fail-part">
+                      <SelectValue placeholder={form.unit ? "Pilih part" : "Pilih unit dahulu"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {partChoices.length === 0 && (
+                        <SelectItem value={NONE} disabled>
+                          Tiada part untuk unit ini
+                        </SelectItem>
+                      )}
+                      {partChoices.map((part) => (
+                        <SelectItem key={part} value={part}>
+                          <PartBadge part={part} warna={partWarna(lockers, { unit: form.unit, part })} />
+                          {!isListedPart(part) && <span className="ms-1.5 text-caption-1-regular text-text-tertiary">tiada di Setup Locker</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="No. Locker" htmlFor="fail-locker" required className="w-28 sm:w-auto">
+                  <Select
+                    value={form.noLocker || NONE}
+                    onValueChange={onPick((noLocker) => setForm((prev) => ({ ...prev, noLocker })))}
+                    disabled={!form.part}
+                  >
+                    <SelectTrigger id="fail-locker">
+                      <SelectValue placeholder="Pilih" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lockerChoices.length === 0 && (
+                        <SelectItem value={NONE} disabled>
+                          Tiada locker
+                        </SelectItem>
+                      )}
+                      {lockerChoices.map((noLocker) => (
+                        <SelectItem key={noLocker} value={noLocker}>
+                          {noLocker}
+                          {!isListedLocker(noLocker) && <span className="ms-1.5 text-caption-1-regular text-text-tertiary">lama</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              {form.unit && unitLockers.length === 0 && (
+                <p className="-mt-1 text-caption-1-regular text-text-secondary">
+                  Tiada locker untuk unit {form.unit}.{" "}
+                  {onOpenLocker ? (
+                    <button
+                      type="button"
+                      className="font-semibold text-text-destructive underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setFormOpen(false)
+                        onOpenLocker()
+                      }}
+                    >
+                      Tambah di Setup Locker
+                    </button>
+                  ) : (
+                    "Tambah di tab Setup Locker."
+                  )}
+                </p>
+              )}
+              <Field label="No. Fail" htmlFor="fail-no" required>
+                <Input id="fail-no" value={form.noFail} onChange={setField("noFail")} placeholder="2" aria-describedby={duplicates.length > 0 ? "fail-duplicate" : undefined} />
+              </Field>
+              {duplicates.length > 0 && (
+                <div id="fail-duplicate" className="-mt-1 flex flex-col gap-2 rounded-xl bg-status-yellow-background p-3 text-caption-1-regular text-status-yellow-text">
+                  <p>
+                    Fail <b>{form.part} · Locker {form.noLocker} · No. {form.noFail}</b> untuk unit {form.unit} sudah wujud
+                    {duplicates[0].pecahan || duplicates[0].pecahanKecil
+                      ? ` (${[duplicates[0].pecahan, duplicates[0].pecahanKecil].filter(Boolean).join(" · ")})`
+                      : ""}
+                    {duplicates.length > 1 ? ` dan ${duplicates.length - 1} lagi` : ""}. Adakah anda mahu menyahaktifkan fail lama?
+                    Fail lama tidak akan muncul dalam borang Surat baharu, tetapi surat lama tidak berubah.
+                  </p>
+                  <label className="flex cursor-pointer items-start gap-2 text-caption-1-medium">
+                    <Checkbox checked={disableOld} onCheckedChange={(checked) => setDisableOld(checked === true)} className="mt-0.5" />
+                    Ya, nyahaktifkan fail lama
+                  </label>
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Pecahan" htmlFor="fail-pecahan">
+                  <Input id="fail-pecahan" value={form.pecahan} onChange={setField("pecahan")} />
+                </Field>
+                <Field label="Pecahan Kecil" htmlFor="fail-pecahan-kecil">
+                  <Input id="fail-pecahan-kecil" value={form.pecahanKecil} onChange={setField("pecahanKecil")} />
+                </Field>
+              </div>
             </div>
 
             <div className="flex gap-2 border-t border-border-table px-4 py-3 sm:justify-end sm:px-6">
@@ -470,6 +651,8 @@ export function FailManager({
                   </span>
                 ) : editing ? (
                   "Kemaskini"
+                ) : duplicates.length > 0 && disableOld ? (
+                  "Simpan & nyahaktif lama"
                 ) : (
                   "Simpan"
                 )}
