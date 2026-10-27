@@ -1160,8 +1160,8 @@ export async function getAllFail(): Promise<Fail[]> {
     if (error) throw error
 
     return (
-      data?.map((row, index) => ({
-        id: index.toString(),
+      data?.map((row) => ({
+        id: row.id,
         part: row.part,
         noLocker: row.no_locker || "",
         noFail: row.no_fail,
@@ -1210,14 +1210,6 @@ export async function addFail(failData: Omit<Fail, "id">): Promise<Fail> {
 
 export async function updateFail(id: string, failData: Omit<Fail, "id">): Promise<Fail> {
   try {
-    // Get all fail to find the one at the given index
-    const allFail = await getAllFail()
-    const targetFail = allFail[parseInt(id)]
-
-    if (!targetFail) {
-      throw new Error(`Fail at index ${id} not found`)
-    }
-
     const { data, error } = await supabaseAdmin
       .from("fail")
       .update({
@@ -1228,14 +1220,14 @@ export async function updateFail(id: string, failData: Omit<Fail, "id">): Promis
         pecahan_kecil: failData.pecahanKecil || null,
         unit: failData.unit,
       })
-      .eq("id", targetFail.id)
+      .eq("id", id)
       .select()
       .single()
 
     if (error) throw error
 
     return {
-      id: id,
+      id: data.id,
       ...failData,
     }
   } catch (error: any) {
@@ -1246,15 +1238,7 @@ export async function updateFail(id: string, failData: Omit<Fail, "id">): Promis
 
 export async function deleteFail(id: string): Promise<void> {
   try {
-    // Get all fail to find the one at the given index
-    const allFail = await getAllFail()
-    const targetFail = allFail[parseInt(id)]
-
-    if (!targetFail) {
-      throw new Error(`Fail at index ${id} not found`)
-    }
-
-    const { error } = await supabaseAdmin.from("fail").delete().eq("id", targetFail.id)
+    const { error } = await supabaseAdmin.from("fail").delete().eq("id", id)
 
     if (error) throw error
   } catch (error: any) {
