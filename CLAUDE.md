@@ -210,7 +210,7 @@ Located in `types/` directory:
 
 - **Styling**: Tailwind CSS v4 (CSS-first config in [app/globals.css](app/globals.css)) with BoardUI design tokens ([styles/theme.css](styles/theme.css), [styles/typography.css](styles/typography.css))
 - **BoardUI**: source-owned components in [components/base/](components/base/), [components/application/](components/application/), [components/foundations/](components/foundations/); merge classes with `cx()` from [utils/cx.ts](utils/cx.ts). The dashboard frame is [components/dashboard/app-shell.tsx](components/dashboard/app-shell.tsx)
-- **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/))
+- **Components**: shadcn/ui + Radix UI primitives ([components/ui/](components/ui/)); [components/ui/calendar.tsx](components/ui/calendar.tsx) is styled for react-day-picker v9 (its class-name keys differ from v8) and defaults to the date-fns `ms` locale
 - **Forms**: React Hook Form with Zod validation ([types/bayaran-schema.ts](types/bayaran-schema.ts))
 - **State Management**: React Context for authentication
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
@@ -648,6 +648,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `bottom-tab-bar.tsx` - iPhone (below `sm`) bottom tab bar; "Lagi" opens the drawer
    - `sidebar.tsx` - Navigation sidebar and `useNavigation()` (RBAC-filtered nav items)
    - `row-actions.tsx` - "…" row menu (BoardUI Dropdown)
+   - `date-range-filter.tsx` - `DateRangeFilter`: header calendar button for Surat (tarikh) and Rekod Bayaran (tarikh terima). A one-month react-aria `RangeCalendar` (BoardUI `MonthPanel`, Malay via the app's `ms-MY` I18nProvider) with quick ranges (Hari ini, 7 hari lepas, Bulan ini, Bulan lepas, Tahun ini) and Kosongkan / Guna; `inRange()` compares whole days. Pages keep the range as `[from, to]`
    - `header.tsx` - Page header
 
 5. **Surat Components** ([components/surat/](components/surat/))

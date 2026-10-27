@@ -49,6 +49,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { BayaranShareImageGenerator } from "@/components/bayaran-share-image-generator";
+import { inRange } from "@/components/dashboard/date-range-filter";
+import { parseDate } from "@/lib/dashboard-stats";
 import { BayaranTable } from "@/components/bayaran/BayaranTable";
 import { matchesBayaranSearch, parseRecordNumber } from "@/lib/bayaran-search";
 import { DetailDialog, type KontrakInfo } from "@/components/bayaran/DetailDialog";
@@ -361,23 +363,8 @@ export default function BayaranPage() {
 
     // Apply date range filter
     if (dateFilter[0]) {
-      const fromDate = dateFilter[0];
-      const toDate = dateFilter[1] || fromDate; // If no end date, use start date
-
-      filtered = filtered.filter((item) => {
-        if (!item.tarikhTerima) return false;
-        const dateParts = item.tarikhTerima.split("/");
-        if (dateParts.length !== 3) return false;
-        const itemDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
-
-        if (isNaN(itemDate.getTime())) return false;
-
-        // Normalize dates to remove time part
-        const from = new Date(fromDate.setHours(0, 0, 0, 0));
-        const to = new Date(toDate.setHours(23, 59, 59, 999));
-
-        return itemDate >= from && itemDate <= to;
-      });
+      // Whole days, inclusive; a single day when there is no end date
+      filtered = filtered.filter((item) => inRange(parseDate(item.tarikhTerima), dateFilter));
     } else {
       // Default filter for current year and previous year - show 2025 and 2026 records
       const currentYear = new Date().getFullYear();
@@ -457,10 +444,6 @@ export default function BayaranPage() {
 
   const handleKontrakFilter = (kontrak: string) => {
     setKontrakFilter(kontrak);
-  };
-
-  const handleDateFilter = (date: Date | undefined) => {
-    setDateFilter(date);
   };
 
   const clearAllFilters = () => {
