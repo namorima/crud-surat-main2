@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { updateFail, deleteFail } from "@/lib/supabase-db"
+import { updateFail, deleteFail, setFailActive } from "@/lib/supabase-db"
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,6 +17,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     console.error("Error updating FAIL:", error)
     return NextResponse.json(
       { error: "Failed to update FAIL in Supabase", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    )
+  }
+}
+
+/** { isActive: boolean }: disable a fail (hidden from the Surat form) or enable it again. */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    if (typeof body?.isActive !== "boolean") {
+      return NextResponse.json({ error: "isActive must be true or false" }, { status: 400 })
+    }
+    return NextResponse.json(await setFailActive(id, body.isActive))
+  } catch (error) {
+    console.error("Error changing FAIL status:", error)
+    return NextResponse.json(
+      { error: "Failed to change FAIL status in Supabase", details: error instanceof Error ? error.message : String(error) },
       { status: 500 },
     )
   }

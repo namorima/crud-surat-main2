@@ -1154,6 +1154,19 @@ export async function getUnitAndPicData() {
 
 // ===== FAIL FUNCTIONS =====
 
+function mapFailRow(row: any): Fail {
+  return {
+    id: row.id,
+    part: row.part,
+    noLocker: row.no_locker || "",
+    noFail: row.no_fail,
+    pecahan: row.pecahan || "",
+    pecahanKecil: row.pecahan_kecil || "",
+    unit: row.unit,
+    isActive: row.is_active !== false,
+  }
+}
+
 export async function getAllFail(): Promise<Fail[]> {
   try {
     const { data, error } = await supabaseAdmin.from("fail").select("*").order("created_at", { ascending: false })
@@ -1161,15 +1174,7 @@ export async function getAllFail(): Promise<Fail[]> {
     if (error) throw error
 
     return (
-      data?.map((row) => ({
-        id: row.id,
-        part: row.part,
-        noLocker: row.no_locker || "",
-        noFail: row.no_fail,
-        pecahan: row.pecahan || "",
-        pecahanKecil: row.pecahan_kecil || "",
-        unit: row.unit,
-      })) || []
+      data?.map(mapFailRow) || []
     )
   } catch (error: any) {
     console.error("Error fetching fail data from Supabase:", error)
@@ -1177,7 +1182,7 @@ export async function getAllFail(): Promise<Fail[]> {
   }
 }
 
-export async function addFail(failData: Omit<Fail, "id">): Promise<Fail> {
+export async function addFail(failData: Omit<Fail, "id" | "isActive">): Promise<Fail> {
   try {
     const { data, error } = await supabaseAdmin
       .from("fail")
@@ -1194,22 +1199,14 @@ export async function addFail(failData: Omit<Fail, "id">): Promise<Fail> {
 
     if (error) throw error
 
-    return {
-      id: data.id,
-      part: data.part,
-      noLocker: data.no_locker || "",
-      noFail: data.no_fail,
-      pecahan: data.pecahan || "",
-      pecahanKecil: data.pecahan_kecil || "",
-      unit: data.unit,
-    }
+    return mapFailRow(data)
   } catch (error: any) {
     console.error("Error adding fail to Supabase:", error)
     throw new Error(`Failed to add fail to Supabase: ${error.message}`)
   }
 }
 
-export async function updateFail(id: string, failData: Omit<Fail, "id">): Promise<Fail> {
+export async function updateFail(id: string, failData: Omit<Fail, "id" | "isActive">): Promise<Fail> {
   try {
     const { data, error } = await supabaseAdmin
       .from("fail")
@@ -1227,14 +1224,51 @@ export async function updateFail(id: string, failData: Omit<Fail, "id">): Promis
 
     if (error) throw error
 
-    return {
-      id: data.id,
-      ...failData,
-    }
+    return mapFailRow(data)
   } catch (error: any) {
     console.error("Error updating fail in Supabase:", error)
     throw new Error(`Failed to update fail in Supabase: ${error.message}`)
   }
+}
+
+/** Disables or re-enables a fail; a disabled fail is no longer offered in the Surat form. */
+export async function setFailActive(id: string, active: boolean): Promise<Fail> {
+  const { data, error } = await supabaseAdmin
+    .from("fail")
+    .update({ is_active: active, disabled_at: active ? null : new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) {
+    console.error("Error changing fail status in Supabase:", error)
+    throw new Error(`Failed to change fail status in Supabase: ${error.message}`)
+  }
+  return mapFailRow(data)
+}
+
+/** ilike pattern matching the text exactly, ignoring case. */
+const ilikeExact = (value: string) => value.trim().replace(/[\\%_]/g, (c) => `\\${c}`)
+
+/**
+ * Disables the other active fails with the same unit, part, no locker and no
+ * fail (ignoring case), e.g. when a new fail replaces an old one. Returns their ids.
+ */
+export async function disableMatchingFails(fail: Pick<Fail, "id" | "unit" | "part" | "noLocker" | "noFail">): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from("fail")
+    .update({ is_active: false, disabled_at: new Date().toISOString() })
+    .eq("is_active", true)
+    .neq("id", fail.id)
+    .ilike("unit", ilikeExact(fail.unit))
+    .ilike("part", ilikeExact(fail.part))
+    .ilike("no_locker", ilikeExact(fail.noLocker))
+    .ilike("no_fail", ilikeExact(fail.noFail))
+    .select("id")
+  if (error) {
+    console.error("Error disabling matching fails in Supabase:", error)
+    throw new Error(`Failed to disable matching fails in Supabase: ${error.message}`)
+  }
+  return (data || []).map((row) => row.id)
 }
 
 export async function deleteFail(id: string): Promise<void> {

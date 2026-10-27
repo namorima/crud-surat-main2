@@ -333,7 +333,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           <>
             {/* Desktop only: with the sidebar, the table needs ~1000px */}
             <div className="hidden overflow-hidden rounded-2xl border border-border-table xl:block">
-              <div className="relative max-h-[60dvh] overflow-auto">
+              {/* No inner vertical scroll: a nested scroll area traps touch scrolling on iPad; the page scrolls */}
+              <div className="relative overflow-x-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
