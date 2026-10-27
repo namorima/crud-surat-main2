@@ -350,7 +350,8 @@ export function FailManager({
           <>
             {/* iPad landscape and desktop */}
             <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
-              <div className="relative max-h-[60dvh] overflow-auto">
+              {/* No inner vertical scroll: a nested scroll area traps touch scrolling on iPad; the page scrolls */}
+              <div className="relative overflow-x-auto">
                 <table className="bui-table">
                   <thead className="sticky top-0 z-10">
                     <tr>
