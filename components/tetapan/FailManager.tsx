@@ -44,6 +44,8 @@ const UNIT_FILTER_KEY = "tetapan:setup-fail:unit"
 
 type FailForm = Omit<Fail, "id" | "isActive">
 
+type StatusFilter = "aktif" | "tidak-aktif" | "semua"
+
 /** Same unit, part, locker and no fail, ignoring case and spacing. */
 const sameFail = (a: FailForm, b: FailForm) =>
   (["unit", "part", "noLocker", "noFail"] as const).every((key) => (a[key] || "").trim().toUpperCase() === (b[key] || "").trim().toUpperCase())
@@ -126,8 +128,8 @@ export function FailManager({
   const [deleting, setDeleting] = useState<Fail | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [lockers, setLockers] = useState<Locker[]>([])
-  // Disabled fails are hidden from the list until asked for
-  const [showInactive, setShowInactive] = useState(false)
+  // Status filter: active fails by default, or only the disabled ones, or both
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("aktif")
   // Adding a fail that repeats an active one: disable the old one (asked in the form)
   const [disableOld, setDisableOld] = useState(true)
 
@@ -191,7 +193,11 @@ export function FailManager({
     [items, canViewAll, userUnit],
   )
   const inactiveCount = useMemo(() => ownUnit.filter((fail) => !fail.isActive).length, [ownUnit])
-  const visible = useMemo(() => (showInactive ? ownUnit : ownUnit.filter((fail) => fail.isActive)), [ownUnit, showInactive])
+  const visible = useMemo(
+    () =>
+      statusFilter === "semua" ? ownUnit : ownUnit.filter((fail) => fail.isActive === (statusFilter === "aktif")),
+    [ownUnit, statusFilter],
+  )
 
   // Units from Unit PIC plus any unit already used by a fail (and the saved one, so it still shows)
   const unitOptions = useMemo(() => {
@@ -371,6 +377,7 @@ export function FailManager({
               aria-label="Cari fail"
             />
           </div>
+          <div className={cx("grid gap-2 sm:flex", canViewAll && "grid-cols-2")}>
           {canViewAll && (
             <Select value={unitFilter} onValueChange={setUnitFilter}>
               <SelectTrigger
@@ -395,19 +402,29 @@ export function FailManager({
               </SelectContent>
             </Select>
           )}
-          {inactiveCount > 0 && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="small"
-              leadingIcon={RiForbidLine}
-              aria-pressed={showInactive}
-              onClick={() => setShowInactive((value) => !value)}
-              className={cx("shrink-0", showInactive && "ring-2 ring-inset ring-border-button-active")}
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+            <SelectTrigger
+              aria-label="Tapis status"
+              className={cx("sm:w-44", statusFilter !== "aktif" && "ring-border-button-active")}
             >
-              Tidak aktif ({inactiveCount})
-            </Button>
-          )}
+              <div className="flex min-w-0 items-center gap-1.5">
+                {statusFilter === "tidak-aktif" ? (
+                  <RiForbidLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                ) : (
+                  <RiCheckboxCircleLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                )}
+                <span className="truncate">
+                  <SelectValue />
+                </span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="aktif">Aktif</SelectItem>
+              <SelectItem value="tidak-aktif">Tidak aktif ({inactiveCount})</SelectItem>
+              <SelectItem value="semua">Semua status</SelectItem>
+            </SelectContent>
+          </Select>
+          </div>
         </div>
 
         {loading ? (
@@ -418,7 +435,9 @@ export function FailManager({
         ) : filtered.length === 0 ? (
           <p className="py-10 text-center text-body-regular text-text-secondary">
             {visible.length === 0
-              ? "Tiada data fail"
+              ? statusFilter === "tidak-aktif"
+                ? "Tiada fail tidak aktif"
+                : "Tiada data fail"
               : query.trim()
                 ? "Tiada fail sepadan dengan carian"
                 : `Tiada fail untuk unit ${activeUnit}`}
@@ -503,9 +522,9 @@ export function FailManager({
       <CardFooter>
         <p className="text-body-regular text-text-secondary">
           Jumlah: {narrowed ? `${filtered.length} / ` : ""}
-          {visible.length} fail
+          {visible.length} fail{statusFilter === "tidak-aktif" && " tidak aktif"}
           {activeUnit !== ALL_UNITS && ` · Unit ${activeUnit}`}
-          {!showInactive && inactiveCount > 0 && ` · ${inactiveCount} tidak aktif disembunyikan`}
+          {statusFilter === "aktif" && inactiveCount > 0 && ` · ${inactiveCount} tidak aktif disembunyikan`}
         </p>
       </CardFooter>
 
