@@ -58,7 +58,8 @@ The application uses a **dual-database architecture**:
    - Columns: `id`, `bayaran_id`, `action`, `changed_by`, `old_values`, `new_values`, `timestamp`
 
 6. **`unit_pic`** - Unit and PIC (Person in Charge) mappings
-   - Columns: `id`, `unit`, `pic`, `created_at`
+   - Columns: `id`, `unit`, `pic`, `is_active` (default true), `disabled_at`, `created_at`
+   - `is_active` from [add-unit-pic-active.sql](add-unit-pic-active.sql), set per person (all of a PIC's rows): a disabled PIC is left out of `unitPicMap` (the Surat form's Tindakan PIC list); `surat.tindakan_pic` stores the name, so old surat are unchanged
 
 7. **`kontrak`** - Contract and category data
    - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `status` (AKTIF | SELESAI | TIDAK AKTIF, default AKTIF), `created_at`
@@ -639,7 +640,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
    - `UserForm.tsx` - User add/edit dialog; a new account has no password field: its first password is the staff ID and `must_change_password` forces a change on first login
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
-   - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit
+   - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit. `PATCH` `{ pic, isActive }` disables / enables a person (Nyahaktif / Aktifkan in the row menu and the Atur Unit dialog); new unit rows of a disabled PIC stay disabled. Editing a surat keeps its PIC selectable even when it is no longer listed
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
