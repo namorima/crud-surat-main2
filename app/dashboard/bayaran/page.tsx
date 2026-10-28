@@ -477,23 +477,49 @@ export default function BayaranPage() {
     setFilteredDaripadaSuggestions(filtered);
   };
 
+  // Kategori is picked first; No Kontrak then lists that kategori's contracts
+  // (each kontrak has one kategori in the kontrak table)
+  const kategoriOf = (noKontrak: string, daripada = formData.daripada) => {
+    const own = formOptions.categoryData[daripada]?.[noKontrak];
+    if (own?.length) return own;
+    for (const byKontrak of Object.values(formOptions.categoryData)) {
+      if (byKontrak[noKontrak]?.length) return byKontrak[noKontrak];
+    }
+    return [];
+  };
+
+  // Open contracts of the Daripada (any kategori). Closed ones (SELESAI / TIDAK
+  // AKTIF) are hidden; a record that already uses one keeps it so editing does not wipe it
+  const openKontraksOf = (daripada: string, keep = "") => {
+    const all =
+      daripada.toUpperCase() === "LADANG NEGERI" ? formOptions.allContracts : formOptions.contractData[daripada] || [];
+    const closed = new Set(formOptions.closedContracts);
+    return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === keep);
+  };
+
+  const kontraksFor = (daripada: string, kategori: string, keep = "") =>
+    kategori ? openKontraksOf(daripada, keep).filter((k) => kategoriOf(k, daripada).includes(kategori)) : [];
+
+  const handleKategoriChange = (value: string) => {
+    setFormData((prev) => {
+      const options = kontraksFor(prev.daripada, value);
+      return {
+        ...prev,
+        kategori: value,
+        // Keep a no kontrak that still fits; a kategori with one contract fills it in
+        noKontrak: options.includes(prev.noKontrak) ? prev.noKontrak : options.length === 1 ? options[0] : "",
+      };
+    });
+  };
+
   const handleKontrakChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      noKontrak: value,
-      kategori: "", // Reset dependent field
-    }));
+    setFormData((prev) => ({ ...prev, noKontrak: value }));
   };
 
   const getAvailableKontraks = () => {
-    const all =
-      formData.daripada.toUpperCase() === "LADANG NEGERI"
-        ? formOptions.allContracts
-        : formOptions.contractData[formData.daripada] || [];
-    // Closed contracts (SELESAI / TIDAK AKTIF) are hidden; a record that already
-    // uses one keeps showing it so editing does not wipe its no kontrak
-    const closed = new Set(formOptions.closedContracts);
-    return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === formData.noKontrak);
+    const options = kontraksFor(formData.daripada, formData.kategori, formData.noKontrak);
+    // An older record whose no kontrak does not match its kategori keeps it
+    return formData.noKontrak && !options.includes(formData.noKontrak) ? [formData.noKontrak, ...options] : options;
   };
 
   // Once shown, errors clear as the fields are filled; closing the form drops them
@@ -503,17 +529,20 @@ export default function BayaranPage() {
       return;
     }
     setFormErrors((prev) =>
-      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, getAvailableKontraks())
+      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, showAddDialog, showEditDialog, editingBayaran]);
 
   const getAvailableKategoris = () => {
-    if (formData.daripada.toUpperCase() === "LADANG NEGERI") {
-      return formOptions.allCategories;
-    }
-    if (!formData.daripada || !formData.noKontrak) return [];
-    return formOptions.categoryData[formData.daripada]?.[formData.noKontrak] || [];
+    if (!formData.daripada) return [];
+    const kategoris =
+      formData.daripada.toUpperCase() === "LADANG NEGERI"
+        ? [...formOptions.allCategories]
+        : Array.from(new Set(openKontraksOf(formData.daripada).flatMap((k) => kategoriOf(k))));
+    // An older record keeps its kategori selectable
+    if (formData.kategori && !kategoris.includes(formData.kategori)) kategoris.unshift(formData.kategori);
+    return kategoris;
   };
 
   // Get status color from AUTH sheet data
@@ -774,7 +803,7 @@ export default function BayaranPage() {
 
       // Validate required fields (a new record also needs Nilai, Bayaran Ke and,
       // when the Daripada has contracts, No Kontrak)
-      const errors = bayaranFormErrors(formData, !editingBayaran, getAvailableKontraks());
+      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() });
       setFormErrors(errors);
       if (Object.keys(errors).length > 0) {
         toast.error("Sila isi semua medan yang diperlukan");
@@ -1182,6 +1211,7 @@ Detail: ${directLink}
         handleDaripadaChange={handleDaripadaChange}
         filteredDaripadaSuggestions={filteredDaripadaSuggestions}
         handleKontrakChange={handleKontrakChange}
+        handleKategoriChange={handleKategoriChange}
         getAvailableKontraks={getAvailableKontraks}
         getAvailableKategoris={getAvailableKategoris}
         handleCurrencyInputChange={handleCurrencyInputChange}
