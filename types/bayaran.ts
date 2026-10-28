@@ -3,6 +3,8 @@ export type Bayaran = {
   ids?: number  // Original numeric ID from Google Sheets
   daripada: string
   tarikhTerima: string
+  /** KEMAJUAN | WCP | WANG TAHANAN; empty on records keyed before it */
+  jenisBayaran?: string
   perkara: string
   nilaiBayaran: string
   bayaranKe: string

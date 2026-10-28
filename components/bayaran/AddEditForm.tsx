@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { bayaranKategoriChip } from "@/lib/ui-status"
+import { JENIS_BAYARAN } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
 
 interface AddEditFormProps {
@@ -54,6 +55,7 @@ interface AddEditFormProps {
 const EMPTY_FORM = {
   daripada: "",
   tarikhTerima: "",
+  jenisBayaran: "KEMAJUAN",
   perkara: "",
   nilaiBayaran: "",
   bayaranKe: "",
@@ -319,16 +321,37 @@ export function AddEditForm({
                 </Popover>
               </Field>
 
-              <Field label="Tarikh Terima" htmlFor="tarikhTerima" required error={formErrors.tarikhTerima}>
-                <Input
-                  id="tarikhTerima"
-                  className={cx(formErrors.tarikhTerima && errorRing)}
-                  type="date"
-                  value={formData.tarikhTerima}
-                  onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhTerima: e.target.value }))}
-                  disabled={locked}
-                />
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Tarikh Terima" htmlFor="tarikhTerima" required error={formErrors.tarikhTerima}>
+                  <Input
+                    id="tarikhTerima"
+                    className={cx(formErrors.tarikhTerima && errorRing)}
+                    type="date"
+                    value={formData.tarikhTerima}
+                    onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhTerima: e.target.value }))}
+                    disabled={locked}
+                  />
+                </Field>
+                <Field label="Jenis Bayaran" htmlFor="jenisBayaran" required={!isEdit} error={formErrors.jenisBayaran}>
+                  <Select
+                    value={formData.jenisBayaran}
+                    // Radix reports "" for a value not in the list yet; never clear it for that
+                    onValueChange={(value) => value && setFormData((prev: any) => ({ ...prev, jenisBayaran: value }))}
+                    disabled={locked}
+                  >
+                    <SelectTrigger id="jenisBayaran" className={cx(formErrors.jenisBayaran && errorRing)}>
+                      <SelectValue placeholder="Pilih jenis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JENIS_BAYARAN.map((jenis) => (
+                        <SelectItem key={jenis} value={jenis}>
+                          {jenis}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
 
               <Field label="Perkara" htmlFor="perkara" required error={formErrors.perkara}>
                 <Textarea

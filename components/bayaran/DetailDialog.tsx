@@ -238,10 +238,19 @@ export function DetailDialog({
                     <p className="text-caption-1-medium text-text-tertiary">Nilai Bayaran</p>
                     <p className="text-title-2-semibold text-text-primary tabular-nums">{formatCurrency(b.nilaiBayaran)}</p>
                   </div>
-                  {b.bayaranKe && (
-                    <Chip variant="caption" color="soft" className="shrink-0 border border-border-button-default">
-                      Bayaran ke-{b.bayaranKe}
-                    </Chip>
+                  {(b.jenisBayaran || b.bayaranKe) && (
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {b.jenisBayaran && (
+                        <Chip variant="caption" color="blue">
+                          {b.jenisBayaran}
+                        </Chip>
+                      )}
+                      {b.bayaranKe && (
+                        <Chip variant="caption" color="soft" className="border border-border-button-default">
+                          Bayaran ke-{b.bayaranKe}
+                        </Chip>
+                      )}
+                    </div>
                   )}
                 </div>
 
