@@ -200,7 +200,7 @@ export default function DownloadPage() {
                 { label: "Rekod", value: String(bayaranRows.length) },
                 { label: "Jumlah nilai", value: formatRM(jumlahNilai(bayaranRows)), wide: true },
               ]}
-              columns="ID, Tarikh Terima, Daripada, Perkara, Nilai, Kontraktor, Status Bayaran"
+              columns="ID, Tarikh Terima, Daripada, Perkara, Bayaran Ke, Nilai, No Kontrak, Kontraktor, Status Bayaran"
               preview={bayaranRows.slice(0, PREVIEW).map((b) => ({ key: b.id, left: `#${b.ids ?? b.id}`, main: b.perkara, right: b.statusBayaran }))}
               more={bayaranRows.length - PREVIEW}
               empty="Tiada rekod bayaran dalam tempoh ini."
