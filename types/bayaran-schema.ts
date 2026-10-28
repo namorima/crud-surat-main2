@@ -54,7 +54,7 @@ export const BayaranBaruSchema = BayaranSchema.extend({
 export function bayaranFormErrors(
   form: Record<string, any>,
   isNew: boolean,
-  options: { kategori: string[]; kontrak: string[] },
+  options: { kategori: string[]; kontrak: string[]; kontraktor?: string[] },
 ): Record<string, string> {
   const errors: Record<string, string> = {}
   if (!String(form.daripada ?? "").trim()) errors.daripada = "Daripada diperlukan"
@@ -65,8 +65,10 @@ export function bayaranFormErrors(
     if (!(amount(form.nilaiBayaran) > 0)) errors.nilaiBayaran = "Nilai Bayaran diperlukan"
     if (!String(form.bayaranKe ?? "").trim()) errors.bayaranKe = "Bayaran Ke diperlukan"
     if (form.jenisBayaran === PIECERATE) {
-      // PIECERATE: no kontrak; the contractor is picked by name
-      if (!String(form.namaKontraktor ?? "").trim()) errors.namaKontraktor = "Pilih Nama Kontraktor"
+      // PIECERATE: no kontrak; the contractor is picked from the kawasan's PIECERATE kontrak
+      if ((options.kontraktor?.length ?? 0) > 0 && !String(form.namaKontraktor ?? "").trim()) {
+        errors.namaKontraktor = "Pilih Nama Kontraktor"
+      }
     }
     // Kategori comes first, then No Kontrak; each only when there is something to pick
     else if (options.kategori.length > 0 && !form.kategori) errors.kategori = "Pilih Kategori"
