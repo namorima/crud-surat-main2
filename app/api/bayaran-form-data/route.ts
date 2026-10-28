@@ -28,7 +28,11 @@ export async function GET() {
       allCategories: contractCategoryData.allCategories,
       contractorData: contractCategoryData.contractorData,
       kontrakInfo: contractCategoryData.kontrakInfo,
+      kontrakInfoByKawasan: contractCategoryData.kontrakInfoByKawasan,
       closedContracts: contractCategoryData.closedContracts,
+      closedByKawasan: contractCategoryData.closedByKawasan,
+      // kawasan -> contractors of its AKTIF PIECERATE kontrak (Nama Kontraktor for a PIECERATE bayaran)
+      piecerateKontraktor: contractCategoryData.piecerateKontraktor,
       penerimaData,
       statusBayaranData,
     })

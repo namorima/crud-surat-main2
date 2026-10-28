@@ -58,7 +58,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
-import { bayaranFormErrors } from "@/types/bayaran-schema";
+import { PIECERATE, bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -125,6 +125,7 @@ export default function BayaranPage() {
     bayaranKe: "",
     kategori: "",
     noKontrak: "",
+    namaKontraktor: "",
     tarikhMemoLadang: "",
     statusLadang: "",
     tarikhHantar: "",
@@ -145,8 +146,11 @@ export default function BayaranPage() {
     allContracts: [] as string[],
     allCategories: [] as string[],
     contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
-    kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak
-    closedContracts: [] as string[], // SELESAI / TIDAK AKTIF: not offered for new records
+    kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak (first kawasan)
+    kontrakInfoByKawasan: {} as Record<string, Record<string, KontrakInfo>>, // kawasan -> noKontrak -> info
+    closedContracts: [] as string[], // closed in every kawasan (LADANG NEGERI list)
+    closedByKawasan: {} as Record<string, string[]>,
+    piecerateKontraktor: {} as Record<string, string[]>, // kawasan -> contractors of its AKTIF PIECERATE kontrak // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -299,7 +303,10 @@ export default function BayaranPage() {
           allCategories: data.allCategories || [],
           contractorData: data.contractorData || {},
           kontrakInfo: data.kontrakInfo || {},
+          kontrakInfoByKawasan: data.kontrakInfoByKawasan || {},
           closedContracts: data.closedContracts || [],
+          closedByKawasan: data.closedByKawasan || {},
+          piecerateKontraktor: data.piecerateKontraktor || {},
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -468,7 +475,8 @@ export default function BayaranPage() {
       ...prev,
       daripada: value,
       noKontrak: "", // Reset dependent fields
-      kategori: "",
+      // A PIECERATE bayaran keeps its kategori (and contractor) whatever the Daripada
+      kategori: prev.jenisBayaran === PIECERATE ? PIECERATE : "",
     }));
 
     // Filter suggestions
@@ -494,9 +502,16 @@ export default function BayaranPage() {
   const openKontraksOf = (daripada: string, keep = "") => {
     const all =
       daripada.toUpperCase() === "LADANG NEGERI" ? formOptions.allContracts : formOptions.contractData[daripada] || [];
-    const closed = new Set(formOptions.closedContracts);
+    // A kontrak is its kawasan + no kontrak: the same number may be open in one kawasan and closed in another
+    const closed = new Set(
+      daripada.toUpperCase() === "LADANG NEGERI" ? formOptions.closedContracts : formOptions.closedByKawasan[daripada] || []
+    );
     return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === keep);
   };
+
+  // Kerja / nilai of a bayaran's kontrak: its own kawasan's, else the number's first
+  const kontrakInfoOf = (b: Bayaran) =>
+    formOptions.kontrakInfoByKawasan[b.daripada]?.[b.noKontrak] ?? formOptions.kontrakInfo[b.noKontrak];
 
   const kontraksFor = (daripada: string, kategori: string, keep = "") =>
     kategori ? openKontraksOf(daripada, keep).filter((k) => kategoriOf(k, daripada).includes(kategori)) : [];
@@ -512,6 +527,34 @@ export default function BayaranPage() {
       };
     });
   };
+
+  // PIECERATE needs no kontrak: kategori becomes PIECERATE (its input is hidden)
+  // and the contractor is picked by name. Leaving it clears those again.
+  const handleJenisBayaranChange = (value: string) => {
+    setFormData((prev) => {
+      if (value === PIECERATE) return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "" };
+      if (prev.jenisBayaran === PIECERATE) return { ...prev, jenisBayaran: value, kategori: "", noKontrak: "", namaKontraktor: "" };
+      return { ...prev, jenisBayaran: value };
+    });
+  };
+
+  // PIECERATE: Nama Kontraktor lists the contractors of the Daripada's AKTIF
+  // PIECERATE kontrak; an edited record keeps its own name
+  const getPiecerateKontraktors = () => {
+    const names = [...(formOptions.piecerateKontraktor[formData.daripada] || [])];
+    if (formData.namaKontraktor && !names.includes(formData.namaKontraktor)) names.unshift(formData.namaKontraktor);
+    return names;
+  };
+
+  // New PIECERATE record: follow the Daripada, filling in its only contractor
+  useEffect(() => {
+    if (editingBayaran || formData.jenisBayaran !== PIECERATE) return;
+    const names = formOptions.piecerateKontraktor[formData.daripada] || [];
+    if (names.includes(formData.namaKontraktor)) return;
+    const next = names.length === 1 ? names[0] : "";
+    if (next !== formData.namaKontraktor) setFormData((prev) => ({ ...prev, namaKontraktor: next }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.daripada, formData.jenisBayaran, formOptions.piecerateKontraktor, editingBayaran]);
 
   const handleKontrakChange = (value: string) => {
     setFormData((prev) => ({ ...prev, noKontrak: value }));
@@ -530,7 +573,7 @@ export default function BayaranPage() {
       return;
     }
     setFormErrors((prev) =>
-      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() })
+      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, showAddDialog, showEditDialog, editingBayaran]);
@@ -804,7 +847,7 @@ export default function BayaranPage() {
 
       // Validate required fields (a new record also needs Nilai, Bayaran Ke and,
       // when the Daripada has contracts, No Kontrak)
-      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() });
+      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() });
       setFormErrors(errors);
       if (Object.keys(errors).length > 0) {
         toast.error("Sila isi semua medan yang diperlukan");
@@ -850,6 +893,7 @@ export default function BayaranPage() {
           bayaranKe: "",
           kategori: "",
           noKontrak: "",
+          namaKontraktor: "",
           tarikhMemoLadang: "",
           statusLadang: "",
           tarikhHantar: "",
@@ -912,6 +956,7 @@ export default function BayaranPage() {
       bayaranKe: bayaran.bayaranKe,
       kategori: bayaran.kategori,
       noKontrak: bayaran.noKontrak,
+      namaKontraktor: bayaran.namaKontraktor || "",
       tarikhMemoLadang: convertDateForEdit(bayaran.tarikhMemoLadang),
       statusLadang: bayaran.statusLadang,
       tarikhHantar: convertDateForEdit(bayaran.tarikhHantar),
@@ -1179,7 +1224,7 @@ Detail: ${directLink}
         showDetailDialog={showDetailDialog}
         setShowDetailDialog={setShowDetailDialog}
         selectedBayaran={selectedBayaran}
-        kontrakInfo={selectedBayaran?.noKontrak ? formOptions.kontrakInfo[selectedBayaran.noKontrak] : undefined}
+        kontrakInfo={selectedBayaran?.noKontrak ? kontrakInfoOf(selectedBayaran) : undefined}
         handleEdit={handleEdit}
         handleShare={handleShare}
         isSharing={isSharing}
@@ -1216,6 +1261,8 @@ Detail: ${directLink}
         filteredDaripadaSuggestions={filteredDaripadaSuggestions}
         handleKontrakChange={handleKontrakChange}
         handleKategoriChange={handleKategoriChange}
+        handleJenisBayaranChange={handleJenisBayaranChange}
+        getPiecerateKontraktors={getPiecerateKontraktors}
         getAvailableKontraks={getAvailableKontraks}
         getAvailableKategoris={getAvailableKategoris}
         handleCurrencyInputChange={handleCurrencyInputChange}
@@ -1241,7 +1288,7 @@ Detail: ${directLink}
       {sharingBayaran && (
         <BayaranShareImageGenerator
           bayaran={sharingBayaran}
-          kontrakInfo={sharingBayaran.noKontrak ? formOptions.kontrakInfo[sharingBayaran.noKontrak] : undefined}
+          kontrakInfo={sharingBayaran.noKontrak ? kontrakInfoOf(sharingBayaran) : undefined}
           onImageGenerated={handleImageGenerated}
           onError={handleImageError}
         />
