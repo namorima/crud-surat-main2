@@ -53,6 +53,7 @@ import { SuratDetailDialog } from "@/components/surat/SuratDetailDialog"
 import { SuratFormDialog } from "@/components/surat/SuratFormDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
+import { canViewAudit } from "@/components/dashboard/audit-dialog"
 import { parseDate, suratTertunggak } from "@/lib/dashboard-stats"
 import { DateRangeFilter, inRange, type DateRange } from "@/components/dashboard/date-range-filter"
 
@@ -1602,6 +1603,7 @@ export default function SuratPage() {
         failLabel={detailSurat ? getFullFailDisplay(detailSurat.fail, failData) : "-"}
         failPart={detailSurat ? getFailPartFromStoredValue(detailSurat.fail, failData) : ""}
         canEdit={!!canEditFull}
+        showAudit={canViewAudit(user)}
         sharing={!!detailSurat && sharingItemId === detailSurat.id}
         generatingImage={generatingImage}
         onRespond={(item) => {

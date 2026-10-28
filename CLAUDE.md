@@ -55,7 +55,9 @@ The application uses a **dual-database architecture**:
    - `staff_id`, `is_active`, `deactivated_at`, `replaced_by` from [add-user-active.sql](add-user-active.sql): staff moving unit get a new account with the same staff ID; `POST /api/auth` with `replaceExisting: true` (409 without it) renames the old account's username to `<staff_id>~<yyyymmddhhmi>` and deactivates it (no login, not offered as Penerima or PIC, records keep their name). The UI shows `staff_id` as "ID Staf"
 
 5. **`audit_bayaran`** - Payment audit trail
-   - Columns: `id`, `bayaran_id`, `action`, `changed_by`, `old_values`, `new_values`, `timestamp`
+   - Columns: `id`, `bayaran_id`, `user_name`, `user_id`, `action` (CREATE | UPDATE | BULK_UPDATE_STATUS | DELETE), `details`, `changes` (jsonb `[{ field, label, from, to }]`), `created_at`; `user_id` / `changes` from [create-audit-surat.sql](create-audit-surat.sql), NULL on older rows
+
+5b. **`audit_surat`** - Surat audit trail, same shape keyed by `surat_id` (+ `bil`), from [create-audit-surat.sql](create-audit-surat.sql); RLS enabled with no policies
 
 6. **`unit_pic`** - Unit and PIC (Person in Charge) mappings
    - Columns: `id`, `unit`, `pic`, `is_active` (default true), `disabled_at`, `created_at`
@@ -178,9 +180,11 @@ Located in `types/` directory:
    - Share Links: `getAllShareLinks()`, `getShareLinkById()`, `addShareLink()`, `deleteShareLink()`, `incrementShareLinkAccess()`
    - RBAC: `getAllRoles()`, `getRoleById()`, `createRole()`, `updateRole()`, `deleteRole()`, `assignPermissionsToRole()`, `getUserPermissions()`
 
-3. **Audit Trail**
-   - Payment operations automatically logged to `audit_bayaran` table
-   - Tracks: action type, user, old values, new values, timestamp
+3. **Audit Trail** ([lib/audit.ts](lib/audit.ts))
+   - Surat create / edit / delete (`/api/surat`) go to `audit_surat`; bayaran create / edit / delete / bulk status go to `audit_bayaran`
+   - The actor is the signed-in user from the session cookie (`getActor()`: username + name from `users`), not the name the client sends (that is only a fallback)
+   - `changes` holds the fields that differ (`diffRows()` over `SURAT_AUDIT_FIELDS` / `BAYARAN_AUDIT_FIELDS`, dates as DD/MM/YYYY); a create or delete keeps the record's values; an edit with no changed field is not logged
+   - `GET /api/audit?type=surat|bayaran&id=` is for admin / Super Admin only (`isAdminRequest()`: legacy role `semua` / `Super Admin` / `admin` or RBAC role `semua` / `admin`); the clock button (`AuditButton` in [components/dashboard/audit-dialog.tsx](components/dashboard/audit-dialog.tsx)) shows in Maklumat Surat and Rekod Bayaran for those users
 
 4. **Bulk Operations**
    - Support for bulk status updates on payment records
@@ -726,6 +730,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 
 ### Utility Routes
 
+- `/api/audit` - Audit trail of one surat or bayaran, admin / Super Admin only ([app/api/audit/route.ts](app/api/audit/route.ts))
 - `/api/upload-image` - ImgBB image upload ([app/api/upload-image/route.ts](app/api/upload-image/route.ts))
 - `/api/debug/rbac` - RBAC debug endpoint ([app/api/debug/rbac/route.ts](app/api/debug/rbac/route.ts))
 

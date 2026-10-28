@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateBayaran, getAllBayaran, deleteBayaran, addAuditLog } from "@/lib/supabase-db"
+import { updateBayaran, addAuditLog } from "@/lib/supabase-db"
+import { BAYARAN_AUDIT_FIELDS, diffRows, getActor } from "@/lib/audit"
 import { BayaranSchema } from "@/types/bayaran-schema"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabase"
@@ -36,7 +37,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       tarikhPn: validatedData.tarikhPn ? formatDateForSheet(validatedData.tarikhPn) : "",
     }
 
-    await updateBayaran(id, formattedData, user || "Unknown")
+    await updateBayaran(id, formattedData, await getActor(request, user))
     return NextResponse.json({ success: true, message: "Bayaran record updated successfully" })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -57,16 +58,16 @@ function formatDateForSheet(dateString: string): string {
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = request.nextUrl.searchParams.get("user") || "Unknown"
+    const actor = await getActor(request, request.nextUrl.searchParams.get("user") || undefined)
 
     console.log("[DELETE] ===== START DELETE REQUEST =====")
     console.log("[DELETE] Received ID:", id)
-    console.log("[DELETE] User:", user)
+    console.log("[DELETE] User:", actor.name)
 
     // Query Supabase directly - without .single() to avoid errors
     const { data: records, error: fetchError } = await supabaseAdmin
       .from("bayaran")
-      .select("id, ids")
+      .select("*")
       .eq("id", id)
 
     console.log("[DELETE] Query result - records:", records)
@@ -95,9 +96,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     try {
       await addAuditLog({
         bayaranId: id,
-        user: user,
+        actor,
         action: "DELETE",
         details: `Rekod bayaran #${existingRecord.ids || id} dipadam`,
+        // Keeps what was deleted
+        changes: diffRows(existingRecord, null, BAYARAN_AUDIT_FIELDS),
       })
       console.log("[DELETE] Audit log added successfully")
     } catch (auditError) {

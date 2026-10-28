@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllBayaran, addBayaran } from "@/lib/supabase-db"
+import { getActor } from "@/lib/audit"
 import { BayaranSchema } from "@/types/bayaran-schema"
 import { z } from "zod"
 
@@ -56,7 +57,8 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Add to database
     try {
-      await addBayaran(formattedData, user || "Unknown")
+      // Who keyed it comes from the session; the client's name is only a fallback
+      await addBayaran(formattedData, await getActor(request, user))
     } catch (dbError) {
       console.error("Database Error:", dbError)
       return NextResponse.json({ 

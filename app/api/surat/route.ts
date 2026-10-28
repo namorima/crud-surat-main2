@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllSurat, addSurat, updateSurat, deleteSurat } from "@/lib/supabase-db"
+import { getAllSurat, addSurat, updateSurat, deleteSurat, getSuratRow } from "@/lib/supabase-db"
+import { SURAT_AUDIT_FIELDS, diffRows, getActor, logSuratAudit } from "@/lib/audit"
 
 export async function GET() {
   try {
@@ -37,6 +38,16 @@ export async function POST(request: NextRequest) {
     // addSurat will now return the database-generated BIL
     // No need to calculate next BIL manually - database sequence handles it
     const generatedBil = await addSurat(0, body) // rowIndex not used anymore
+
+    const created = await getSuratRow(generatedBil).catch(() => null)
+    await logSuratAudit({
+      suratId: created?.id,
+      bil: generatedBil,
+      action: "CREATE",
+      actor: await getActor(request),
+      details: `Surat #${generatedBil} dikeyin`,
+      changes: diffRows(null, created, SURAT_AUDIT_FIELDS),
+    })
     
     return NextResponse.json({ success: true, bil: generatedBil })
   } catch (error: any) {
@@ -55,7 +66,21 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unit, Tindakan PIC, and Status are required fields" }, { status: 400 })
     }
 
+    const before = await getSuratRow(rowIndex).catch(() => null)
     await updateSurat(rowIndex, data)
+    const after = await getSuratRow(data.bil ?? rowIndex).catch(() => null)
+    const changes = diffRows(before, after, SURAT_AUDIT_FIELDS)
+    if (changes.length > 0) {
+      const statusChange = changes.find((c) => c.field === "status")
+      await logSuratAudit({
+        suratId: after?.id ?? before?.id,
+        bil: after?.bil ?? rowIndex,
+        action: "UPDATE",
+        actor: await getActor(request),
+        details: statusChange ? `Status: ${statusChange.from || "-"} → ${statusChange.to || "-"}` : `${changes.length} medan dikemaskini`,
+        changes,
+      })
+    }
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("Error updating surat:", error)
@@ -81,7 +106,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log("Calling deleteSurat with bil:", rowIndex)
+    const before = await getSuratRow(rowIndex).catch(() => null)
     await deleteSurat(rowIndex)
+    await logSuratAudit({
+      suratId: before?.id,
+      bil: rowIndex,
+      action: "DELETE",
+      actor: await getActor(request),
+      details: `Surat #${rowIndex} dipadam`,
+      // Keeps what was deleted
+      changes: diffRows(before, null, SURAT_AUDIT_FIELDS),
+    })
     console.log("deleteSurat completed successfully")
     return NextResponse.json({ success: true })
   } catch (error: any) {
