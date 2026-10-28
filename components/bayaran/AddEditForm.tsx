@@ -42,6 +42,8 @@ interface AddEditFormProps {
   handleKategoriChange: (value: string) => void
   /** PIECERATE sets kategori PIECERATE and swaps No Kontrak for Nama Kontraktor */
   handleJenisBayaranChange: (value: string) => void
+  /** Nama Kontraktor choices for PIECERATE: the Daripada's PIECERATE kontrak */
+  getPiecerateKontraktors: () => string[]
   getAvailableKontraks: () => string[]
   getAvailableKategoris: () => string[]
   handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -152,6 +154,7 @@ export function AddEditForm({
   handleKontrakChange,
   handleKategoriChange,
   handleJenisBayaranChange,
+  getPiecerateKontraktors,
   getAvailableKontraks,
   getAvailableKategoris,
   handleCurrencyInputChange,
@@ -188,12 +191,9 @@ export function AddEditForm({
   const isPiecerate = formData.jenisBayaran === PIECERATE
   const needsKategori = !isEdit && kategoriOptions.length > 0
   const needsKontrak = !isEdit && kontrakOptions.length > 0
-  // PIECERATE: no kontrak, so the contractor is picked from the Kontraktor list;
-  // an older record keeps its name even when it is no longer listed
-  const kontraktorOptions: string[] = formOptions.kontraktorNames ?? []
-  if (formData.namaKontraktor && !kontraktorOptions.includes(formData.namaKontraktor)) {
-    kontraktorOptions.unshift(formData.namaKontraktor)
-  }
+  // PIECERATE: no kontrak, so the contractor is picked from the Daripada's
+  // PIECERATE kontrak (an edited record keeps its own name)
+  const kontraktorOptions = getPiecerateKontraktors()
 
   const close = () => {
     if (isEdit) {
@@ -416,18 +416,26 @@ export function AddEditForm({
                 <Field
                   label="Nama Kontraktor"
                   htmlFor="namaKontraktor"
-                  required={!isEdit}
+                  required={!isEdit && kontraktorOptions.length > 0}
                   error={formErrors.namaKontraktor}
-                  hint="Piecerate tidak memerlukan No Kontrak."
+                  hint={
+                    !formData.daripada
+                      ? "Pilih Daripada dahulu."
+                      : kontraktorOptions.length
+                        ? "Kontraktor PIECERATE bagi kawasan ini. Tidak memerlukan No Kontrak."
+                        : "Tiada kontrak PIECERATE aktif untuk kawasan ini (daftar di Tetapan → Kontrak)."
+                  }
                 >
                   <Select
                     value={formData.namaKontraktor}
                     // Radix reports "" for a value not in the list yet; never clear it for that
                     onValueChange={(value) => value && setFormData((prev: any) => ({ ...prev, namaKontraktor: value }))}
-                    disabled={locked}
+                    disabled={locked || !formData.daripada || kontraktorOptions.length === 0}
                   >
                     <SelectTrigger id="namaKontraktor" className={cx(formErrors.namaKontraktor && errorRing)}>
-                      <SelectValue placeholder={kontraktorOptions.length ? "Pilih nama kontraktor" : "Tiada kontraktor"} />
+                      <SelectValue
+                        placeholder={!formData.daripada ? "Pilih Daripada dahulu" : kontraktorOptions.length ? "Pilih nama kontraktor" : "Tiada kontraktor"}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {kontraktorOptions.map((nama) => (

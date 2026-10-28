@@ -150,7 +150,7 @@ export default function BayaranPage() {
     kontrakInfoByKawasan: {} as Record<string, Record<string, KontrakInfo>>, // kawasan -> noKontrak -> info
     closedContracts: [] as string[], // closed in every kawasan (LADANG NEGERI list)
     closedByKawasan: {} as Record<string, string[]>,
-    kontraktorNames: [] as string[], // Nama Kontraktor choices for a PIECERATE bayaran // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
+    piecerateKontraktor: {} as Record<string, string[]>, // kawasan -> contractors of its AKTIF PIECERATE kontrak // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -306,7 +306,7 @@ export default function BayaranPage() {
           kontrakInfoByKawasan: data.kontrakInfoByKawasan || {},
           closedContracts: data.closedContracts || [],
           closedByKawasan: data.closedByKawasan || {},
-          kontraktorNames: data.kontraktorNames || [],
+          piecerateKontraktor: data.piecerateKontraktor || {},
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -538,6 +538,24 @@ export default function BayaranPage() {
     });
   };
 
+  // PIECERATE: Nama Kontraktor lists the contractors of the Daripada's AKTIF
+  // PIECERATE kontrak; an edited record keeps its own name
+  const getPiecerateKontraktors = () => {
+    const names = [...(formOptions.piecerateKontraktor[formData.daripada] || [])];
+    if (formData.namaKontraktor && !names.includes(formData.namaKontraktor)) names.unshift(formData.namaKontraktor);
+    return names;
+  };
+
+  // New PIECERATE record: follow the Daripada, filling in its only contractor
+  useEffect(() => {
+    if (editingBayaran || formData.jenisBayaran !== PIECERATE) return;
+    const names = formOptions.piecerateKontraktor[formData.daripada] || [];
+    if (names.includes(formData.namaKontraktor)) return;
+    const next = names.length === 1 ? names[0] : "";
+    if (next !== formData.namaKontraktor) setFormData((prev) => ({ ...prev, namaKontraktor: next }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.daripada, formData.jenisBayaran, formOptions.piecerateKontraktor, editingBayaran]);
+
   const handleKontrakChange = (value: string) => {
     setFormData((prev) => ({ ...prev, noKontrak: value }));
   };
@@ -555,7 +573,7 @@ export default function BayaranPage() {
       return;
     }
     setFormErrors((prev) =>
-      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() })
+      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, showAddDialog, showEditDialog, editingBayaran]);
@@ -829,7 +847,7 @@ export default function BayaranPage() {
 
       // Validate required fields (a new record also needs Nilai, Bayaran Ke and,
       // when the Daripada has contracts, No Kontrak)
-      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks() });
+      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() });
       setFormErrors(errors);
       if (Object.keys(errors).length > 0) {
         toast.error("Sila isi semua medan yang diperlukan");
@@ -1244,6 +1262,7 @@ Detail: ${directLink}
         handleKontrakChange={handleKontrakChange}
         handleKategoriChange={handleKategoriChange}
         handleJenisBayaranChange={handleJenisBayaranChange}
+        getPiecerateKontraktors={getPiecerateKontraktors}
         getAvailableKontraks={getAvailableKontraks}
         getAvailableKategoris={getAvailableKategoris}
         handleCurrencyInputChange={handleCurrencyInputChange}

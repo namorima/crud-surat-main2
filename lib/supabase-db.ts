@@ -756,6 +756,9 @@ export async function getContractCategoryData() {
     const allCategories: string[] = []
     // A kontrak (kawasan + no kontrak) with an AKTIF row stays selectable in Tambah Rekod Bayaran
     const activeByKawasan: Record<string, Set<string>> = {}
+    // Nama Kontraktor choices for a PIECERATE bayaran: contractors of the kawasan's
+    // AKTIF kontrak with kategori PIECERATE
+    const piecerateKontraktor: Record<string, string[]> = {}
     const activeContracts = new Set<string>()
 
     data?.forEach((row) => {
@@ -799,6 +802,11 @@ export async function getContractCategoryData() {
         kontrakInfo[noKontrak] ??= info
       }
 
+      if (kategori.toUpperCase() === "PIECERATE" && namaKontraktor && (row.status || "AKTIF") === "AKTIF") {
+        const names = (piecerateKontraktor[kawasan] ??= [])
+        if (!names.includes(namaKontraktor)) names.push(namaKontraktor)
+      }
+
       if (noKontrak) {
         const active = (activeByKawasan[kawasan] ??= new Set<string>())
         if ((row.status || "AKTIF") === "AKTIF") {
@@ -835,6 +843,7 @@ export async function getContractCategoryData() {
       kontrakInfoByKawasan,
       closedContracts,
       closedByKawasan,
+      piecerateKontraktor,
     }
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
