@@ -48,6 +48,7 @@ The application uses a **dual-database architecture**:
 
 2. **`bayaran`** - Payment records
    - Columns: `id`, `ids`, `daripada`, `tarikh_terima`, `perkara`, `nilai_bayaran`, `bayaran_ke`, `kategori`, `no_kontrak`, `nama_kontraktor`, `tarikh_memo_ladang`, `status_ladang`, `tarikh_hantar`, `tarikh_ppnp`, `tarikh_pn`, `penerima`, `status_bayaran`, `tarikh_bayar`, `nombor_baucer`, `nota_kaki`, `created_at`, `updated_at`
+   - `jenis_bayaran` (KEMAJUAN | WCP | WANG TAHANAN, check constraint; NULL on older records) from [add-bayaran-jenis.sql](add-bayaran-jenis.sql); options in `JENIS_BAYARAN` ([types/bayaran-schema.ts](types/bayaran-schema.ts))
    - Auto-populated: `nama_kontraktor` via trigger function
 
 3. **`fail`** - File/document management
@@ -640,11 +641,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 ### Feature Components
 
 1. **Bayaran Components** ([components/bayaran/](components/bayaran/))
-   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer. Kategori (left) is picked before No Kontrak (right): Kategori lists the kategori of the Daripada's open contracts, No Kontrak only that kategori's contracts (each kontrak has one kategori; a kategori with one contract fills it in; an older record keeps its values). Required: Daripada, Tarikh Terima, Perkara; a new record also needs Nilai Bayaran (> 0), Bayaran Ke and, when there is something to pick, Kategori then No Kontrak (`bayaranFormErrors()` in [types/bayaran-schema.ts](types/bayaran-schema.ts), errors per field after Simpan). `POST /api/bayaran` enforces Perkara / Nilai / Bayaran Ke with `BayaranBaruSchema`; edits of older records are not held to them
+   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer. Jenis Bayaran sits right of Tarikh Terima (KEMAJUAN by default for a new record; an older record without one stays empty when edited). Kategori (left) is picked before No Kontrak (right): Kategori lists the kategori of the Daripada's open contracts, No Kontrak only that kategori's contracts (each kontrak has one kategori; a kategori with one contract fills it in; an older record keeps its values). Required: Daripada, Tarikh Terima, Perkara; a new record also needs Jenis Bayaran, Nilai Bayaran (> 0), Bayaran Ke and, when there is something to pick, Kategori then No Kontrak (`bayaranFormErrors()` in [types/bayaran-schema.ts](types/bayaran-schema.ts), errors per field after Simpan). `POST /api/bayaran` enforces Perkara / Nilai / Bayaran Ke with `BayaranBaruSchema`; edits of older records are not held to them
    - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
-   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount, fields (incl. Kerja and Nilai Kontrak of its kontrak, from `kontrakInfo` in `/api/bayaran-form-data`, loaded on first open), tracking timeline; Padam / Tutup / Edit / Share
+   - `DetailDialog.tsx` - "Rekod Bayaran #…" detail: amount (with Jenis Bayaran and Bayaran ke-N chips), fields (incl. Kerja and Nilai Kontrak of its kontrak, from `kontrakInfo` in `/api/bayaran-form-data`, loaded on first open), tracking timeline; Padam / Tutup / Edit / Share
    - `progress.tsx` - process steps (Memo → PPN(P) → PN → Hantar → Bayar) and the `StageDots` indicator
 
 2. **Share Components** ([components/share/](components/share/))
