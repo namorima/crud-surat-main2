@@ -58,6 +58,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
+import { bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -159,6 +160,8 @@ export default function BayaranPage() {
   const [filteredDaripadaSuggestions, setFilteredDaripadaSuggestions] = useState<string[]>([]);
   const [formDataLoading, setFormDataLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Field errors of the Tambah / Edit form, shown after a save attempt
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Share functionality states
   const [sharingBayaran, setSharingBayaran] = useState<Bayaran | null>(null);
@@ -493,6 +496,18 @@ export default function BayaranPage() {
     return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === formData.noKontrak);
   };
 
+  // Once shown, errors clear as the fields are filled; closing the form drops them
+  useEffect(() => {
+    if (!showAddDialog && !showEditDialog) {
+      setFormErrors({});
+      return;
+    }
+    setFormErrors((prev) =>
+      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, getAvailableKontraks())
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, showAddDialog, showEditDialog, editingBayaran]);
+
   const getAvailableKategoris = () => {
     if (formData.daripada.toUpperCase() === "LADANG NEGERI") {
       return formOptions.allCategories;
@@ -757,8 +772,11 @@ export default function BayaranPage() {
     try {
       setSaving(true);
 
-      // Validate required fields
-      if (!formData.daripada || !formData.tarikhTerima || !formData.perkara) {
+      // Validate required fields (a new record also needs Nilai, Bayaran Ke and,
+      // when the Daripada has contracts, No Kontrak)
+      const errors = bayaranFormErrors(formData, !editingBayaran, getAvailableKontraks());
+      setFormErrors(errors);
+      if (Object.keys(errors).length > 0) {
         toast.error("Sila isi semua medan yang diperlukan");
         return;
       }
@@ -828,7 +846,9 @@ export default function BayaranPage() {
       } else {
         const errorData = await response.json();
         toast.error(
-          errorData.error || `Gagal ${editingBayaran ? "mengemaskini" : "menyimpan"} rekod bayaran`
+          errorData.details?.[0]?.message ||
+            errorData.error ||
+            `Gagal ${editingBayaran ? "mengemaskini" : "menyimpan"} rekod bayaran`
         );
       }
     } catch (error) {
@@ -1155,6 +1175,7 @@ Detail: ${directLink}
         formOptions={formOptions}
         handleSave={handleSave}
         saving={saving}
+        formErrors={formErrors}
         user={user}
         showDaripadaDropdown={showDaripadaDropdown}
         setShowDaripadaDropdown={setShowDaripadaDropdown}

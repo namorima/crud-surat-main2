@@ -21,6 +21,36 @@ export const BayaranSchema = z.object({
   notaKaki: z.string().optional(),
 })
 
+const amount = (value: string | undefined) => Number(String(value ?? "").replace(/[^\d.-]/g, ""))
+
+/**
+ * Tambah Rekod Bayaran: Perkara, Nilai Bayaran and Bayaran Ke are required as
+ * well (edits of older records are not held to it). No Kontrak is checked by
+ * the form, since only it knows whether the Daripada has contracts to pick.
+ */
+export const BayaranBaruSchema = BayaranSchema.extend({
+  perkara: z.string().trim().min(1, "Perkara diperlukan"),
+  nilaiBayaran: z
+    .string({ required_error: "Nilai Bayaran diperlukan" })
+    .refine((v) => amount(v) > 0, "Nilai Bayaran diperlukan"),
+  bayaranKe: z.string({ required_error: "Bayaran Ke diperlukan" }).trim().min(1, "Bayaran Ke diperlukan"),
+})
+
+/** Field errors for the Tambah / Edit form; kontrakOptions are the no kontrak offered for the Daripada. */
+export function bayaranFormErrors(form: Record<string, any>, isNew: boolean, kontrakOptions: string[]): Record<string, string> {
+  const errors: Record<string, string> = {}
+  if (!String(form.daripada ?? "").trim()) errors.daripada = "Daripada diperlukan"
+  if (!form.tarikhTerima) errors.tarikhTerima = "Tarikh Terima diperlukan"
+  if (!String(form.perkara ?? "").trim()) errors.perkara = "Perkara diperlukan"
+  if (isNew) {
+    if (!(amount(form.nilaiBayaran) > 0)) errors.nilaiBayaran = "Nilai Bayaran diperlukan"
+    if (!String(form.bayaranKe ?? "").trim()) errors.bayaranKe = "Bayaran Ke diperlukan"
+    // Only when the Daripada has contracts to choose from
+    if (kontrakOptions.length > 0 && !form.noKontrak) errors.noKontrak = "Pilih No Kontrak"
+  }
+  return errors
+}
+
 export const BulkUpdateBayaranSchema = z.object({
   ids: z.array(z.string()).min(1, "Sekurang-kurangnya satu ID diperlukan"),
   newStatus: z.string().min(1, "Status baru diperlukan"),

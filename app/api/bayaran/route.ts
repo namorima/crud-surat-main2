@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllBayaran, addBayaran } from "@/lib/supabase-db"
 import { getActor } from "@/lib/audit"
-import { BayaranSchema } from "@/types/bayaran-schema"
+import { BayaranBaruSchema } from "@/types/bayaran-schema"
 import { z } from "zod"
 
 export async function GET() {
@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
     // Step 2: Validate with Zod
     let validatedData: any
     try {
-      validatedData = BayaranSchema.parse(bayaranData)
+      // A new record needs Perkara, Nilai Bayaran and Bayaran Ke
+      validatedData = BayaranBaruSchema.parse(bayaranData)
     } catch (zodError) {
       if (zodError instanceof z.ZodError) {
         console.error("Validation Error:", zodError.errors)
