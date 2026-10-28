@@ -28,7 +28,9 @@ export async function GET() {
       allCategories: contractCategoryData.allCategories,
       contractorData: contractCategoryData.contractorData,
       kontrakInfo: contractCategoryData.kontrakInfo,
+      kontrakInfoByKawasan: contractCategoryData.kontrakInfoByKawasan,
       closedContracts: contractCategoryData.closedContracts,
+      closedByKawasan: contractCategoryData.closedByKawasan,
       penerimaData,
       statusBayaranData,
     })

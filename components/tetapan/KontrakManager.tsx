@@ -214,14 +214,14 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       })
       if (!response.ok) throw new Error(await readError(response, "Gagal menyimpan kontrak"))
       const { kontrak: saved, bayaranUpdated } = (await response.json()) as { kontrak: Kontrak; bayaranUpdated: number }
-      // Apply the save locally instead of reloading the list: rows sharing the
-      // no kontrak take its contractor name and status, as the server did
+      // Apply the save locally instead of reloading the list: rows of the same
+      // kawasan and no kontrak take its contractor name and status, as the server did
       setItems((prev) =>
         sortKontrak([
           ...prev
             .filter((item) => item.id !== saved.id)
             .map((item) =>
-              item.noKontrak !== saved.noKontrak
+              item.noKontrak !== saved.noKontrak || item.kawasan !== saved.kawasan
                 ? item
                 : editing
                   ? { ...item, namaKontraktor: saved.namaKontraktor, status: saved.status }

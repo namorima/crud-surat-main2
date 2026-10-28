@@ -145,8 +145,10 @@ export default function BayaranPage() {
     allContracts: [] as string[],
     allCategories: [] as string[],
     contractorData: {} as Record<string, string>, // noKontrak -> namaKontraktor
-    kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak
-    closedContracts: [] as string[], // SELESAI / TIDAK AKTIF: not offered for new records
+    kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak (first kawasan)
+    kontrakInfoByKawasan: {} as Record<string, Record<string, KontrakInfo>>, // kawasan -> noKontrak -> info
+    closedContracts: [] as string[], // closed in every kawasan (LADANG NEGERI list)
+    closedByKawasan: {} as Record<string, string[]>, // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -299,7 +301,9 @@ export default function BayaranPage() {
           allCategories: data.allCategories || [],
           contractorData: data.contractorData || {},
           kontrakInfo: data.kontrakInfo || {},
+          kontrakInfoByKawasan: data.kontrakInfoByKawasan || {},
           closedContracts: data.closedContracts || [],
+          closedByKawasan: data.closedByKawasan || {},
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -494,9 +498,16 @@ export default function BayaranPage() {
   const openKontraksOf = (daripada: string, keep = "") => {
     const all =
       daripada.toUpperCase() === "LADANG NEGERI" ? formOptions.allContracts : formOptions.contractData[daripada] || [];
-    const closed = new Set(formOptions.closedContracts);
+    // A kontrak is its kawasan + no kontrak: the same number may be open in one kawasan and closed in another
+    const closed = new Set(
+      daripada.toUpperCase() === "LADANG NEGERI" ? formOptions.closedContracts : formOptions.closedByKawasan[daripada] || []
+    );
     return all.filter((noKontrak) => !closed.has(noKontrak) || noKontrak === keep);
   };
+
+  // Kerja / nilai of a bayaran's kontrak: its own kawasan's, else the number's first
+  const kontrakInfoOf = (b: Bayaran) =>
+    formOptions.kontrakInfoByKawasan[b.daripada]?.[b.noKontrak] ?? formOptions.kontrakInfo[b.noKontrak];
 
   const kontraksFor = (daripada: string, kategori: string, keep = "") =>
     kategori ? openKontraksOf(daripada, keep).filter((k) => kategoriOf(k, daripada).includes(kategori)) : [];
@@ -1179,7 +1190,7 @@ Detail: ${directLink}
         showDetailDialog={showDetailDialog}
         setShowDetailDialog={setShowDetailDialog}
         selectedBayaran={selectedBayaran}
-        kontrakInfo={selectedBayaran?.noKontrak ? formOptions.kontrakInfo[selectedBayaran.noKontrak] : undefined}
+        kontrakInfo={selectedBayaran?.noKontrak ? kontrakInfoOf(selectedBayaran) : undefined}
         handleEdit={handleEdit}
         handleShare={handleShare}
         isSharing={isSharing}
@@ -1241,7 +1252,7 @@ Detail: ${directLink}
       {sharingBayaran && (
         <BayaranShareImageGenerator
           bayaran={sharingBayaran}
-          kontrakInfo={sharingBayaran.noKontrak ? formOptions.kontrakInfo[sharingBayaran.noKontrak] : undefined}
+          kontrakInfo={sharingBayaran.noKontrak ? kontrakInfoOf(sharingBayaran) : undefined}
           onImageGenerated={handleImageGenerated}
           onError={handleImageError}
         />

@@ -516,18 +516,8 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
 
     const nextIds = (maxIdsData?.[0]?.ids || 0) + 1
 
-    // Get contractor name from kontrak table
-    let namaKontraktor = ""
-    if (bayaran.noKontrak) {
-      const { data: kontrakData } = await supabaseAdmin
-        .from("kontrak")
-        .select("nama_kontraktor")
-        .eq("no_kontrak", bayaran.noKontrak)
-        .limit(1)
-        .single()
-
-      namaKontraktor = kontrakData?.nama_kontraktor || ""
-    }
+    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak
+    const namaKontraktor = await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
 
     const { data, error } = await supabaseAdmin
       .from("bayaran")
@@ -578,18 +568,8 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, ac
   try {
     const { data: before } = await supabaseAdmin.from("bayaran").select("*").eq("id", id).maybeSingle()
 
-    // Get contractor name from kontrak table
-    let namaKontraktor = ""
-    if (bayaran.noKontrak) {
-      const { data: kontrakData } = await supabaseAdmin
-        .from("kontrak")
-        .select("nama_kontraktor")
-        .eq("no_kontrak", bayaran.noKontrak)
-        .limit(1)
-        .single()
-
-      namaKontraktor = kontrakData?.nama_kontraktor || ""
-    }
+    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak
+    const namaKontraktor = await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
 
     const { data: after, error } = await supabaseAdmin
       .from("bayaran")
@@ -762,11 +742,14 @@ export async function getContractCategoryData() {
     const contractData: Record<string, string[]> = {}
     const categoryData: Record<string, Record<string, string[]>> = {}
     const contractorData: Record<string, string> = {}
-    // Kerja and nilai per no kontrak (sibling rows share them; first filled value wins)
+    // Kerja and nilai per kawasan and no kontrak (rows of one kontrak share them;
+    // first filled value wins). kontrakInfo (by number only) is the first kawasan's
+    const kontrakInfoByKawasan: Record<string, Record<string, { kerja: string; nilaiKontrak: number | null }>> = {}
     const kontrakInfo: Record<string, { kerja: string; nilaiKontrak: number | null }> = {}
     const allContracts: string[] = []
     const allCategories: string[] = []
-    // A no kontrak with an AKTIF row stays selectable in Tambah Rekod Bayaran
+    // A kontrak (kawasan + no kontrak) with an AKTIF row stays selectable in Tambah Rekod Bayaran
+    const activeByKawasan: Record<string, Set<string>> = {}
     const activeContracts = new Set<string>()
 
     data?.forEach((row) => {
@@ -802,14 +785,21 @@ export async function getContractCategoryData() {
       }
 
       if (noKontrak) {
-        const info = (kontrakInfo[noKontrak] ??= { kerja: "", nilaiKontrak: null })
+        const info = ((kontrakInfoByKawasan[kawasan] ??= {})[noKontrak] ??= { kerja: "", nilaiKontrak: null })
         if (!info.kerja && row.kerja) info.kerja = row.kerja
         if (info.nilaiKontrak === null && row.nilai_kontrak !== null && row.nilai_kontrak !== undefined) {
           info.nilaiKontrak = Number(row.nilai_kontrak)
         }
+        kontrakInfo[noKontrak] ??= info
       }
 
-      if (noKontrak && (row.status || "AKTIF") === "AKTIF") activeContracts.add(noKontrak)
+      if (noKontrak) {
+        const active = (activeByKawasan[kawasan] ??= new Set<string>())
+        if ((row.status || "AKTIF") === "AKTIF") {
+          active.add(noKontrak)
+          activeContracts.add(noKontrak)
+        }
+      }
 
       // Collect all contracts and categories for LADANG NEGERI
       if (noKontrak && !allContracts.includes(noKontrak)) {
@@ -820,10 +810,26 @@ export async function getContractCategoryData() {
       }
     })
 
-    // SELESAI / TIDAK AKTIF: kept for old records and filters, hidden from new bayaran
+    // SELESAI / TIDAK AKTIF: kept for old records and filters, hidden from new bayaran.
+    // closedByKawasan is per kawasan; closedContracts holds numbers closed in every kawasan
+    const closedByKawasan: Record<string, string[]> = {}
+    for (const [kawasan, numbers] of Object.entries(contractData)) {
+      const active = activeByKawasan[kawasan] ?? new Set<string>()
+      closedByKawasan[kawasan] = numbers.filter((noKontrak) => !active.has(noKontrak))
+    }
     const closedContracts = allContracts.filter((noKontrak) => !activeContracts.has(noKontrak))
 
-    return { contractData, categoryData, allContracts, allCategories, contractorData, kontrakInfo, closedContracts }
+    return {
+      contractData,
+      categoryData,
+      allContracts,
+      allCategories,
+      contractorData,
+      kontrakInfo,
+      kontrakInfoByKawasan,
+      closedContracts,
+      closedByKawasan,
+    }
   } catch (error: any) {
     console.error("Error fetching contract and category data from Supabase:", error)
     throw new Error(`Failed to fetch contract and category data from Supabase: ${error.message}`)
@@ -883,11 +889,14 @@ export async function getAllKontrak(): Promise<Kontrak[]> {
 }
 
 /**
- * One contract number can have several kontrak rows (one per kategori), and
- * bayaran rows look the name up by contract number alone. Keep every sibling
- * row and every bayaran on the same name; returns the bayaran rows updated.
+ * A kontrak is its kawasan + no kontrak: the same number can be used by
+ * different kawasan (e.g. "PIECERATE") for unrelated contracts. Rows of the same
+ * kawasan and number (one per kategori) share the contractor name and status.
+ * Bayaran keep a copy of the name: when other kawasan use the number too, only
+ * bayaran from this kawasan (daripada) are rewritten. Returns the bayaran updated.
  */
 async function applyNamaKontraktor(
+  kawasan: string,
   noKontrak: string,
   namaKontraktor: string,
   siblingFields: { status?: string } = {},
@@ -896,19 +905,36 @@ async function applyNamaKontraktor(
   if (!noKontrak) return 0
   const nama = namaKontraktor || null
 
-  // Both updates go out together: each is a round trip to the database
+  const { data: users, error: usersError } = await supabaseAdmin.from("kontrak").select("kawasan").eq("no_kontrak", noKontrak)
+  if (usersError) throw usersError
+  const sharedNumber = (users || []).some((row) => (row.kawasan || "") !== kawasan)
+
   let siblings = supabaseAdmin
     .from("kontrak")
     .update({ nama_kontraktor: nama, ...siblingFields })
+    .eq("kawasan", kawasan)
     .eq("no_kontrak", noKontrak)
   if (exceptId) siblings = siblings.neq("id", exceptId)
-  const [{ error: siblingError }, { data, error }] = await Promise.all([
-    siblings,
-    supabaseAdmin.from("bayaran").update({ nama_kontraktor: nama }).eq("no_kontrak", noKontrak).select("id"),
-  ])
+  let bayaran = supabaseAdmin.from("bayaran").update({ nama_kontraktor: nama }).eq("no_kontrak", noKontrak)
+  if (sharedNumber) bayaran = bayaran.eq("daripada", kawasan)
+
+  // Both updates go out together: each is a round trip to the database
+  const [{ error: siblingError }, { data, error }] = await Promise.all([siblings, bayaran.select("id")])
   if (siblingError) throw siblingError
   if (error) throw error
   return data?.length || 0
+}
+
+/** Contractor of a bayaran's kontrak: its own kawasan first, else any kawasan using the number. */
+async function lookupNamaKontraktor(noKontrak: string, daripada: string): Promise<string> {
+  if (!noKontrak) return ""
+  const { data } = await supabaseAdmin
+    .from("kontrak")
+    .select("kawasan, nama_kontraktor")
+    .eq("no_kontrak", noKontrak)
+    .not("nama_kontraktor", "is", null)
+  const rows = data || []
+  return (rows.find((row) => row.kawasan === daripada) ?? rows[0])?.nama_kontraktor || ""
 }
 
 async function assertKontrakUnique(input: KontrakInput, exceptId?: string) {
@@ -936,7 +962,7 @@ export async function addKontrak(input: KontrakInput): Promise<{ kontrak: Kontra
       .single()
 
     if (error) throw error
-    const bayaranUpdated = input.namaKontraktor ? await applyNamaKontraktor(input.noKontrak, input.namaKontraktor) : 0
+    const bayaranUpdated = input.namaKontraktor ? await applyNamaKontraktor(input.kawasan, input.noKontrak, input.namaKontraktor) : 0
     return { kontrak: { ...mapKontrakRow(data), namaKontraktor: input.namaKontraktor }, bayaranUpdated }
   } catch (error: any) {
     console.error("Error adding kontrak to Supabase:", error)
@@ -958,8 +984,8 @@ export async function updateKontrak(
       .single()
 
     if (error) throw error
-    // Rows sharing this no kontrak (one per kategori) open and close together
-    const bayaranUpdated = await applyNamaKontraktor(input.noKontrak, input.namaKontraktor, { status: input.status || "AKTIF" }, id)
+    // Rows of this kawasan and no kontrak (one per kategori) open and close together
+    const bayaranUpdated = await applyNamaKontraktor(input.kawasan, input.noKontrak, input.namaKontraktor, { status: input.status || "AKTIF" }, id)
     return { kontrak: mapKontrakRow(data), bayaranUpdated }
   } catch (error: any) {
     console.error("Error updating kontrak in Supabase:", error)
@@ -980,19 +1006,33 @@ export async function deleteKontrak(id: string): Promise<void> {
 /** Re-copies every contractor name onto its bayaran rows (one-off backfill). */
 export async function syncAllBayaranKontraktor(): Promise<number> {
   try {
-    // First named row per contract number wins, matching the bayaran lookup.
-    const names = new Map<string, string>()
+    // Per kawasan + no kontrak; the first named row wins, as in lookupNamaKontraktor
+    const names = new Map<string, Map<string, string>>() // no kontrak -> kawasan -> name
     for (const kontrak of await getAllKontrak()) {
-      if (kontrak.noKontrak && kontrak.namaKontraktor && !names.has(kontrak.noKontrak)) {
-        names.set(kontrak.noKontrak, kontrak.namaKontraktor)
-      }
+      if (!kontrak.noKontrak || !kontrak.namaKontraktor) continue
+      const byKawasan = names.get(kontrak.noKontrak) ?? new Map<string, string>()
+      if (!byKawasan.has(kontrak.kawasan)) byKawasan.set(kontrak.kawasan, kontrak.namaKontraktor)
+      names.set(kontrak.noKontrak, byKawasan)
     }
     let total = 0
-    for (const [noKontrak, nama] of names) {
+    for (const [noKontrak, byKawasan] of names) {
+      for (const [kawasan, nama] of byKawasan) {
+        const { data, error } = await supabaseAdmin
+          .from("bayaran")
+          .update({ nama_kontraktor: nama })
+          .eq("no_kontrak", noKontrak)
+          .eq("daripada", kawasan)
+          .select("id")
+        if (error) throw error
+        total += data?.length || 0
+      }
+      // Bayaran whose daripada is none of the number's kawasan take the first name
+      const kawasans = [...byKawasan.keys()].map((k) => `"${k.replace(/"/g, '\\"')}"`).join(",")
       const { data, error } = await supabaseAdmin
         .from("bayaran")
-        .update({ nama_kontraktor: nama })
+        .update({ nama_kontraktor: [...byKawasan.values()][0] })
         .eq("no_kontrak", noKontrak)
+        .not("daripada", "in", `(${kawasans})`)
         .select("id")
       if (error) throw error
       total += data?.length || 0
