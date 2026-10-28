@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-provider"
 import {
   RiBankCardLine,
   RiCloseLine,
+  RiDownload2Line,
   RiHome5Line,
   RiLogoutBoxRLine,
   RiMailOpenLine,
@@ -66,6 +67,15 @@ const navigation: NavigationItem[] = [
     legacyRoles: ["semua", "Super Admin", "admin"]
   },
   {
+    // Laporan Surat / Rekod Bayaran PDFs: open to anyone who sees either page
+    name: "Download",
+    href: "/dashboard/download",
+    icon: RiDownload2Line,
+    requiredPermission: { resource: 'surat', action: 'view' },
+    alsoPermissions: [{ resource: 'bayaran', action: 'view' }],
+    legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
+  },
+  {
     name: "Tetapan",
     href: "/dashboard/tetapan",
     icon: RiSettings4Line,
@@ -97,7 +107,7 @@ export function useNavigation(): NavigationItem[] {
     if (item.legacyRoles && user?.role) {
       // KEWANGAN role specific filtering (legacy)
       if (user.role === "KEWANGAN") {
-        return item.name === "Bayaran"
+        return item.name === "Bayaran" || item.name === "Download"
       }
 
       return item.legacyRoles.includes(user.role)

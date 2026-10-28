@@ -607,6 +607,11 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - Audit trail
    - Export functionality
 
+3b. **Download** ([app/dashboard/download/page.tsx](app/dashboard/download/page.tsx)) - nav item before Tetapan, shown with `surat:view` or `bayaran:view` (legacy KEWANGAN too)
+   - Mingguan (Isnin–Ahad) / Bulanan period with prev/next, a date or month picker and Minggu ini / Bulan ini
+   - Laporan Surat (by tarikh; Bil, Tarikh, Kategori, Perkara, Unit / PIC, Status; users other than `semua` / `PENGURUS` get their own unit only, as on the Surat page) and Laporan Rekod Bayaran (by tarikh terima; ID, Tarikh Terima, Daripada, Perkara, Bayaran Ke, Nilai, No Kontrak, Kontraktor, Status Bayaran, with a Jumlah row)
+   - A4 portrait PDFs made in the browser with jsPDF + jspdf-autotable (loaded on demand) in [lib/laporan.ts](lib/laporan.ts): header with period and generator, repeated table head, Disemak Oleh / Disahkan Oleh block (Nama, Jawatan, Tarikh) after the table, "Halaman x / y" footer. The built-in PDF font has no en dash, so PDF text uses "hingga"
+
 4. **Pengguna (Users)** ([app/dashboard/pengguna/page.tsx](app/dashboard/pengguna/page.tsx))
    - User management
    - Role assignment
@@ -635,7 +640,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 ### Feature Components
 
 1. **Bayaran Components** ([components/bayaran/](components/bayaran/))
-   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer
+   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer. Required: Daripada, Tarikh Terima, Perkara; a new record also needs Nilai Bayaran (> 0), Bayaran Ke and, when the Daripada has active contracts to pick, No Kontrak (`bayaranFormErrors()` in [types/bayaran-schema.ts](types/bayaran-schema.ts), errors per field after Simpan). `POST /api/bayaran` enforces Perkara / Nilai / Bayaran Ke with `BayaranBaruSchema`; edits of older records are not held to them
    - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
