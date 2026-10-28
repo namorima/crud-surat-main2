@@ -37,6 +37,8 @@ interface AddEditFormProps {
   handleDaripadaChange: (value: string) => void
   filteredDaripadaSuggestions: string[]
   handleKontrakChange: (value: string) => void
+  /** Sets the kategori and narrows / clears the no kontrak to match */
+  handleKategoriChange: (value: string) => void
   getAvailableKontraks: () => string[]
   getAvailableKategoris: () => string[]
   handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -143,6 +145,7 @@ export function AddEditForm({
   handleDaripadaChange,
   filteredDaripadaSuggestions,
   handleKontrakChange,
+  handleKategoriChange,
   getAvailableKontraks,
   getAvailableKategoris,
   handleCurrencyInputChange,
@@ -172,9 +175,11 @@ export function AddEditForm({
     })
   }
 
-  // A new record also needs Nilai Bayaran, Bayaran Ke and, when the Daripada has
-  // contracts to pick, No Kontrak (the page checks with bayaranFormErrors)
+  // Kategori first, then No Kontrak from that kategori's contracts. A new record
+  // needs each one when there is something to pick (the page checks with bayaranFormErrors)
+  const kategoriOptions = getAvailableKategoris()
   const kontrakOptions = getAvailableKontraks()
+  const needsKategori = !isEdit && kategoriOptions.length > 0
   const needsKontrak = !isEdit && kontrakOptions.length > 0
 
   const close = () => {
@@ -188,9 +193,21 @@ export function AddEditForm({
   }
 
   const kontrakSelect = (
-    <Select value={formData.noKontrak} onValueChange={handleKontrakChange} disabled={!formData.daripada || locked}>
+    <Select value={formData.noKontrak} onValueChange={(value) => value && handleKontrakChange(value)} disabled={!formData.kategori || !kontrakOptions.length || locked}>
       <SelectTrigger id="noKontrak" className={cx(formErrors.noKontrak && errorRing)}>
-        <SelectValue placeholder={!formData.daripada ? "Pilih Daripada dahulu" : kontrakOptions.length ? "Pilih no kontrak" : "Tiada kontrak"} />
+        <SelectValue
+          placeholder={
+            !formData.daripada
+              ? "Pilih Daripada dahulu"
+              : !formData.kategori
+                ? kategoriOptions.length
+                  ? "Pilih Kategori dahulu"
+                  : "Tiada kontrak"
+                : kontrakOptions.length
+                  ? "Pilih no kontrak"
+                  : "Tiada kontrak"
+          }
+        />
       </SelectTrigger>
       <SelectContent>
         {kontrakOptions.map((kontrak) => (
@@ -205,14 +222,15 @@ export function AddEditForm({
   const kategoriSelect = (
     <Select
       value={formData.kategori}
-      onValueChange={(value) => setFormData((prev: any) => ({ ...prev, kategori: value }))}
-      disabled={!formData.daripada || !formData.noKontrak || locked}
+      // Radix reports "" for a value not in the list yet; never clear the kategori for that
+      onValueChange={(value) => value && handleKategoriChange(value)}
+      disabled={!formData.daripada || !kategoriOptions.length || locked}
     >
-      <SelectTrigger id="kategori">
-        <SelectValue placeholder="Pilih kategori" />
+      <SelectTrigger id="kategori" className={cx(formErrors.kategori && errorRing)}>
+        <SelectValue placeholder={!formData.daripada ? "Pilih Daripada dahulu" : kategoriOptions.length ? "Pilih kategori" : "Tiada kategori"} />
       </SelectTrigger>
       <SelectContent>
-        {getAvailableKategoris().map((kategori) => (
+        {kategoriOptions.map((kategori) => (
           <SelectItem key={kategori} value={kategori}>
             <Chip variant="caption" color={bayaranKategoriChip(kategori)}>
               {kategori}
@@ -353,17 +371,18 @@ export function AddEditForm({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                {/* Kategori first; No Kontrak lists that kategori's contracts */}
                 <Field
-                  label="No Kontrak"
-                  htmlFor="noKontrak"
-                  required={needsKontrak}
-                  error={formErrors.noKontrak}
-                  hint={formData.daripada && kontrakOptions.length === 0 ? "Tiada kontrak aktif; boleh dikosongkan." : undefined}
+                  label="Kategori"
+                  htmlFor="kategori"
+                  required={needsKategori}
+                  error={formErrors.kategori}
+                  hint={formData.daripada && kategoriOptions.length === 0 ? "Tiada kontrak aktif; boleh dikosongkan." : undefined}
                 >
-                  {kontrakSelect}
-                </Field>
-                <Field label="Kategori" htmlFor="kategori">
                   {kategoriSelect}
+                </Field>
+                <Field label="No Kontrak" htmlFor="noKontrak" required={needsKontrak} error={formErrors.noKontrak}>
+                  {kontrakSelect}
                 </Field>
               </div>
             </Section>
