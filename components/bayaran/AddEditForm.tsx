@@ -29,6 +29,8 @@ interface AddEditFormProps {
   formOptions: any
   handleSave: () => void
   saving: boolean
+  /** Missing required fields after a save attempt (bayaranFormErrors) */
+  formErrors?: Record<string, string>
   user: User | null
   showDaripadaDropdown: boolean
   setShowDaripadaDropdown: (show: boolean) => void
@@ -67,17 +69,41 @@ const EMPTY_FORM = {
   notaKaki: "",
 }
 
-/** Label + control. */
-function Field({ label, htmlFor, children, className }: { label: string; htmlFor?: string; children: ReactNode; className?: string }) {
+/** Label + control, with a required mark and the field's error or hint. */
+function Field({
+  label,
+  htmlFor,
+  required,
+  error,
+  hint,
+  children,
+  className,
+}: {
+  label: string
+  htmlFor?: string
+  required?: boolean
+  error?: string
+  hint?: string
+  children: ReactNode
+  className?: string
+}) {
   return (
     <div className={cx("flex min-w-0 flex-col gap-1.5", className)}>
       <Label htmlFor={htmlFor} className="text-caption-1-medium text-text-secondary">
         {label}
+        {required && <span className="ms-0.5 text-text-destructive">*</span>}
       </Label>
       {children}
+      {error ? (
+        <p className="text-caption-1-regular text-text-destructive">{error}</p>
+      ) : hint ? (
+        <p className="text-caption-2-regular text-text-tertiary">{hint}</p>
+      ) : null}
     </div>
   )
 }
+
+const errorRing = "ring-2 ring-inset ring-border-error-default"
 
 /** Numbered form section; `hint` replaces the body while the step is not reachable yet. */
 function Section({ step, title, hint, children }: { step: number; title: string; hint?: string; children?: ReactNode }) {
@@ -110,6 +136,7 @@ export function AddEditForm({
   formOptions,
   handleSave,
   saving,
+  formErrors = {},
   user,
   showDaripadaDropdown,
   setShowDaripadaDropdown,
@@ -145,6 +172,11 @@ export function AddEditForm({
     })
   }
 
+  // A new record also needs Nilai Bayaran, Bayaran Ke and, when the Daripada has
+  // contracts to pick, No Kontrak (the page checks with bayaranFormErrors)
+  const kontrakOptions = getAvailableKontraks()
+  const needsKontrak = !isEdit && kontrakOptions.length > 0
+
   const close = () => {
     if (isEdit) {
       setShowEditDialog(false)
@@ -157,11 +189,11 @@ export function AddEditForm({
 
   const kontrakSelect = (
     <Select value={formData.noKontrak} onValueChange={handleKontrakChange} disabled={!formData.daripada || locked}>
-      <SelectTrigger id="noKontrak">
-        <SelectValue placeholder={formData.daripada ? "Pilih no kontrak" : "Pilih Daripada dahulu"} />
+      <SelectTrigger id="noKontrak" className={cx(formErrors.noKontrak && errorRing)}>
+        <SelectValue placeholder={!formData.daripada ? "Pilih Daripada dahulu" : kontrakOptions.length ? "Pilih no kontrak" : "Tiada kontrak"} />
       </SelectTrigger>
       <SelectContent>
-        {getAvailableKontraks().map((kontrak) => (
+        {kontrakOptions.map((kontrak) => (
           <SelectItem key={kontrak} value={kontrak}>
             {kontrak}
           </SelectItem>
@@ -214,7 +246,7 @@ export function AddEditForm({
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
             <Section step={1} title="Maklumat Bayaran">
               {/* Daripada: pick a suggestion or keep what was typed */}
-              <Field label="Daripada">
+              <Field label="Daripada" required error={formErrors.daripada}>
                 <Popover open={showDaripadaDropdown} onOpenChange={setShowDaripadaDropdown}>
                   <PopoverTrigger asChild>
                     <button
@@ -225,6 +257,7 @@ export function AddEditForm({
                       className={cx(
                         "flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-2lg bg-background-tertiary-default px-2.5 text-left text-body-regular ring-2 ring-inset ring-transparent outline-none transition-[box-shadow] hover:ring-border-button-hover focus-visible:ring-border-button-active disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text",
                         formData.daripada ? "text-text-primary" : "text-text-tertiary",
+                        formErrors.daripada && errorRing,
                       )}
                     >
                       <span className="truncate">{formData.daripada || "Pilih atau taip nama/organisasi..."}</span>
@@ -268,9 +301,10 @@ export function AddEditForm({
                 </Popover>
               </Field>
 
-              <Field label="Tarikh Terima" htmlFor="tarikhTerima">
+              <Field label="Tarikh Terima" htmlFor="tarikhTerima" required error={formErrors.tarikhTerima}>
                 <Input
                   id="tarikhTerima"
+                  className={cx(formErrors.tarikhTerima && errorRing)}
                   type="date"
                   value={formData.tarikhTerima}
                   onChange={(e) => setFormData((prev: any) => ({ ...prev, tarikhTerima: e.target.value }))}
@@ -278,9 +312,10 @@ export function AddEditForm({
                 />
               </Field>
 
-              <Field label="Perkara" htmlFor="perkara">
+              <Field label="Perkara" htmlFor="perkara" required error={formErrors.perkara}>
                 <Textarea
                   id="perkara"
+                  className={cx(formErrors.perkara && errorRing)}
                   value={formData.perkara}
                   onChange={(e) => setFormData((prev: any) => ({ ...prev, perkara: e.target.value }))}
                   rows={3}
@@ -290,7 +325,7 @@ export function AddEditForm({
               </Field>
 
               <div className="grid grid-cols-[1fr_6rem] gap-3">
-                <Field label="Nilai Bayaran" htmlFor="nilaiBayaran">
+                <Field label="Nilai Bayaran" htmlFor="nilaiBayaran" required={!isEdit} error={formErrors.nilaiBayaran}>
                   <div className="relative">
                     <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
                     <Input
@@ -300,14 +335,15 @@ export function AddEditForm({
                       value={formatCurrencyInput(formData.nilaiBayaran)}
                       onChange={handleCurrencyInputChange}
                       placeholder="0.00"
-                      className="pl-9 tabular-nums"
+                      className={cx("pl-9 tabular-nums", formErrors.nilaiBayaran && errorRing)}
                       disabled={locked}
                     />
                   </div>
                 </Field>
-                <Field label="Bayaran Ke" htmlFor="bayaranKe">
+                <Field label="Bayaran Ke" htmlFor="bayaranKe" required={!isEdit} error={formErrors.bayaranKe}>
                   <Input
                     id="bayaranKe"
+                    className={cx(formErrors.bayaranKe && errorRing)}
                     inputMode="numeric"
                     value={formData.bayaranKe}
                     onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
@@ -317,7 +353,13 @@ export function AddEditForm({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="No Kontrak" htmlFor="noKontrak">
+                <Field
+                  label="No Kontrak"
+                  htmlFor="noKontrak"
+                  required={needsKontrak}
+                  error={formErrors.noKontrak}
+                  hint={formData.daripada && kontrakOptions.length === 0 ? "Tiada kontrak aktif; boleh dikosongkan." : undefined}
+                >
                   {kontrakSelect}
                 </Field>
                 <Field label="Kategori" htmlFor="kategori">

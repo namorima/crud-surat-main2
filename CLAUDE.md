@@ -640,7 +640,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 ### Feature Components
 
 1. **Bayaran Components** ([components/bayaran/](components/bayaran/))
-   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer
+   - `AddEditForm.tsx` - Add/Edit payment form in three numbered sections (Maklumat Bayaran, Proses Ladang, Kewangan); later sections show a hint until the earlier date is filled; KEWANGAN/PENERIMA edits are locked except status bayaran, tarikh bayar, baucer. Required: Daripada, Tarikh Terima, Perkara; a new record also needs Nilai Bayaran (> 0), Bayaran Ke and, when the Daripada has active contracts to pick, No Kontrak (`bayaranFormErrors()` in [types/bayaran-schema.ts](types/bayaran-schema.ts), errors per field after Simpan). `POST /api/bayaran` enforces Perkara / Nilai / Bayaran Ke with `BayaranBaruSchema`; edits of older records are not held to them
    - `BayaranTable.tsx` - BoardUI table (md+: ID, Terima, Perkara, Nilai, Kontraktor from lg, Status with stage dots) and neutral phone cards; rows are not tinted
    - `BayaranHeader.tsx` - Header with bulk actions
    - `BulkEditDialog.tsx` - Bulk update dialog
