@@ -73,6 +73,7 @@ The application uses a **dual-database architecture**:
 
 7. **`kontrak`** - Contract and category data
    - Columns: `id`, `kawasan`, `no_kontrak`, `kategori`, `nama_kontraktor`, `tarikh_mula`, `tarikh_akhir`, `tahun_kontrak` (generated from `tarikh_mula`), `jenis_kerja`, `kerja` (work name, free text), `nilai_kontrak` (RM, numeric(14,2), optional), `status` (AKTIF | SELESAI | TIDAK AKTIF, default AKTIF), `created_at`
+   - A kontrak is its **kawasan + no_kontrak**: one number can be used by several kawasan for unrelated contracts (e.g. "PIECERATE" in ARING, BUKIT TANDAK and TUMBI RAPAT). Only rows of the same kawasan and number share the contractor name and status; a contractor may appear in many kawasan
    - New columns come from [add-kontrak-fields.sql](add-kontrak-fields.sql), [add-kontrak-kerja.sql](add-kontrak-kerja.sql), [add-kontrak-nilai.sql](add-kontrak-nilai.sql) and [add-kontrak-status.sql](add-kontrak-status.sql); kategori and jenis kerja options are in [lib/kontrak-input.ts](lib/kontrak-input.ts)
 
 8. **`kontraktor`** - Contractor master data (vendor and bank details)
@@ -683,7 +684,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `LockerManager.tsx` - Tetapan → Setup Locker tab (right of Setup Fail): Unit, Part, No. Locker and the Part badge colour (preset swatches or any colour). Writes go through `requireUnitEdit()` ([lib/server-auth.ts](lib/server-auth.ts)): `tetapan:edit`, and only the user's own unit without `tetapan:manage_all_units`
    - `part-badge.tsx` - `PartBadge` and `partWarna()`: a fail's badge colour comes from its locker (else the same part in the unit, anywhere, then the old fixed hues)
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor
-   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates sibling kontrak rows and every bayaran with that `no_kontrak` (bayaran keeps a copy of the name). Status is shared by rows with the same `no_kontrak`; a no kontrak without an AKTIF row is in `closedContracts` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran (a record that already uses it keeps it)
+   - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). Editing a contractor name also updates the rows of the same kawasan and `no_kontrak` and their bayaran (bayaran keeps a copy of the name; when other kawasan use the number, only bayaran whose `daripada` is this kawasan are rewritten, `applyNamaKontraktor()` in [lib/supabase-db.ts](lib/supabase-db.ts)). Status is shared by rows of the same kawasan and `no_kontrak`; a kontrak without an AKTIF row is in `closedByKawasan[kawasan]` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran for that kawasan (a record that already uses it keeps it). A bayaran's contractor and Kerja / Nilai Kontrak come from its own kawasan's kontrak first (`lookupNamaKontraktor()`, `kontrakInfoByKawasan`)
 
 7. **Auth Components** ([components/auth/](components/auth/))
    - `PasswordStrengthIndicator.tsx` - Password strength meter
