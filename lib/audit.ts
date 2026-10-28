@@ -27,12 +27,14 @@ export async function isAdminRequest(request: Request): Promise<boolean> {
 export const SURAT_AUDIT_FIELDS: Record<string, string> = {
   bil: "Bil",
   kategori: "Kategori",
+  kaedah: "Kaedah",
   tarikh: "Tarikh",
   daripada_kepada: "Daripada / Kepada",
   perkara: "Perkara",
   unit: "Unit",
   tindakan_pic: "Tindakan PIC",
   fail: "Fail",
+  untuk_makluman: "Untuk Makluman",
   status: "Status",
   tarikh_selesai: "Tarikh Selesai",
   nota: "Nota",
@@ -62,6 +64,7 @@ export const BAYARAN_AUDIT_FIELDS: Record<string, string> = {
 
 const show = (value: unknown) => {
   if (value === null || value === undefined) return ""
+  if (typeof value === "boolean") return value ? "Ya" : "Tidak"
   const text = String(value).trim()
   // DB dates (YYYY-MM-DD) as the app shows them
   const m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/)

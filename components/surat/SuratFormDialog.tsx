@@ -4,7 +4,18 @@ import type React from "react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { RiArrowDownLine, RiArrowUpDownLine, RiArrowUpLine, RiChat3Line, RiCheckLine, RiFileCopyLine, RiLoader4Line, RiReplyLine } from "@remixicon/react"
+import {
+  RiArrowDownLine,
+  RiArrowUpDownLine,
+  RiArrowUpLine,
+  RiChat3Line,
+  RiCheckLine,
+  RiFileCopyLine,
+  RiHandHeartLine,
+  RiLoader4Line,
+  RiMailLine,
+  RiReplyLine,
+} from "@remixicon/react"
 import type { Fail } from "@/types/fail"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -15,9 +26,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Button } from "@/components/base/buttons/button"
 import { Chip } from "@/components/base/badges/chip"
+import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { cx } from "@/utils/cx"
 
 const STATUSES = ["BELUM PROSES", "HOLD / KIV", "DALAM TINDAKAN", "SELESAI", "BATAL"] as const
+
+/** How the surat was sent or received; a new surat starts as MELALUI EMEL. */
+export const KAEDAH = ["MELALUI EMEL", "SERAHAN TANGAN"] as const
 
 /** Fail part dots keep the hues of FAIL_PART_COLORS. */
 const FAIL_PART_DOT: Record<string, string> = {
@@ -31,6 +46,7 @@ export type SuratFormData = {
   tarikh: string
   perkara: string
   kategori: string
+  kaedah: string
   unit: string
   tindakanPic: string
   status: string
@@ -38,6 +54,7 @@ export type SuratFormData = {
   nota: string
   komen: string
   reference: string
+  untukMakluman: boolean
 }
 
 export interface SuratFormDialogProps {
@@ -48,6 +65,8 @@ export interface SuratFormDialogProps {
   formErrors: Record<string, string>
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (name: string, value: string) => void
+  /** Ticked: status SELESAI with today's tarikh selesai */
+  onUntukMaklumanChange: (checked: boolean) => void
   /** Add mode: the surat this one replies to. */
   referenceBil?: number | null
   /** Add mode, Respon: perkara of the surat being answered, offered as a one-tap copy */
@@ -142,6 +161,8 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
   // Perkara is a textarea (long subjects wrap), so its suggestions are our own list, not a datalist
   const [perkaraFocused, setPerkaraFocused] = useState(false)
   const isKeluar = formData.kategori === "KELUAR"
+  // Both KELUAR and Untuk Makluman save as SELESAI
+  const statusLocked = isKeluar || formData.untukMakluman
   const selectedFail = failOptions.find((fail) => fail.id === selectedFailId)
   const activePics = (formData.unit && unitPicMap[formData.unit]) || []
   // A surat being edited keeps its PIC even if that PIC was disabled (or moved) since
@@ -192,6 +213,33 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                         )}
                       >
                         {k === "MASUK" ? <RiArrowDownLine className="size-4" aria-hidden /> : <RiArrowUpLine className="size-4" aria-hidden />}
+                        {k}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Field>
+
+              <Field label="Kaedah">
+                <div role="radiogroup" aria-label="Kaedah" className="grid grid-cols-2 gap-1 rounded-2lg bg-background-tertiary-default p-1">
+                  {KAEDAH.map((k) => {
+                    const active = formData.kaedah === k
+                    const Icon = k === "MELALUI EMEL" ? RiMailLine : RiHandHeartLine
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => onSelectChange("kaedah", k)}
+                        className={cx(
+                          "flex h-7 cursor-pointer items-center justify-center gap-1 rounded-lg text-body-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+                          active
+                            ? "bg-background-primary-default text-text-primary shadow-xs dark:bg-neutral-700"
+                            : "text-text-secondary hover:text-text-primary",
+                        )}
+                      >
+                        <Icon className="size-4" aria-hidden />
                         {k}
                       </button>
                     )
@@ -398,15 +446,21 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
             </Section>
 
             <Section step={3} title="Status">
+              <div className="flex flex-col gap-0.5 rounded-xl bg-background-secondary-default px-3 py-2.5 dark:bg-background-primary-default">
+                <Checkbox id={id("untukMakluman")} isSelected={formData.untukMakluman} onChange={props.onUntukMaklumanChange}>
+                  Untuk Makluman
+                </Checkbox>
+                <p className="ps-6 text-caption-2-regular text-text-tertiary">Status terus SELESAI dengan tarikh selesai hari ini.</p>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field
                   label="Status"
                   htmlFor={id("status")}
                   required
                   error={formErrors.status}
-                  hint={isKeluar ? "Surat keluar terus SELESAI." : undefined}
+                  hint={formData.untukMakluman ? "Untuk makluman terus SELESAI." : isKeluar ? "Surat keluar terus SELESAI." : undefined}
                 >
-                  <Select value={formData.status} onValueChange={(v) => onSelectChange("status", v)} disabled={isKeluar}>
+                  <Select value={formData.status} onValueChange={(v) => onSelectChange("status", v)} disabled={statusLocked}>
                     <SelectTrigger id={id("status")} className={cx("text-left", formErrors.status && errorRing)}>
                       <SelectValue placeholder="Pilih status" />
                     </SelectTrigger>
@@ -422,7 +476,7 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                 <Field
                   label="Tarikh Selesai"
                   htmlFor={id("tarikhSelesai")}
-                  hint={formatDateToDisplay(formData.tarikhSelesai) || (formData.status !== "SELESAI" && !isKeluar ? "Untuk status SELESAI" : "DD/MM/YYYY")}
+                  hint={formatDateToDisplay(formData.tarikhSelesai) || (formData.status !== "SELESAI" && !statusLocked ? "Untuk status SELESAI" : "DD/MM/YYYY")}
                 >
                   <Input
                     id={id("tarikhSelesai")}
@@ -430,7 +484,7 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                     type="date"
                     value={formData.tarikhSelesai}
                     onChange={onInputChange}
-                    disabled={formData.status !== "SELESAI" && !isKeluar}
+                    disabled={formData.status !== "SELESAI" && !statusLocked}
                   />
                 </Field>
               </div>

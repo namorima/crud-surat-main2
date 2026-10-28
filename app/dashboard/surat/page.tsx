@@ -210,6 +210,7 @@ export default function SuratPage() {
     tarikh: "",
     perkara: "",
     kategori: "MASUK",
+    kaedah: "MELALUI EMEL",
     unit: "",
     fail: "",
     tindakanPic: "",
@@ -218,6 +219,7 @@ export default function SuratPage() {
     nota: "",
     komen: "",
     reference: "",
+    untukMakluman: false,
   })
 
   // State untuk reference bil (untuk respon surat)
@@ -866,6 +868,8 @@ export default function SuratPage() {
       tarikh: formatDateToInput(surat.tarikh),
       perkara: surat.perkara,
       kategori: surat.kategori || "MASUK",
+      // Surat keyed before Kaedah existed have none; the user may pick one
+      kaedah: surat.kaedah || "",
       unit: surat.unit,
       fail: surat.fail,
       tindakanPic: surat.tindakanPic,
@@ -874,6 +878,7 @@ export default function SuratPage() {
       nota: surat.nota,
       komen: surat.komen || "",
       reference: surat.reference || "",
+      untukMakluman: !!surat.untukMakluman,
     })
 
     // Find the fail object that matches the stored value (an active one first: a
@@ -920,6 +925,7 @@ export default function SuratPage() {
       tarikh: today,
       perkara: "",
       kategori: isRespon ? "KELUAR" : "MASUK",
+      kaedah: "MELALUI EMEL",
       unit: defaultUnit,
       fail: "",
       tindakanPic: "",
@@ -928,6 +934,7 @@ export default function SuratPage() {
       nota: "",
       komen: "",
       reference: referenceValue,
+      untukMakluman: false,
     })
     setFormErrors({})
     setCurrentSurat(null)
@@ -950,6 +957,30 @@ export default function SuratPage() {
         const newErrors = { ...prev }
         delete newErrors[name]
         return newErrors
+      })
+    }
+  }
+
+  // Untuk Makluman: nothing to act on, so it is SELESAI on the day it is ticked
+  const handleUntukMaklumanChange = (checked: boolean) => {
+    const today = formatDateToInput(getCurrentDateFormatted())
+    setFormData((prev) => {
+      if (checked) return { ...prev, untukMakluman: true, status: "SELESAI", tarikhSelesai: today }
+      if (prev.kategori === "KELUAR") return { ...prev, untukMakluman: false }
+      // Unticked: back to the surat's own status when editing one that was not for makluman
+      const own = currentSurat && !currentSurat.untukMakluman ? currentSurat : null
+      return {
+        ...prev,
+        untukMakluman: false,
+        status: own?.status || "BELUM PROSES",
+        tarikhSelesai: own?.tarikhSelesai ? formatDateToInput(own.tarikhSelesai) : "",
+      }
+    })
+    if (formErrors.status) {
+      setFormErrors((prev) => {
+        const next = { ...prev }
+        delete next.status
+        return next
       })
     }
   }
@@ -1517,6 +1548,7 @@ export default function SuratPage() {
         formErrors={formErrors}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
+        onUntukMaklumanChange={handleUntukMaklumanChange}
         daripadaKepadaSuggestions={daripadaKepadaSuggestions}
         perkaraSuggestions={perkaraSuggestions}
         unitPicMap={unitPicMap}
@@ -1543,6 +1575,7 @@ export default function SuratPage() {
         formErrors={formErrors}
         onInputChange={handleInputChange}
         onSelectChange={handleSelectChange}
+        onUntukMaklumanChange={handleUntukMaklumanChange}
         daripadaKepadaSuggestions={daripadaKepadaSuggestions}
         perkaraSuggestions={perkaraSuggestions}
         unitPicMap={unitPicMap}

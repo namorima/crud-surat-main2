@@ -13,4 +13,8 @@ export type Surat = {
   nota: string
   komen: string
   reference: string // Column M - Bil surat yang dilink (untuk respon)
+  /** "MELALUI EMEL" | "SERAHAN TANGAN"; "" on surat keyed before it was asked */
+  kaedah?: string
+  /** For information only: saved as SELESAI on the day it was ticked */
+  untukMakluman?: boolean
 }
