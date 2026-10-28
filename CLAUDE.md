@@ -38,7 +38,13 @@ The application uses a **dual-database architecture**:
 1. **`surat`** - Letter/mail records
    - Columns: `id`, `bil`, `daripada_kepada`, `tarikh`, `perkara`, `kategori`, `unit`, `fail`, `tindakan_pic`, `status`, `tarikh_selesai`, `nota`, `komen`, `reference`
    - `kaedah` ("MELALUI EMEL" | "SERAHAN TANGAN", NULL on older surat) and `untuk_makluman` (boolean, default false) from [add-surat-kaedah.sql](add-surat-kaedah.sql)
+   - `created_by` (username of who keyed it, set by `POST /api/surat` from the session; NULL on surat keyed before) from [create-surat-komen.sql](create-surat-komen.sql)
+   - `komen` is the old single "Komen Pengurus"; its 2 values were copied into `surat_komen` and the UI no longer shows or edits it
    - Auto-increment: `bil` field uses sequence `surat_bil_seq`
+
+1b. **`surat_komen`** - Komen thread per surat: `id`, `surat_id` (cascade), `user_id` (username; NULL for the migrated Komen Pengurus), `user_name`, `isi` (1–2000 chars), `created_at`
+
+1c. **`surat_komen_notifikasi`** - One row per recipient per komen: `id`, `user_id`, `komen_id`, `surat_id`, `read_at`, `created_at`. A komen notifies the surat's `created_by` and everyone who already commented, never the author. Both tables from [create-surat-komen.sql](create-surat-komen.sql); RLS enabled with no policies
 
 2. **`bayaran`** - Payment records
    - Columns: `id`, `ids`, `daripada`, `tarikh_terima`, `perkara`, `nilai_bayaran`, `bayaran_ke`, `kategori`, `no_kontrak`, `nama_kontraktor`, `tarikh_memo_ladang`, `status_ladang`, `tarikh_hantar`, `tarikh_ppnp`, `tarikh_pn`, `penerima`, `status_bayaran`, `tarikh_bayar`, `nombor_baucer`, `nota_kaki`, `created_at`, `updated_at`
@@ -655,11 +661,13 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `row-actions.tsx` - "…" row menu (BoardUI Dropdown)
    - `date-range-filter.tsx` - `DateRangeFilter`: header calendar button for Surat (tarikh) and Rekod Bayaran (tarikh terima). A one-month react-aria `RangeCalendar` (BoardUI `MonthPanel`, Malay via the app's `ms-MY` I18nProvider) with quick ranges (Hari ini, 7 hari lepas, Bulan ini, Bulan lepas, Tahun ini) and Kosongkan / Guna; `inRange()` compares whole days. Pages keep the range as `[from, to]`
    - `header.tsx` - Page header
+   - `komen-notifier.tsx` - `KomenNotifier` (in [app/dashboard/layout.tsx](app/dashboard/layout.tsx)): on opening the app (and on returning to the tab after 5 min) shows unread komen per surat with Buka komen (goes to `/dashboard/surat?komen=<bil>`, or `KOMEN_OPEN_EVENT` when already there) / Abaikan / Abaikan semua
 
 5. **Surat Components** ([components/surat/](components/surat/))
    - `SuratList.tsx` - BoardUI table (md+: Bil, Tarikh, Perkara, Unit/PIC from lg, Status, Ref) and compact neutral cards (phones) with pagination; status shows as a chip, rows are not tinted
    - `SuratDetailDialog.tsx` - "Maklumat Surat #…" dialog (Tutup / Respon / Edit / Share); the Daripada / Kepada field is labelled "Daripada" for MASUK and "Kepada" for KELUAR
    - `SuratFormDialog.tsx` - Tambah and Edit Surat form (one component, `mode` add/edit): Maklumat Surat, Tindakan, Status sections; the page keeps form state, validation and saving. Kaedah (MELALUI EMEL by default / SERAHAN TANGAN) sits under Kategori; ticking "Untuk Makluman" in Status sets SELESAI with today's tarikh selesai and locks the status (unticking restores the surat's own status, or BELUM PROSES). Perkara is a wrapping textarea with its own suggestion list. A Respon starts as the opposite kategori of the surat it answers (MASUK → KELUAR, status SELESAI) and offers "Salin perkara surat #N"
+   - `KomenThread.tsx` - Komen in Maklumat Surat (replaced Komen Pengurus): every signed-in user reads and adds komen with their name; the author or an admin can delete one; Ctrl/Cmd+Enter sends. Opening it marks this surat's notifications read. The row menu "Komen" opens Maklumat Surat with the box focused; the list shows the newest komen and the count; the share image shows the newest komen
    - `bil-links.tsx` - renders notes as plain text with `#123` as buttons; never render notes as HTML
    - `TertunggakDialog.tsx` - "Surat Tertunggak" (bell button): open surat (not SELESAI or BATAL) whose tarikh is more than 30 days ago, computed by `suratTertunggak()` in [lib/dashboard-stats.ts](lib/dashboard-stats.ts) from the loaded surat (users limited to their unit see only that unit). A Paling baru (default) / Paling lama switch orders it, remembered in localStorage (`surat:tertunggak:order`). It used to read the Google Sheets `FX` tab
    - Share (WhatsApp) image: [components/share-image-generator.tsx](components/share-image-generator.tsx) draws a BoardUI card like Maklumat Surat (status chip, kategori arrow, Daripada/Kepada, perkara, Unit/PIC/Tarikh Selesai/Reference/Fail, Nota, Komen) at 2× with a measure-then-paint layout; canvas helpers and chip hex colours are shared with the Bayaran image in [lib/share-canvas.ts](lib/share-canvas.ts). Both generators run once per record (callbacks are read through a ref) so a re-render does not upload again
@@ -732,6 +740,8 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 ### Utility Routes
 
 - `/api/audit` - Audit trail of one surat or bayaran, admin / Super Admin only ([app/api/audit/route.ts](app/api/audit/route.ts))
+- `/api/surat-komen` - `GET ?suratId=` thread, `POST { suratId, isi }` (author from the session), `DELETE ?id=` (author or admin) ([app/api/surat-komen/route.ts](app/api/surat-komen/route.ts)); logic in [lib/surat-komen.ts](lib/surat-komen.ts)
+- `/api/komen-notifikasi` - `GET` the signed-in user's unread komen, `PATCH { suratId? }` marks them read ([app/api/komen-notifikasi/route.ts](app/api/komen-notifikasi/route.ts))
 - `/api/upload-image` - ImgBB image upload ([app/api/upload-image/route.ts](app/api/upload-image/route.ts))
 - `/api/debug/rbac` - RBAC debug endpoint ([app/api/debug/rbac/route.ts](app/api/debug/rbac/route.ts))
 

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllSurat, addSurat, updateSurat, deleteSurat, getSuratRow } from "@/lib/supabase-db"
 import { SURAT_AUDIT_FIELDS, diffRows, getActor, logSuratAudit } from "@/lib/audit"
+import { getSession } from "@/lib/session"
 
 export async function GET() {
   try {
@@ -37,7 +38,8 @@ export async function POST(request: NextRequest) {
 
     // addSurat will now return the database-generated BIL
     // No need to calculate next BIL manually - database sequence handles it
-    const generatedBil = await addSurat(0, body) // rowIndex not used anymore
+    const session = await getSession(request)
+    const generatedBil = await addSurat(0, body, session?.uid) // rowIndex not used anymore
 
     const created = await getSuratRow(generatedBil).catch(() => null)
     await logSuratAudit({

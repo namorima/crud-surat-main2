@@ -17,4 +17,7 @@ export type Surat = {
   kaedah?: string
   /** For information only: saved as SELESAI on the day it was ticked */
   untukMakluman?: boolean
+  /** Komen thread (surat_komen): how many, and the newest; set by GET /api/surat */
+  komenCount?: number
+  komenTerakhir?: { userName: string; isi: string } | null
 }

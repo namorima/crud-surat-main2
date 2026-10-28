@@ -8,7 +8,6 @@ import {
   RiArrowDownLine,
   RiArrowUpDownLine,
   RiArrowUpLine,
-  RiChat3Line,
   RiCheckLine,
   RiFileCopyLine,
   RiHandHeartLine,
@@ -82,7 +81,6 @@ export interface SuratFormDialogProps {
   setFailComboboxOpen: (open: boolean) => void
   formatFailDisplay: (fail: Fail) => string
   formatDateToDisplay: (date: string) => string
-  canComment: boolean
   saving: boolean
   onSave: () => void
   onCancel: () => void
@@ -501,26 +499,6 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                   placeholder="Taip #123 untuk pautan ke surat 123."
                 />
               </Field>
-              {props.canComment && (
-                <Field
-                  label={
-                    <span className="inline-flex items-center gap-1">
-                      <RiChat3Line className="size-3.5" aria-hidden />
-                      Komen Pengurus
-                    </span>
-                  }
-                  htmlFor={id("komen")}
-                >
-                  <Textarea
-                    id={id("komen")}
-                    name="komen"
-                    value={formData.komen}
-                    onChange={onInputChange}
-                    rows={2}
-                    placeholder="Tambah komen sebagai pengurus..."
-                  />
-                </Field>
-              )}
             </div>
           </div>
         </div>

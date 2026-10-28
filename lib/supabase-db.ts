@@ -10,6 +10,7 @@ import type { Locker, LockerInput } from "@/types/locker"
 import type { AuditChange } from "@/types/audit"
 import { BAYARAN_AUDIT_FIELDS, diffRows, type Actor } from "./audit"
 import { hashPassword, isHashedPassword } from "./password"
+import { getKomenSummary } from "./surat-komen"
 
 // ===== SURAT FUNCTIONS =====
 
@@ -55,10 +56,14 @@ function formatDateFromDB(dateString: string | null): string {
 
 export async function getAllSurat(): Promise<Surat[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("surat")
-      .select("*")
-      .order("bil", { ascending: false })
+    const [{ data, error }, komen] = await Promise.all([
+      supabaseAdmin.from("surat").select("*").order("bil", { ascending: false }),
+      // The list still loads if the komen tables are unreachable
+      getKomenSummary().catch((e) => {
+        console.error("Error fetching komen summary:", e)
+        return new Map() as Awaited<ReturnType<typeof getKomenSummary>>
+      }),
+    ])
 
     if (error) throw error
 
@@ -80,6 +85,10 @@ export async function getAllSurat(): Promise<Surat[]> {
         reference: row.reference || "",
         kaedah: row.kaedah || "",
         untukMakluman: !!row.untuk_makluman,
+        komenCount: komen.get(row.id)?.count ?? 0,
+        komenTerakhir: komen.get(row.id)
+          ? { userName: komen.get(row.id)!.latest.userName, isi: komen.get(row.id)!.latest.isi }
+          : null,
       })) || []
     )
   } catch (error: any) {
@@ -88,7 +97,7 @@ export async function getAllSurat(): Promise<Surat[]> {
   }
 }
 
-export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil">): Promise<number> {
+export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil">, createdBy?: string): Promise<number> {
   try {
     // Let database auto-generate BIL using sequence
     // Don't pass bil in insert - it will use DEFAULT nextval('surat_bil_seq')
@@ -107,6 +116,8 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
       reference: surat.reference || null,
       kaedah: surat.kaedah || null,
       untuk_makluman: !!surat.untukMakluman,
+      // Username of who keyed it; komen on the surat notify them
+      created_by: createdBy || null,
     })
     .select('bil')
     .single()

@@ -36,7 +36,6 @@ import {
   Loader2,
   Share2,
   Bell,
-  MessageSquare,
   Reply,
   ChevronsUpDown,
   Check,
@@ -54,6 +53,8 @@ import { SuratFormDialog } from "@/components/surat/SuratFormDialog"
 import { ShareImageGenerator } from "@/components/share-image-generator"
 import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
 import { canViewAudit } from "@/components/dashboard/audit-dialog"
+import { KOMEN_OPEN_EVENT } from "@/components/surat/KomenThread"
+import type { SuratKomen } from "@/types/surat-komen"
 import { parseDate, suratTertunggak } from "@/lib/dashboard-stats"
 import { DateRangeFilter, inRange, type DateRange } from "@/components/dashboard/date-range-filter"
 
@@ -238,10 +239,6 @@ export default function SuratPage() {
     ? hasPermission(user.permissions, { resource: 'surat', action: 'view' })
     : (user?.role === "semua" || user?.role === "PENGURUS")
   
-  const canComment = user?.permissions && user.permissions.length > 0
-    ? hasPermission(user.permissions, { resource: 'surat', action: 'edit' })
-    : (user?.role === "PENGURUS")
-  
   const canEditFull = user?.permissions && user.permissions.length > 0
     ? hasPermission(user.permissions, { resource: 'surat', action: 'edit' })
     : (user?.role === "semua" || user?.role === surat.find((s) => s.unit === user.role)?.unit)
@@ -250,58 +247,40 @@ export default function SuratPage() {
     ? hasPermission(user.permissions, { resource: 'surat', action: 'create' })
     : true // Legacy: all users without RBAC permissions can create
 
-  // Add these state variables after the existing state declarations
-  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false)
-  const [commentText, setCommentText] = useState("")
-  const [isAddingComment, setIsAddingComment] = useState(false)
+  // Every signed-in user can comment: the Komen thread in Maklumat Surat
+  const canComment = true
+  // Maklumat Surat opened to write a komen focuses its komen box
+  const [focusKomen, setFocusKomen] = useState(false)
+  const openCommentDialog = (item: Surat) => {
+    setDetailSurat(item)
+    setFocusKomen(true)
+    setIsDetailModalOpen(true)
+  }
 
-  // Add this function to handle comment submission
-  const handleAddComment = async () => {
-    if (!currentSurat || !commentText.trim()) return
+  // Keeps the list's komen count and newest komen in step with the thread
+  const handleKomenChanged = (item: Surat, count: number, latest: SuratKomen | null) => {
+    const patch = { komenCount: count, komenTerakhir: latest ? { userName: latest.userName, isi: latest.isi } : null }
+    setSurat((prev) => prev.map((s) => (s.id === item.id ? { ...s, ...patch } : s)))
+    setDetailSurat((prev) => (prev?.id === item.id ? { ...prev, ...patch } : prev))
+  }
 
-    setIsAddingComment(true)
-    try {
-      // Create updated data with the new comment
-      const updatedData = {
-        ...currentSurat,
-        komen: commentText.trim(),
-      }
-
-      const response = await fetch("/api/surat", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rowIndex: currentSurat.bil,
-          data: updatedData,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Error updating comment: ${response.status} ${response.statusText}`)
-      }
-
-      setIsCommentDialogOpen(false)
-      setCommentText("")
-      setCurrentSurat(null)
-      // Invalidate cache to force refresh
-      setLastFetchTime(null)
-      fetchWithCache()
-    } catch (error) {
-      console.error("Error adding comment:", error)
-      setError(error.message || "Failed to add comment. Please try again.")
-    } finally {
-      setIsAddingComment(false)
+  // A komen notification opens its surat: /dashboard/surat?komen=<bil> from
+  // another page, or KOMEN_OPEN_EVENT when the Surat page is already open
+  useEffect(() => {
+    const open = (bil: number) => {
+      const found = surat.find((item) => item.bil === bil)
+      if (!found) return false
+      setDetailSurat(found)
+      setFocusKomen(true)
+      setIsDetailModalOpen(true)
+      return true
     }
-  }
-
-  // Add this function to open comment dialog
-  const openCommentDialog = (surat: Surat) => {
-    setCurrentSurat(surat)
-    setCommentText(surat.komen || "")
-    setIsCommentDialogOpen(true)
-  }
+    const bil = Number(new URLSearchParams(window.location.search).get("komen"))
+    if (bil && open(bil)) window.history.replaceState(null, "", window.location.pathname)
+    const onOpen = (e: Event) => open(Number((e as CustomEvent<{ bil: number }>).detail?.bil))
+    window.addEventListener(KOMEN_OPEN_EVENT, onOpen)
+    return () => window.removeEventListener(KOMEN_OPEN_EVENT, onOpen)
+  }, [surat])
 
   // Get unique units for filtering
   const uniqueUnits = useMemo(() => Array.from(new Set(surat.map((item) => item.unit))).filter(Boolean), [surat])
@@ -1558,7 +1537,6 @@ export default function SuratPage() {
         setFailComboboxOpen={setFailComboboxOpen}
         formatFailDisplay={formatFailDisplay}
         formatDateToDisplay={formatDateToDisplay}
-        canComment={!!canComment}
         saving={isSaving}
         onSave={handleAddSurat}
         onCancel={() => setIsAddDialogOpen(false)}
@@ -1585,7 +1563,6 @@ export default function SuratPage() {
         setFailComboboxOpen={setFailComboboxOpen}
         formatFailDisplay={formatFailDisplay}
         formatDateToDisplay={formatDateToDisplay}
-        canComment={!!canComment}
         saving={isSaving}
         onSave={handleEditSurat}
         onCancel={() => setIsEditDialogOpen(false)}
@@ -1631,7 +1608,10 @@ export default function SuratPage() {
       {/* Detail Modal */}
       <SuratDetailDialog
         open={isDetailModalOpen}
-        onOpenChange={setIsDetailModalOpen}
+        onOpenChange={(open) => {
+          setIsDetailModalOpen(open)
+          if (!open) setFocusKomen(false)
+        }}
         surat={detailSurat}
         failLabel={detailSurat ? getFullFailDisplay(detailSurat.fail, failData) : "-"}
         failPart={detailSurat ? getFailPartFromStoredValue(detailSurat.fail, failData) : ""}
@@ -1649,67 +1629,11 @@ export default function SuratPage() {
         }}
         onShare={handleShareToWhatsApp}
         onBilClick={handleBilReferenceClick}
+        username={user?.username || ""}
+        isAdmin={canViewAudit(user)}
+        focusKomen={focusKomen}
+        onKomenChanged={handleKomenChanged}
       />
-
-      {/* Comment Dialog */}
-      <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] p-3 md:p-6">
-          <DialogHeader className="p-0 md:p-2">
-            <DialogTitle className="text-base md:text-lg flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Komen Pengurus
-            </DialogTitle>
-            <DialogDescription className="text-xs md:text-sm">
-              Tambah atau kemaskini komen untuk surat #{currentSurat?.bil}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="comment-text" className="text-sm font-medium">
-                Komen
-              </Label>
-              <Textarea
-                id="comment-text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                rows={4}
-                className="text-sm"
-                placeholder="Masukkan komen anda di sini..."
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCommentDialogOpen(false)
-                setCommentText("")
-                setCurrentSurat(null)
-              }}
-              className="w-full sm:w-auto sm:mr-2 text-xs md:text-sm h-8 md:h-10"
-              disabled={isAddingComment}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleAddComment}
-              className="w-full sm:w-auto text-xs md:text-sm h-8 md:h-10"
-              disabled={isAddingComment || !commentText.trim()}
-            >
-              {isAddingComment ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan Komen"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {shareItem && (
         <ShareImageGenerator
