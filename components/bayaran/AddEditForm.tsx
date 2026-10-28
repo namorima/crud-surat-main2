@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_BAYARAN } from "@/types/bayaran-schema"
+import { JENIS_BAYARAN, PIECERATE } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
 
 interface AddEditFormProps {
@@ -40,6 +40,8 @@ interface AddEditFormProps {
   handleKontrakChange: (value: string) => void
   /** Sets the kategori and narrows / clears the no kontrak to match */
   handleKategoriChange: (value: string) => void
+  /** PIECERATE sets kategori PIECERATE and swaps No Kontrak for Nama Kontraktor */
+  handleJenisBayaranChange: (value: string) => void
   getAvailableKontraks: () => string[]
   getAvailableKategoris: () => string[]
   handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -61,6 +63,7 @@ const EMPTY_FORM = {
   bayaranKe: "",
   kategori: "",
   noKontrak: "",
+  namaKontraktor: "",
   tarikhMemoLadang: "",
   statusLadang: "",
   tarikhHantar: "",
@@ -148,6 +151,7 @@ export function AddEditForm({
   filteredDaripadaSuggestions,
   handleKontrakChange,
   handleKategoriChange,
+  handleJenisBayaranChange,
   getAvailableKontraks,
   getAvailableKategoris,
   handleCurrencyInputChange,
@@ -181,8 +185,15 @@ export function AddEditForm({
   // needs each one when there is something to pick (the page checks with bayaranFormErrors)
   const kategoriOptions = getAvailableKategoris()
   const kontrakOptions = getAvailableKontraks()
+  const isPiecerate = formData.jenisBayaran === PIECERATE
   const needsKategori = !isEdit && kategoriOptions.length > 0
   const needsKontrak = !isEdit && kontrakOptions.length > 0
+  // PIECERATE: no kontrak, so the contractor is picked from the Kontraktor list;
+  // an older record keeps its name even when it is no longer listed
+  const kontraktorOptions: string[] = formOptions.kontraktorNames ?? []
+  if (formData.namaKontraktor && !kontraktorOptions.includes(formData.namaKontraktor)) {
+    kontraktorOptions.unshift(formData.namaKontraktor)
+  }
 
   const close = () => {
     if (isEdit) {
@@ -307,7 +318,13 @@ export function AddEditForm({
                               key={suggestion}
                               value={suggestion}
                               onSelect={() => {
-                                setFormData((prev: any) => ({ ...prev, daripada: suggestion, noKontrak: "", kategori: "" }))
+                                setFormData((prev: any) => ({
+                                  ...prev,
+                                  daripada: suggestion,
+                                  noKontrak: "",
+                                  // A PIECERATE bayaran keeps its kategori whatever the Daripada
+                                  kategori: prev.jenisBayaran === PIECERATE ? PIECERATE : "",
+                                }))
                                 setShowDaripadaDropdown(false)
                               }}
                             >
@@ -336,7 +353,7 @@ export function AddEditForm({
                   <Select
                     value={formData.jenisBayaran}
                     // Radix reports "" for a value not in the list yet; never clear it for that
-                    onValueChange={(value) => value && setFormData((prev: any) => ({ ...prev, jenisBayaran: value }))}
+                    onValueChange={(value) => value && handleJenisBayaranChange(value)}
                     disabled={locked}
                   >
                     <SelectTrigger id="jenisBayaran" className={cx(formErrors.jenisBayaran && errorRing)}>
@@ -393,21 +410,51 @@ export function AddEditForm({
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* Kategori first; No Kontrak lists that kategori's contracts */}
+              {isPiecerate ? (
+                // PIECERATE: kategori is set to PIECERATE behind the scenes, and the
+                // contractor is picked by name instead of a no kontrak
                 <Field
-                  label="Kategori"
-                  htmlFor="kategori"
-                  required={needsKategori}
-                  error={formErrors.kategori}
-                  hint={formData.daripada && kategoriOptions.length === 0 ? "Tiada kontrak aktif; boleh dikosongkan." : undefined}
+                  label="Nama Kontraktor"
+                  htmlFor="namaKontraktor"
+                  required={!isEdit}
+                  error={formErrors.namaKontraktor}
+                  hint="Piecerate tidak memerlukan No Kontrak."
                 >
-                  {kategoriSelect}
+                  <Select
+                    value={formData.namaKontraktor}
+                    // Radix reports "" for a value not in the list yet; never clear it for that
+                    onValueChange={(value) => value && setFormData((prev: any) => ({ ...prev, namaKontraktor: value }))}
+                    disabled={locked}
+                  >
+                    <SelectTrigger id="namaKontraktor" className={cx(formErrors.namaKontraktor && errorRing)}>
+                      <SelectValue placeholder={kontraktorOptions.length ? "Pilih nama kontraktor" : "Tiada kontraktor"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kontraktorOptions.map((nama) => (
+                        <SelectItem key={nama} value={nama}>
+                          {nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
-                <Field label="No Kontrak" htmlFor="noKontrak" required={needsKontrak} error={formErrors.noKontrak}>
-                  {kontrakSelect}
-                </Field>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Kategori first; No Kontrak lists that kategori's contracts */}
+                  <Field
+                    label="Kategori"
+                    htmlFor="kategori"
+                    required={needsKategori}
+                    error={formErrors.kategori}
+                    hint={formData.daripada && kategoriOptions.length === 0 ? "Tiada kontrak aktif; boleh dikosongkan." : undefined}
+                  >
+                    {kategoriSelect}
+                  </Field>
+                  <Field label="No Kontrak" htmlFor="noKontrak" required={needsKontrak} error={formErrors.noKontrak}>
+                    {kontrakSelect}
+                  </Field>
+                </div>
+              )}
             </Section>
 
             <div className="flex flex-col gap-3 md:gap-4">

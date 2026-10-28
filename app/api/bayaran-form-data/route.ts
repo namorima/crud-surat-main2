@@ -5,19 +5,28 @@ import {
   getContractCategoryData,
   getPenerimaData,
   getStatusBayaranData,
+  getAllKontraktor,
 } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
     // Fetch all required data in parallel
-    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData] =
+    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData, kontraktor] =
       await Promise.all([
         getDaripadaKepadaValues(),
         getStatusLadangData(),
         getContractCategoryData(),
         getPenerimaData(),
         getStatusBayaranData(),
+        // The form still loads if the kontraktor list cannot be read
+        getAllKontraktor().catch(() => []),
       ])
+
+    // Nama Kontraktor choices for a PIECERATE bayaran (no kontrak): the Kontraktor
+    // list plus names already used on kontrak, A-Z
+    const kontraktorNames = Array.from(
+      new Set([...kontraktor.map((k) => k.namaKontraktor), ...Object.values(contractCategoryData.contractorData)].filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b))
 
     return NextResponse.json({
       daripadaSuggestions,
@@ -31,6 +40,7 @@ export async function GET() {
       kontrakInfoByKawasan: contractCategoryData.kontrakInfoByKawasan,
       closedContracts: contractCategoryData.closedContracts,
       closedByKawasan: contractCategoryData.closedByKawasan,
+      kontraktorNames,
       penerimaData,
       statusBayaranData,
     })

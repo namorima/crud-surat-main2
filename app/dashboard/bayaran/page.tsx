@@ -58,7 +58,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
-import { bayaranFormErrors } from "@/types/bayaran-schema";
+import { PIECERATE, bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -125,6 +125,7 @@ export default function BayaranPage() {
     bayaranKe: "",
     kategori: "",
     noKontrak: "",
+    namaKontraktor: "",
     tarikhMemoLadang: "",
     statusLadang: "",
     tarikhHantar: "",
@@ -148,7 +149,8 @@ export default function BayaranPage() {
     kontrakInfo: {} as Record<string, KontrakInfo>, // noKontrak -> kerja, nilai kontrak (first kawasan)
     kontrakInfoByKawasan: {} as Record<string, Record<string, KontrakInfo>>, // kawasan -> noKontrak -> info
     closedContracts: [] as string[], // closed in every kawasan (LADANG NEGERI list)
-    closedByKawasan: {} as Record<string, string[]>, // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
+    closedByKawasan: {} as Record<string, string[]>,
+    kontraktorNames: [] as string[], // Nama Kontraktor choices for a PIECERATE bayaran // SELESAI / TIDAK AKTIF per kawasan: not offered for new records
     penerimaData: [] as Array<{
       name: string;
       unit: string;
@@ -304,6 +306,7 @@ export default function BayaranPage() {
           kontrakInfoByKawasan: data.kontrakInfoByKawasan || {},
           closedContracts: data.closedContracts || [],
           closedByKawasan: data.closedByKawasan || {},
+          kontraktorNames: data.kontraktorNames || [],
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
@@ -472,7 +475,8 @@ export default function BayaranPage() {
       ...prev,
       daripada: value,
       noKontrak: "", // Reset dependent fields
-      kategori: "",
+      // A PIECERATE bayaran keeps its kategori (and contractor) whatever the Daripada
+      kategori: prev.jenisBayaran === PIECERATE ? PIECERATE : "",
     }));
 
     // Filter suggestions
@@ -521,6 +525,16 @@ export default function BayaranPage() {
         // Keep a no kontrak that still fits; a kategori with one contract fills it in
         noKontrak: options.includes(prev.noKontrak) ? prev.noKontrak : options.length === 1 ? options[0] : "",
       };
+    });
+  };
+
+  // PIECERATE needs no kontrak: kategori becomes PIECERATE (its input is hidden)
+  // and the contractor is picked by name. Leaving it clears those again.
+  const handleJenisBayaranChange = (value: string) => {
+    setFormData((prev) => {
+      if (value === PIECERATE) return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "" };
+      if (prev.jenisBayaran === PIECERATE) return { ...prev, jenisBayaran: value, kategori: "", noKontrak: "", namaKontraktor: "" };
+      return { ...prev, jenisBayaran: value };
     });
   };
 
@@ -861,6 +875,7 @@ export default function BayaranPage() {
           bayaranKe: "",
           kategori: "",
           noKontrak: "",
+          namaKontraktor: "",
           tarikhMemoLadang: "",
           statusLadang: "",
           tarikhHantar: "",
@@ -923,6 +938,7 @@ export default function BayaranPage() {
       bayaranKe: bayaran.bayaranKe,
       kategori: bayaran.kategori,
       noKontrak: bayaran.noKontrak,
+      namaKontraktor: bayaran.namaKontraktor || "",
       tarikhMemoLadang: convertDateForEdit(bayaran.tarikhMemoLadang),
       statusLadang: bayaran.statusLadang,
       tarikhHantar: convertDateForEdit(bayaran.tarikhHantar),
@@ -1227,6 +1243,7 @@ Detail: ${directLink}
         filteredDaripadaSuggestions={filteredDaripadaSuggestions}
         handleKontrakChange={handleKontrakChange}
         handleKategoriChange={handleKategoriChange}
+        handleJenisBayaranChange={handleJenisBayaranChange}
         getAvailableKontraks={getAvailableKontraks}
         getAvailableKategoris={getAvailableKategoris}
         handleCurrencyInputChange={handleCurrencyInputChange}

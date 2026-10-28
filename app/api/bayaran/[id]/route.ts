@@ -28,7 +28,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Convert date format if needed (from YYYY-MM-DD to DD/MM/YYYY)
     const formattedData = {
       ...validatedData,
-      namaKontraktor: "", // Will be auto-populated by updateBayaran from kontrak table
+      // Looked up from the kontrak by supabase-db; a PIECERATE bayaran has no
+      // kontrak and keeps the contractor picked in the form
+      namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
       tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
       tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
       tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",

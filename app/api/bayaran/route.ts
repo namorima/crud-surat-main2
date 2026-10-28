@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
     // Step 3: Pass data directly (dates already in YYYY-MM-DD format)
     const formattedData = {
       ...validatedData,
-      namaKontraktor: "", // Will be auto-populated by supabase-db
+      // Looked up from the kontrak by supabase-db; a PIECERATE bayaran has no
+      // kontrak and keeps the contractor picked in the form
+      namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
     }
 
     // Step 4: Add to database

@@ -516,8 +516,11 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
 
     const nextIds = (maxIdsData?.[0]?.ids || 0) + 1
 
-    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak
-    const namaKontraktor = await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
+    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak;
+    // without one (PIECERATE) the name the route passed on
+    const namaKontraktor = bayaran.noKontrak
+      ? await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
+      : bayaran.namaKontraktor || ""
 
     const { data, error } = await supabaseAdmin
       .from("bayaran")
@@ -568,8 +571,11 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, ac
   try {
     const { data: before } = await supabaseAdmin.from("bayaran").select("*").eq("id", id).maybeSingle()
 
-    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak
-    const namaKontraktor = await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
+    // Contractor name from the kontrak of this kawasan (daripada) and no kontrak;
+    // without one (PIECERATE) the name the route passed on
+    const namaKontraktor = bayaran.noKontrak
+      ? await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
+      : bayaran.namaKontraktor || ""
 
     const { data: after, error } = await supabaseAdmin
       .from("bayaran")
