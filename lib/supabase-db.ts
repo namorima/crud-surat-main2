@@ -78,6 +78,8 @@ export async function getAllSurat(): Promise<Surat[]> {
         nota: row.nota || "",
         komen: row.komen || "",
         reference: row.reference || "",
+        kaedah: row.kaedah || "",
+        untukMakluman: !!row.untuk_makluman,
       })) || []
     )
   } catch (error: any) {
@@ -103,6 +105,8 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
       nota: surat.nota || null,
       komen: surat.komen || null,
       reference: surat.reference || null,
+      kaedah: surat.kaedah || null,
+      untuk_makluman: !!surat.untukMakluman,
     })
     .select('bil')
     .single()
@@ -153,6 +157,9 @@ export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): 
         nota: surat.nota || null,
         komen: surat.komen || null,
         reference: surat.reference || null,
+        // Callers that don't send these (older clients) leave them as they are
+        ...(surat.kaedah !== undefined && { kaedah: surat.kaedah || null }),
+        ...(surat.untukMakluman !== undefined && { untuk_makluman: !!surat.untukMakluman }),
       })
       .eq("id", existingSurat.id)
 

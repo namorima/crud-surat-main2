@@ -89,6 +89,11 @@ export function SuratDetailDialog({
                 {surat.status}
               </Chip>
             )}
+            {surat?.untukMakluman && (
+              <Chip variant="caption" color="cyan">
+                Untuk Makluman
+              </Chip>
+            )}
             {surat && showAudit && (
               <span className="ms-auto">
                 <AuditButton type="surat" id={surat.id} bil={surat.bil} title={`Surat #${surat.bil}`} />
@@ -110,6 +115,7 @@ export function SuratDetailDialog({
                   {isMasuk ? <RiArrowDownLine className="size-4" aria-hidden /> : <RiArrowUpLine className="size-4" aria-hidden />}
                   {surat.kategori}
                 </span>
+                {surat.kaedah && <span className="block text-caption-1-regular text-text-secondary">{surat.kaedah}</span>}
               </Field>
               <Field label="Tarikh">{surat.tarikh || "-"}</Field>
               <Field label="Tarikh Selesai">{surat.tarikhSelesai || "-"}</Field>
