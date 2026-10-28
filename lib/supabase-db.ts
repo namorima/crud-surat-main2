@@ -7,6 +7,8 @@ import type { ShareLink } from "@/types/share-link"
 import type { Kontrak, KontrakInput } from "@/types/kontrak"
 import type { Kontraktor, KontraktorInput } from "@/types/kontraktor"
 import type { Locker, LockerInput } from "@/types/locker"
+import type { AuditChange } from "@/types/audit"
+import { BAYARAN_AUDIT_FIELDS, diffRows, type Actor } from "./audit"
 import { hashPassword, isHashedPassword } from "./password"
 
 // ===== SURAT FUNCTIONS =====
@@ -113,6 +115,13 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
     console.error("Error adding surat to Supabase:", error)
     throw new Error(`Failed to add surat to Supabase: ${error.message}`)
   }
+}
+
+/** The raw surat row (DB columns) for a bil, or null; used for the audit trail. */
+export async function getSuratRow(bilNumber: number): Promise<Record<string, any> | null> {
+  const { data, error } = await supabaseAdmin.from("surat").select("*").eq("bil", bilNumber).limit(1).maybeSingle()
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): Promise<void> {
@@ -476,7 +485,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
   }
 }
 
-export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
+export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Promise<void> {
   try {
     // Get next available ids number
     const { data: maxIdsData } = await supabaseAdmin
@@ -533,9 +542,10 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
     if (data) {
       await addAuditLog({
         bayaranId: data.id,
-        user: user,
+        actor,
         action: "CREATE",
-        details: `Rekod bayaran #${data.ids} dicipta`,
+        details: `Rekod bayaran #${data.ids} dikeyin`,
+        changes: diffRows(null, data, BAYARAN_AUDIT_FIELDS),
       })
     }
   } catch (error: any) {
@@ -544,8 +554,10 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, user: string): Pr
   }
 }
 
-export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, user: string): Promise<void> {
+export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, actor: Actor): Promise<void> {
   try {
+    const { data: before } = await supabaseAdmin.from("bayaran").select("*").eq("id", id).maybeSingle()
+
     // Get contractor name from kontrak table
     let namaKontraktor = ""
     if (bayaran.noKontrak) {
@@ -559,7 +571,7 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, us
       namaKontraktor = kontrakData?.nama_kontraktor || ""
     }
 
-    const { error } = await supabaseAdmin
+    const { data: after, error } = await supabaseAdmin
       .from("bayaran")
       .update({
         daripada: bayaran.daripada,
@@ -582,63 +594,50 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, us
         nota_kaki: bayaran.notaKaki || null,
       })
       .eq("id", id)
+      .select()
+      .single()
 
     if (error) throw error
 
-    await addAuditLog({
-      bayaranId: id,
-      user: user,
-      action: "UPDATE",
-      details: `Rekod bayaran dikemaskini`,
-    })
+    const changes = diffRows(before, after, BAYARAN_AUDIT_FIELDS)
+    if (changes.length > 0) {
+      const status = changes.find((c) => c.field === "status_bayaran") ?? changes.find((c) => c.field === "status_ladang")
+      await addAuditLog({
+        bayaranId: id,
+        actor,
+        action: "UPDATE",
+        details: status ? `${status.label}: ${status.from || "-"} → ${status.to || "-"}` : `${changes.length} medan dikemaskini`,
+        changes,
+      })
+    }
   } catch (error: any) {
     console.error("Error updating bayaran in Supabase:", error)
     throw new Error(`Failed to update bayaran in Supabase: ${error.message}`)
   }
 }
 
-export async function deleteBayaran(rowIndex: number, user: string): Promise<void> {
+export async function bulkUpdateBayaranStatus(ids: string[], newStatus: string, actor: Actor): Promise<void> {
   try {
-    // Get all bayaran to find the one at the given index
-    const allBayaran = await getAllBayaran()
-    const targetBayaran = allBayaran[rowIndex]
+    const { data: before } = await supabaseAdmin.from("bayaran").select("id, status_bayaran").in("id", ids)
+    const oldStatus = new Map((before || []).map((row) => [row.id, row.status_bayaran || ""]))
 
-    if (!targetBayaran) {
-      throw new Error(`Bayaran at index ${rowIndex} not found`)
-    }
-
-    await addAuditLog({
-      bayaranId: targetBayaran.id,
-      user: user,
-      action: "DELETE",
-      details: `Rekod bayaran dipadam`,
-    })
-
-    const { error } = await supabaseAdmin.from("bayaran").delete().eq("id", targetBayaran.id)
-
-    if (error) throw error
-  } catch (error: any) {
-    console.error("Error deleting bayaran from Supabase:", error)
-    throw new Error(`Failed to delete bayaran from Supabase: ${error.message}`)
-  }
-}
-
-export async function bulkUpdateBayaranStatus(ids: string[], newStatus: string, user: string): Promise<void> {
-  try {
     // Update all records with the given IDs
     const { error } = await supabaseAdmin.from("bayaran").update({ status_bayaran: newStatus }).in("id", ids)
 
     if (error) throw error
 
-    // Add audit logs for each updated record
-    for (const id of ids) {
-      await addAuditLog({
-        bayaranId: id,
-        user: user,
+    // One audit row per record, in one insert
+    const { error: auditError } = await supabaseAdmin.from("audit_bayaran").insert(
+      ids.map((id) => ({
+        bayaran_id: id,
+        user_name: actor.name,
+        user_id: actor.userId || null,
         action: "BULK_UPDATE_STATUS",
-        details: `Status rekod dikemaskini kepada '${newStatus}'`,
-      })
-    }
+        details: `Status Bayaran: ${oldStatus.get(id) || "-"} → ${newStatus} (kemas kini pukal)`,
+        changes: [{ field: "status_bayaran", label: "Status Bayaran", from: oldStatus.get(id) || "", to: newStatus }],
+      })),
+    )
+    if (auditError) console.error("Error adding bulk audit logs:", auditError)
   } catch (error: any) {
     console.error("Error bulk updating bayaran status in Supabase:", error)
     throw new Error(`Failed to bulk update bayaran status in Supabase: ${error.message}`)
@@ -647,16 +646,19 @@ export async function bulkUpdateBayaranStatus(ids: string[], newStatus: string, 
 
 export async function addAuditLog(log: {
   bayaranId: string
-  user: string
+  actor: Actor
   action: string
   details: string
+  changes?: AuditChange[]
 }): Promise<void> {
   try {
     const { error } = await supabaseAdmin.from("audit_bayaran").insert({
       bayaran_id: log.bayaranId,
-      user_name: log.user,
+      user_name: log.actor.name,
+      user_id: log.actor.userId || null,
       action: log.action,
       details: log.details,
+      changes: log.changes?.length ? log.changes : null,
     })
 
     if (error) throw error

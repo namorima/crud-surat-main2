@@ -1,6 +1,8 @@
 
 import { type NextRequest, NextResponse } from "next/server"
 import { bulkUpdateBayaranStatus } from "@/lib/supabase-db"
+import { getActor } from "@/lib/audit"
+import { z } from "zod"
 import { BulkUpdateBayaranSchema } from "@/types/bayaran-schema"
 
 export async function POST(request: NextRequest) {
@@ -11,7 +13,7 @@ export async function POST(request: NextRequest) {
     // Validate input using Zod
     const validatedData = BulkUpdateBayaranSchema.parse({ ids, newStatus, user })
 
-    await bulkUpdateBayaranStatus(validatedData.ids, validatedData.newStatus, validatedData.user || "Unknown")
+    await bulkUpdateBayaranStatus(validatedData.ids, validatedData.newStatus, await getActor(request, validatedData.user))
     return NextResponse.json({ success: true, message: "Bayaran records updated successfully" })
   } catch (error) {
     if (error instanceof z.ZodError) {

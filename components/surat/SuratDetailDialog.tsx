@@ -17,6 +17,7 @@ import { Button } from "@/components/base/buttons/button"
 import { suratStatusChip, unitChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { TextWithBilLinks } from "@/components/surat/bil-links"
+import { AuditButton } from "@/components/dashboard/audit-dialog"
 
 type ChipColor = NonNullable<ChipProps["color"]>
 
@@ -46,6 +47,8 @@ export interface SuratDetailDialogProps {
   /** HASIL / PERTANIAN AM / KONTRAK, for the chip colour. */
   failPart: string
   canEdit: boolean
+  /** Admin / Super Admin: show the audit (clock) button */
+  showAudit?: boolean
   /** This surat's share image is being generated. */
   sharing: boolean
   /** Any share image is being generated (disables Share). */
@@ -65,6 +68,7 @@ export function SuratDetailDialog({
   failLabel,
   failPart,
   canEdit,
+  showAudit = false,
   sharing,
   generatingImage,
   onRespond,
@@ -84,6 +88,11 @@ export function SuratDetailDialog({
               <Chip variant="caption" color={suratStatusChip(surat.status)}>
                 {surat.status}
               </Chip>
+            )}
+            {surat && showAudit && (
+              <span className="ms-auto">
+                <AuditButton type="surat" id={surat.id} bil={surat.bil} title={`Surat #${surat.bil}`} />
+              </span>
             )}
           </div>
           <DialogDescription className="text-caption-1-regular text-text-secondary">

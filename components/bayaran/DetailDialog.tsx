@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Chip } from "@/components/base/badges/chip"
+import { AuditButton, canViewAudit } from "@/components/dashboard/audit-dialog"
 import { Button } from "@/components/base/buttons/button"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { hasPermission } from "@/lib/rbac"
@@ -213,6 +214,11 @@ export function DetailDialog({
               <Chip variant="caption" color="gray" className="bg-neutral-950 text-white dark:bg-neutral-50 dark:text-neutral-950">
                 HOLD / KIV
               </Chip>
+            )}
+            {b && canViewAudit(user) && (
+              <span className="ms-auto">
+                <AuditButton type="bayaran" id={b.id} title={`Rekod Bayaran #${b.ids ?? b.id}`} />
+              </span>
             )}
           </div>
           <DialogDescription className="text-caption-1-regular text-text-secondary">
