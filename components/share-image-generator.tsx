@@ -163,7 +163,7 @@ function layout(ctx: CanvasRenderingContext2D, font: string, s: Surat, failLabel
   drawRows(true)
   y = fieldsBottom + 10
 
-  // Nota and Komen Pengurus, as in the dialog
+  // Nota and the newest komen, as in the dialog
   const note = (label: string, body: string, fill: string | undefined, labelColor: string, bodyColor: string) => {
     ctx.font = f(400, 13)
     const lines = wrapLines(ctx, body, contentW - INNER * 2)
@@ -174,7 +174,10 @@ function layout(ctx: CanvasRenderingContext2D, font: string, s: Surat, failLabel
     y += h + 10
   }
   if (s.nota) note("Nota", s.nota, undefined, C.tertiary, C.masuk)
-  if (s.komen) note("Komen Pengurus", s.komen, CHIP_HEX.blue[0], CHIP_HEX.blue[1], C.text)
+  if (s.komenTerakhir) {
+    const more = (s.komenCount ?? 1) > 1 ? ` · ${s.komenCount} komen` : ""
+    note(`Komen · ${s.komenTerakhir.userName}${more}`, s.komenTerakhir.isi, CHIP_HEX.blue[0], CHIP_HEX.blue[1], C.text)
+  }
 
   // Footer
   y += 4

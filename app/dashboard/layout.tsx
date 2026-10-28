@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-provider"
 import { AppShell } from "@/components/dashboard/app-shell"
+import { KomenNotifier } from "@/components/dashboard/komen-notifier"
 
 export default function DashboardLayout({
   children,
@@ -30,6 +31,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <AppShell>{children}</AppShell>
+    <>
+      <AppShell>{children}</AppShell>
+      {/* New komen on the user's surat, once they open the app */}
+      <KomenNotifier />
+    </>
   )
 }

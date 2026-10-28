@@ -98,12 +98,17 @@ function NotaText({
   )
 }
 
-function KomenText({ komen, className }: { komen: string; className?: string }) {
+/** Newest komen of the thread, with how many there are. */
+function KomenText({ item, className }: { item: Surat; className?: string }) {
+  const latest = item.komenTerakhir
+  if (!latest) return null
+  const count = item.komenCount ?? 1
   return (
     <p className={cx("flex min-w-0 items-start gap-1 text-caption-1-regular text-status-blue-text", className)}>
       <RiChat3Line className="mt-px size-3.5 shrink-0" aria-hidden />
       <span className="min-w-0 line-clamp-2">
-        <span className="text-caption-1-semibold">Komen:</span> {komen}
+        <span className="text-caption-1-semibold">{latest.userName}:</span> {latest.isi}
+        {count > 1 && <span className="ms-1 text-caption-2-medium text-text-tertiary">· {count} komen</span>}
       </span>
     </p>
   )
@@ -320,7 +325,7 @@ export function SuratList(props: SuratListProps) {
                             {item.tindakanPic && <span className="text-caption-1-regular text-text-secondary">{item.tindakanPic}</span>}
                           </span>
                           {cols.nota && item.nota && <NotaText nota={item.nota} onReferenceClick={onReferenceClick} />}
-                          {item.komen && <KomenText komen={item.komen} />}
+                          <KomenText item={item} />
                         </div>
                       </td>
                     )}
@@ -387,7 +392,7 @@ export function SuratList(props: SuratListProps) {
                 )}
               </div>
               {item.nota && <NotaText nota={item.nota} onReferenceClick={onReferenceClick} />}
-              {item.komen && <KomenText komen={item.komen} />}
+              <KomenText item={item} />
             </li>
           ))
         )}

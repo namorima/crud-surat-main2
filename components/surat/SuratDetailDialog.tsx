@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 import {
   RiArrowDownLine,
   RiArrowUpLine,
-  RiChat3Line,
   RiEditLine,
   RiLoader4Line,
   RiReplyLine,
@@ -18,6 +17,8 @@ import { suratStatusChip, unitChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { TextWithBilLinks } from "@/components/surat/bil-links"
 import { AuditButton } from "@/components/dashboard/audit-dialog"
+import { KomenThread } from "@/components/surat/KomenThread"
+import type { SuratKomen } from "@/types/surat-komen"
 
 type ChipColor = NonNullable<ChipProps["color"]>
 
@@ -58,6 +59,12 @@ export interface SuratDetailDialogProps {
   onShare: (surat: Surat) => void
   /** Open another surat by BIL (reference chip and #123 in notes). */
   onBilClick: (bil: string) => void
+  /** Signed-in user, for the komen thread */
+  username: string
+  isAdmin: boolean
+  /** Opened to comment (row "Komen" or a notification): focus the komen box */
+  focusKomen?: boolean
+  onKomenChanged?: (surat: Surat, count: number, latest: SuratKomen | null) => void
 }
 
 /** "Maklumat Surat #…": compact BoardUI detail view with Tutup / Respon / Edit / Share. */
@@ -75,6 +82,10 @@ export function SuratDetailDialog({
   onEdit,
   onShare,
   onBilClick,
+  username,
+  isAdmin,
+  focusKomen,
+  onKomenChanged,
 }: SuratDetailDialogProps) {
   const isMasuk = surat?.kategori === "MASUK"
 
@@ -162,15 +173,15 @@ export function SuratDetailDialog({
               </section>
             )}
 
-            {surat.komen && (
-              <section className="mt-3 rounded-2xl bg-status-blue-background p-3 sm:p-4">
-                <h3 className="flex items-center gap-1.5 text-caption-1-medium text-status-blue-text">
-                  <RiChat3Line className="size-4" aria-hidden />
-                  Komen Pengurus
-                </h3>
-                <p className="mt-1 whitespace-pre-wrap text-body-regular text-text-primary break-words">{surat.komen}</p>
-              </section>
-            )}
+            <KomenThread
+              key={surat.id}
+              suratId={surat.id}
+              username={username}
+              isAdmin={isAdmin}
+              autoFocus={focusKomen}
+              onBilClick={onBilClick}
+              onChanged={(count, latest) => onKomenChanged?.(surat, count, latest)}
+            />
           </div>
         )}
 
