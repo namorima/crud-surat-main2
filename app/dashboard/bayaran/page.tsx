@@ -119,6 +119,7 @@ export default function BayaranPage() {
   const [formData, setFormData] = useState({
     daripada: "",
     tarikhTerima: "",
+    jenisBayaran: "KEMAJUAN",
     perkara: "",
     nilaiBayaran: "",
     bayaranKe: "",
@@ -843,6 +844,7 @@ export default function BayaranPage() {
         setFormData({
           daripada: "",
           tarikhTerima: "",
+          jenisBayaran: "KEMAJUAN",
           perkara: "",
           nilaiBayaran: "",
           bayaranKe: "",
@@ -903,6 +905,8 @@ export default function BayaranPage() {
     setFormData({
       daripada: bayaran.daripada,
       tarikhTerima: convertDateForEdit(bayaran.tarikhTerima),
+      // An older record may have none; it stays empty until picked
+      jenisBayaran: bayaran.jenisBayaran || "",
       perkara: bayaran.perkara,
       nilaiBayaran: bayaran.nilaiBayaran.replace(/[^\d.-]/g, ""), // Remove currency formatting
       bayaranKe: bayaran.bayaranKe,
