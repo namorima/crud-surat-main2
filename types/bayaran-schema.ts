@@ -25,8 +25,8 @@ const amount = (value: string | undefined) => Number(String(value ?? "").replace
 
 /**
  * Tambah Rekod Bayaran: Perkara, Nilai Bayaran and Bayaran Ke are required as
- * well (edits of older records are not held to it). No Kontrak is checked by
- * the form, since only it knows whether the Daripada has contracts to pick.
+ * well (edits of older records are not held to it). Kategori and No Kontrak are
+ * checked by the form, since only it knows what the Daripada has to pick.
  */
 export const BayaranBaruSchema = BayaranSchema.extend({
   perkara: z.string().trim().min(1, "Perkara diperlukan"),
@@ -36,8 +36,15 @@ export const BayaranBaruSchema = BayaranSchema.extend({
   bayaranKe: z.string({ required_error: "Bayaran Ke diperlukan" }).trim().min(1, "Bayaran Ke diperlukan"),
 })
 
-/** Field errors for the Tambah / Edit form; kontrakOptions are the no kontrak offered for the Daripada. */
-export function bayaranFormErrors(form: Record<string, any>, isNew: boolean, kontrakOptions: string[]): Record<string, string> {
+/**
+ * Field errors for the Tambah / Edit form. options are what the form offers:
+ * kategori for the Daripada, and no kontrak for the chosen kategori.
+ */
+export function bayaranFormErrors(
+  form: Record<string, any>,
+  isNew: boolean,
+  options: { kategori: string[]; kontrak: string[] },
+): Record<string, string> {
   const errors: Record<string, string> = {}
   if (!String(form.daripada ?? "").trim()) errors.daripada = "Daripada diperlukan"
   if (!form.tarikhTerima) errors.tarikhTerima = "Tarikh Terima diperlukan"
@@ -45,8 +52,9 @@ export function bayaranFormErrors(form: Record<string, any>, isNew: boolean, kon
   if (isNew) {
     if (!(amount(form.nilaiBayaran) > 0)) errors.nilaiBayaran = "Nilai Bayaran diperlukan"
     if (!String(form.bayaranKe ?? "").trim()) errors.bayaranKe = "Bayaran Ke diperlukan"
-    // Only when the Daripada has contracts to choose from
-    if (kontrakOptions.length > 0 && !form.noKontrak) errors.noKontrak = "Pilih No Kontrak"
+    // Kategori comes first, then No Kontrak; each only when there is something to pick
+    if (options.kategori.length > 0 && !form.kategori) errors.kategori = "Pilih Kategori"
+    else if (options.kontrak.length > 0 && !form.noKontrak) errors.noKontrak = "Pilih No Kontrak"
   }
   return errors
 }
