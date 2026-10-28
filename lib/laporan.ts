@@ -182,31 +182,50 @@ export async function laporanBayaranPdf(rows: Bayaran[], meta: Meta) {
   autoTable(doc, {
     ...tableStyle,
     startY,
-    head: [["ID", "Tarikh Terima", "Daripada", "Perkara", { content: "Nilai", styles: { halign: "right" } }, "Kontraktor", "Status Bayaran"]],
+    // Nine columns on A4 portrait: a size smaller than the Surat report
+    styles: { ...tableStyle.styles, fontSize: 7.2, cellPadding: 1.3 },
+    head: [
+      [
+        "ID",
+        "Tarikh Terima",
+        "Daripada",
+        "Perkara",
+        "Bayaran Ke",
+        { content: "Nilai", styles: { halign: "right" } },
+        "No Kontrak",
+        "Kontraktor",
+        "Status Bayaran",
+      ],
+    ],
     body: rows.length
       ? rows.map((b) => [
           String(b.ids ?? b.id),
           b.tarikhTerima || "-",
           b.daripada || "-",
           b.perkara || "-",
+          b.bayaranKe || "-",
           b.nilaiBayaran ? formatRM(parseAmount(b.nilaiBayaran)) : "-",
+          b.noKontrak || "-",
           b.namaKontraktor || "-",
           b.statusBayaran || "-",
         ])
-      : [[{ content: "Tiada rekod bayaran dalam tempoh ini.", colSpan: 7, styles: { halign: "center", textColor: MUTED } }]],
+      : [[{ content: "Tiada rekod bayaran dalam tempoh ini.", colSpan: 9, styles: { halign: "center", textColor: MUTED } }]],
     foot: rows.length
-      ? [[{ content: "Jumlah", colSpan: 4, styles: { halign: "right" } }, { content: formatRM(total), styles: { halign: "right" } }, { content: "", colSpan: 2 }]]
+      ? [[{ content: "Jumlah", colSpan: 5, styles: { halign: "right" } }, { content: formatRM(total), styles: { halign: "right" } }, { content: "", colSpan: 3 }]]
       : undefined,
     footStyles: { fillColor: [243, 244, 246], textColor: INK, fontStyle: "bold" },
     showFoot: "lastPage",
     columnStyles: {
-      0: { cellWidth: 11, halign: "right" },
-      1: { cellWidth: 19 },
-      2: { cellWidth: 24 },
+      0: { cellWidth: 9, halign: "right" },
+      1: { cellWidth: 16 },
+      2: { cellWidth: 19 },
       3: { cellWidth: "auto" },
-      4: { cellWidth: 25, halign: "right" },
-      5: { cellWidth: 32 },
-      6: { cellWidth: 24 },
+      4: { cellWidth: 13 },
+      5: { cellWidth: 22, halign: "right" },
+      // Fits a 12-character no kontrak ("PAKWK 190/24") on one line
+      6: { cellWidth: 21 },
+      7: { cellWidth: 25 },
+      8: { cellWidth: 19 },
     },
   })
   tandatangan(doc, (doc as any).lastAutoTable.finalY)

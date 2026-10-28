@@ -609,7 +609,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 3b. **Download** ([app/dashboard/download/page.tsx](app/dashboard/download/page.tsx)) - nav item before Tetapan, shown with `surat:view` or `bayaran:view` (legacy KEWANGAN too)
    - Mingguan (Isnin–Ahad) / Bulanan period with prev/next, a date or month picker and Minggu ini / Bulan ini
-   - Laporan Surat (by tarikh; Bil, Tarikh, Kategori, Perkara, Unit / PIC, Status; users other than `semua` / `PENGURUS` get their own unit only, as on the Surat page) and Laporan Rekod Bayaran (by tarikh terima; ID, Tarikh Terima, Daripada, Perkara, Nilai, Kontraktor, Status Bayaran, with a Jumlah row)
+   - Laporan Surat (by tarikh; Bil, Tarikh, Kategori, Perkara, Unit / PIC, Status; users other than `semua` / `PENGURUS` get their own unit only, as on the Surat page) and Laporan Rekod Bayaran (by tarikh terima; ID, Tarikh Terima, Daripada, Perkara, Bayaran Ke, Nilai, No Kontrak, Kontraktor, Status Bayaran, with a Jumlah row)
    - A4 portrait PDFs made in the browser with jsPDF + jspdf-autotable (loaded on demand) in [lib/laporan.ts](lib/laporan.ts): header with period and generator, repeated table head, Disemak Oleh / Disahkan Oleh block (Nama, Jawatan, Tarikh) after the table, "Halaman x / y" footer. The built-in PDF font has no en dash, so PDF text uses "hingga"
 
 4. **Pengguna (Users)** ([app/dashboard/pengguna/page.tsx](app/dashboard/pengguna/page.tsx))
