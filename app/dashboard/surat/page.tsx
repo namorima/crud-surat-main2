@@ -998,6 +998,14 @@ export default function SuratPage() {
       setFormData((prev) => ({ ...prev, tindakanPic: "" }))
     }
 
+    // Picking SELESAI fills Tarikh Selesai with today (still editable); a date already there stays
+    if (name === "status" && value === "SELESAI") {
+      setFormData((prev) => ({
+        ...prev,
+        tarikhSelesai: prev.tarikhSelesai || formatDateToInput(getCurrentDateFormatted()),
+      }))
+    }
+
     // If kategori is changed to KELUAR, set status to SELESAI
     if (name === "kategori" && value === "KELUAR") {
       setFormData((prev) => ({
