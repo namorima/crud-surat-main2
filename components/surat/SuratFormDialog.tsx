@@ -189,7 +189,7 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
-          <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+          <div className="grid gap-3 md:grid-cols-2 md:items-start md:gap-4">
             <Section step={1} title="Maklumat Surat">
               <Field label="Kategori">
                 {/* Two-option toggle; MASUK/KELUAR also changes the status rules below */}
@@ -335,170 +335,173 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
               )}
             </Section>
 
-            <Section step={2} title="Tindakan">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Unit" htmlFor={id("unit")} required error={formErrors.unit}>
-                  <Select value={formData.unit} onValueChange={(v) => onSelectChange("unit", v)} disabled={props.unitLocked}>
-                    <SelectTrigger id={id("unit")} className={cx(formErrors.unit && errorRing)}>
-                      <SelectValue placeholder="Pilih unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {props.unitOptions.length > 0 ? (
-                        props.unitOptions.map((unit) => (
-                          <SelectItem key={unit} value={unit || "unknown"}>
-                            {unit || "Unknown"}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading">Loading units...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field label="Tindakan PIC" htmlFor={id("tindakanPic")} required error={formErrors.tindakanPic}>
-                  <Select value={formData.tindakanPic} onValueChange={(v) => onSelectChange("tindakanPic", v)} disabled={!formData.unit}>
-                    <SelectTrigger id={id("tindakanPic")} className={cx(formErrors.tindakanPic && errorRing)}>
-                      <SelectValue placeholder={formData.unit ? "Pilih PIC" : "Pilih unit dahulu"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pics.length > 0 ? (
-                        pics.map((pic) => (
-                          <SelectItem key={pic} value={pic || "unknown"}>
-                            {pic || "Unknown"}
-                            {keepsOldPic && pic === formData.tindakanPic && (
-                              <span className="ms-1.5 text-caption-1-regular text-text-tertiary">tiada dalam senarai PIC</span>
+            {/* Right column: Tindakan, Status and Nota stacked beside Maklumat Surat */}
+            <div className="flex flex-col gap-3 md:gap-4">
+              <Section step={2} title="Tindakan">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Unit" htmlFor={id("unit")} required error={formErrors.unit}>
+                    <Select value={formData.unit} onValueChange={(v) => onSelectChange("unit", v)} disabled={props.unitLocked}>
+                      <SelectTrigger id={id("unit")} className={cx(formErrors.unit && errorRing)}>
+                        <SelectValue placeholder="Pilih unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {props.unitOptions.length > 0 ? (
+                          props.unitOptions.map((unit) => (
+                            <SelectItem key={unit} value={unit || "unknown"}>
+                              {unit || "Unknown"}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading">Loading units...</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Tindakan PIC" htmlFor={id("tindakanPic")} required error={formErrors.tindakanPic}>
+                    <Select value={formData.tindakanPic} onValueChange={(v) => onSelectChange("tindakanPic", v)} disabled={!formData.unit}>
+                      <SelectTrigger id={id("tindakanPic")} className={cx(formErrors.tindakanPic && errorRing)}>
+                        <SelectValue placeholder={formData.unit ? "Pilih PIC" : "Pilih unit dahulu"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pics.length > 0 ? (
+                          pics.map((pic) => (
+                            <SelectItem key={pic} value={pic || "unknown"}>
+                              {pic || "Unknown"}
+                              {keepsOldPic && pic === formData.tindakanPic && (
+                                <span className="ms-1.5 text-caption-1-regular text-text-tertiary">tiada dalam senarai PIC</span>
+                              )}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-pic">Tiada PIC</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+
+                <Field label="Fail" htmlFor={id("fail")}>
+                  <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        id={id("fail")}
+                        type="button"
+                        role="combobox"
+                        aria-expanded={failComboboxOpen}
+                        disabled={!formData.unit}
+                        className="flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-2lg bg-background-tertiary-default px-2.5 text-left text-body-regular ring-2 ring-inset ring-transparent outline-none transition-[box-shadow] hover:ring-border-button-hover focus-visible:ring-border-button-active disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text"
+                      >
+                        {selectedFail ? (
+                          <span className="flex min-w-0 items-center gap-2 text-text-primary">
+                            <span className={cx("size-2 shrink-0 rounded-full", FAIL_PART_DOT[selectedFail.part] ?? "bg-neutral-300")} aria-hidden />
+                            <span className="truncate">{formatFailDisplay(selectedFail)}</span>
+                          </span>
+                        ) : (
+                          <span className="truncate text-text-tertiary">{formData.unit ? "Pilih fail" : "Pilih unit dahulu"}</span>
+                        )}
+                        <RiArrowUpDownLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Cari fail..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>
+                            {formData.unit ? (
+                              <div className="p-2 text-center text-caption-1-regular">
+                                <p className="text-text-secondary">Tiada fail untuk unit ini.</p>
+                                <p className="mt-1">
+                                  Sila ke{" "}
+                                  <Link href="/dashboard/tetapan?from=surat" className="font-bold text-red-600 hover:text-red-700 hover:underline">
+                                    Setup Fail
+                                  </Link>{" "}
+                                  untuk tambah pilihan fail.
+                                </p>
+                              </div>
+                            ) : (
+                              "Pilih unit dahulu"
                             )}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {failOptions.map((fail) => (
+                              <CommandItem
+                                key={fail.id}
+                                value={formatFailDisplay(fail)}
+                                onSelect={() => {
+                                  onSelectChange("fail", fail.id)
+                                  setFailComboboxOpen(false)
+                                }}
+                              >
+                                <span className={cx("size-2 shrink-0 rounded-full", FAIL_PART_DOT[fail.part] ?? "bg-neutral-300")} aria-hidden />
+                                <span className="min-w-0 flex-1">{formatFailDisplay(fail)}</span>
+                                <RiCheckLine className={cx("size-4 shrink-0", selectedFailId === fail.id ? "opacity-100" : "opacity-0")} aria-hidden />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+              </Section>
+
+              <Section step={3} title="Status">
+                <div className="flex flex-col gap-0.5 rounded-xl bg-background-secondary-default px-3 py-2.5 dark:bg-background-primary-default">
+                  <Checkbox id={id("untukMakluman")} isSelected={formData.untukMakluman} onChange={props.onUntukMaklumanChange}>
+                    Untuk Makluman
+                  </Checkbox>
+                  <p className="ps-6 text-caption-2-regular text-text-tertiary">Status terus SELESAI dengan tarikh selesai hari ini.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="Status"
+                    htmlFor={id("status")}
+                    required
+                    error={formErrors.status}
+                    hint={formData.untukMakluman ? "Untuk makluman terus SELESAI." : isKeluar ? "Surat keluar terus SELESAI." : undefined}
+                  >
+                    <Select value={formData.status} onValueChange={(v) => onSelectChange("status", v)} disabled={statusLocked}>
+                      <SelectTrigger id={id("status")} className={cx("text-left", formErrors.status && errorRing)}>
+                        <SelectValue placeholder="Pilih status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
                           </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-pic">Tiada PIC</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field
+                    label="Tarikh Selesai"
+                    htmlFor={id("tarikhSelesai")}
+                    hint={formatDateToDisplay(formData.tarikhSelesai) || (formData.status !== "SELESAI" && !statusLocked ? "Untuk status SELESAI" : "DD/MM/YYYY")}
+                  >
+                    <Input
+                      id={id("tarikhSelesai")}
+                      name="tarikhSelesai"
+                      type="date"
+                      value={formData.tarikhSelesai}
+                      onChange={onInputChange}
+                      disabled={formData.status !== "SELESAI" && !statusLocked}
+                    />
+                  </Field>
+                </div>
+              </Section>
 
-              <Field label="Fail" htmlFor={id("fail")}>
-                <Popover open={failComboboxOpen} onOpenChange={setFailComboboxOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      id={id("fail")}
-                      type="button"
-                      role="combobox"
-                      aria-expanded={failComboboxOpen}
-                      disabled={!formData.unit}
-                      className="flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-2lg bg-background-tertiary-default px-2.5 text-left text-body-regular ring-2 ring-inset ring-transparent outline-none transition-[box-shadow] hover:ring-border-button-hover focus-visible:ring-border-button-active disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text"
-                    >
-                      {selectedFail ? (
-                        <span className="flex min-w-0 items-center gap-2 text-text-primary">
-                          <span className={cx("size-2 shrink-0 rounded-full", FAIL_PART_DOT[selectedFail.part] ?? "bg-neutral-300")} aria-hidden />
-                          <span className="truncate">{formatFailDisplay(selectedFail)}</span>
-                        </span>
-                      ) : (
-                        <span className="truncate text-text-tertiary">{formData.unit ? "Pilih fail" : "Pilih unit dahulu"}</span>
-                      )}
-                      <RiArrowUpDownLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Cari fail..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>
-                          {formData.unit ? (
-                            <div className="p-2 text-center text-caption-1-regular">
-                              <p className="text-text-secondary">Tiada fail untuk unit ini.</p>
-                              <p className="mt-1">
-                                Sila ke{" "}
-                                <Link href="/dashboard/tetapan?from=surat" className="font-bold text-red-600 hover:text-red-700 hover:underline">
-                                  Setup Fail
-                                </Link>{" "}
-                                untuk tambah pilihan fail.
-                              </p>
-                            </div>
-                          ) : (
-                            "Pilih unit dahulu"
-                          )}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {failOptions.map((fail) => (
-                            <CommandItem
-                              key={fail.id}
-                              value={formatFailDisplay(fail)}
-                              onSelect={() => {
-                                onSelectChange("fail", fail.id)
-                                setFailComboboxOpen(false)
-                              }}
-                            >
-                              <span className={cx("size-2 shrink-0 rounded-full", FAIL_PART_DOT[fail.part] ?? "bg-neutral-300")} aria-hidden />
-                              <span className="min-w-0 flex-1">{formatFailDisplay(fail)}</span>
-                              <RiCheckLine className={cx("size-4 shrink-0", selectedFailId === fail.id ? "opacity-100" : "opacity-0")} aria-hidden />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </Field>
-            </Section>
-
-            <Section step={3} title="Status">
-              <div className="flex flex-col gap-0.5 rounded-xl bg-background-secondary-default px-3 py-2.5 dark:bg-background-primary-default">
-                <Checkbox id={id("untukMakluman")} isSelected={formData.untukMakluman} onChange={props.onUntukMaklumanChange}>
-                  Untuk Makluman
-                </Checkbox>
-                <p className="ps-6 text-caption-2-regular text-text-tertiary">Status terus SELESAI dengan tarikh selesai hari ini.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Status"
-                  htmlFor={id("status")}
-                  required
-                  error={formErrors.status}
-                  hint={formData.untukMakluman ? "Untuk makluman terus SELESAI." : isKeluar ? "Surat keluar terus SELESAI." : undefined}
-                >
-                  <Select value={formData.status} onValueChange={(v) => onSelectChange("status", v)} disabled={statusLocked}>
-                    <SelectTrigger id={id("status")} className={cx("text-left", formErrors.status && errorRing)}>
-                      <SelectValue placeholder="Pilih status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field
-                  label="Tarikh Selesai"
-                  htmlFor={id("tarikhSelesai")}
-                  hint={formatDateToDisplay(formData.tarikhSelesai) || (formData.status !== "SELESAI" && !statusLocked ? "Untuk status SELESAI" : "DD/MM/YYYY")}
-                >
-                  <Input
-                    id={id("tarikhSelesai")}
-                    name="tarikhSelesai"
-                    type="date"
-                    value={formData.tarikhSelesai}
+              <div className="flex flex-col gap-3">
+                <Field label="Nota" htmlFor={id("nota")}>
+                  <Textarea
+                    id={id("nota")}
+                    name="nota"
+                    value={formData.nota}
                     onChange={onInputChange}
-                    disabled={formData.status !== "SELESAI" && !statusLocked}
+                    rows={3}
+                    placeholder="Taip #123 untuk pautan ke surat 123."
                   />
                 </Field>
               </div>
-            </Section>
-
-            <div className="flex flex-col gap-3">
-              <Field label="Nota" htmlFor={id("nota")}>
-                <Textarea
-                  id={id("nota")}
-                  name="nota"
-                  value={formData.nota}
-                  onChange={onInputChange}
-                  rows={3}
-                  placeholder="Taip #123 untuk pautan ke surat 123."
-                />
-              </Field>
             </div>
           </div>
         </div>
