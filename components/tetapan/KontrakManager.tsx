@@ -33,6 +33,7 @@ import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
+import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
 type KontrakForm = Omit<KontrakInput, "nilaiKontrak"> & { nilaiKontrak: string }
@@ -135,6 +136,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
+  // Tambah Kontraktor opened from the Nama Kontraktor field, on top of this form
+  const [kontraktorFormOpen, setKontraktorFormOpen] = useState(false)
 
   // Nama Kontraktor choices come from Tetapan → Kontraktor; refreshed each time the form opens.
   const loadKontraktorNames = async () => {
@@ -598,7 +601,23 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     className="min-h-[60px]"
                   />
                 </FormField>
-                <FormField label="Nama Kontraktor" htmlFor="kontrak-nama" hint="Tiada dalam senarai? Tambah dahulu di tab Kontraktor.">
+                <FormField
+                  label="Nama Kontraktor"
+                  htmlFor="kontrak-nama"
+                  hint={
+                    <span className="inline-flex flex-wrap items-center gap-x-1">
+                      Tiada dalam senarai?
+                      <button
+                        type="button"
+                        onClick={() => setKontraktorFormOpen(true)}
+                        className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm font-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                      >
+                        <RiAddLine className="size-3.5" aria-hidden />
+                        Tambah kontraktor baru
+                      </button>
+                    </span>
+                  }
+                >
                   <Select
                     value={form.namaKontraktor || NONE}
                     onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
@@ -668,6 +687,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Outside the kontrak <form>, so saving a contractor never submits the kontrak */}
+      <KontraktorFormDialog
+        open={kontraktorFormOpen}
+        onOpenChange={setKontraktorFormOpen}
+        onSaved={(kontraktor) => {
+          setKontraktorNames((prev) =>
+            prev.includes(kontraktor.namaKontraktor) ? prev : [...prev, kontraktor.namaKontraktor].sort((a, b) => a.localeCompare(b)),
+          )
+          // The new contractor is picked for this kontrak
+          setForm((prev) => ({ ...prev, namaKontraktor: kontraktor.namaKontraktor }))
+        }}
+      />
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>

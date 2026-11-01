@@ -52,8 +52,6 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
   const [query, setQuery] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Kontraktor | null>(null)
-  const [form, setForm] = useState<KontraktorInput>(EMPTY)
-  const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontraktor | null>(null)
 
   const load = async () => {
@@ -85,53 +83,12 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
 
   const openAdd = () => {
     setEditing(null)
-    setForm(EMPTY)
     setFormOpen(true)
   }
 
   const openEdit = (item: Kontraktor) => {
     setEditing(item)
-    setForm({
-      namaKontraktor: item.namaKontraktor,
-      noVendor: item.noVendor,
-      namaAkaun: item.namaAkaun,
-      nomborAkaun: item.nomborAkaun,
-      jenisBank: item.jenisBank,
-    })
     setFormOpen(true)
-  }
-
-  const setField = (field: keyof KontraktorInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }))
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.namaKontraktor.trim()) {
-      toast.error("Nama Kontraktor wajib diisi")
-      return
-    }
-    setSaving(true)
-    try {
-      const response = await fetch(editing ? `/api/kontraktor/${editing.id}` : "/api/kontraktor", {
-        method: editing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
-      if (!response.ok) throw new Error(await readError(response, "Gagal menyimpan kontraktor"))
-      const result = await response.json()
-      const renamed = editing && (result.kontrakUpdated > 0 || result.bayaranUpdated > 0)
-      toast.success(editing ? "Kontraktor dikemas kini" : "Kontraktor ditambah", {
-        description: renamed
-          ? `Nama baharu disalin ke ${result.kontrakUpdated} kontrak dan ${result.bayaranUpdated} rekod bayaran.`
-          : undefined,
-      })
-      setFormOpen(false)
-      await load()
-    } catch (error: any) {
-      toast.error(error.message)
-    } finally {
-      setSaving(false)
-    }
   }
 
   const confirmDelete = async () => {
@@ -258,64 +215,7 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
         <p className="text-body-regular text-text-secondary">Jumlah: {items.length} kontraktor</p>
       </CardFooter>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Kontraktor" : "Tambah Kontraktor"}</DialogTitle>
-            <DialogDescription>
-              {editing
-                ? "Menukar nama kontraktor turut mengemas kini kontrak dan rekod bayaran yang menggunakan nama lama."
-                : "Kontraktor baharu akan muncul dalam pilihan Nama Kontraktor di tab Kontrak."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={save} className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontraktor-nama">
-                Nama Kontraktor <span className="text-text-error-primary">*</span>
-              </Label>
-              <Input id="kontraktor-nama" value={form.namaKontraktor} onChange={setField("namaKontraktor")} required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontraktor-vendor">No Vendor</Label>
-              <Input id="kontraktor-vendor" value={form.noVendor} onChange={setField("noVendor")} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontraktor-akaun-nama">Nama Akaun</Label>
-              <Input id="kontraktor-akaun-nama" value={form.namaAkaun} onChange={setField("namaAkaun")} />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontraktor-akaun-no">Nombor Akaun</Label>
-                <Input
-                  id="kontraktor-akaun-no"
-                  inputMode="numeric"
-                  value={form.nomborAkaun}
-                  onChange={setField("nomborAkaun")}
-                  placeholder="Contoh: 5621-2345-6789"
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontraktor-bank">Jenis Bank</Label>
-                <Input id="kontraktor-bank" list="kontraktor-bank-options" value={form.jenisBank} onChange={setField("jenisBank")} />
-                <datalist id="kontraktor-bank-options">
-                  {BANK_SUGGESTIONS.map((bank) => (
-                    <option key={bank} value={bank} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <DialogFooter className="pt-1">
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <RiLoader4Line className="animate-spin" />}
-                {saving ? "Menyimpan..." : "Simpan"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <KontraktorFormDialog open={formOpen} onOpenChange={setFormOpen} editing={editing} onSaved={() => load()} />
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>
@@ -334,5 +234,137 @@ export function KontraktorManager({ canEdit }: { canEdit: boolean }) {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+  )
+}
+
+/**
+ * Tambah / Edit Kontraktor dialog. Used by this tab and by Tambah / Edit Kontrak
+ * (to add a contractor without leaving the kontrak form); onSaved gets the saved row.
+ */
+export function KontraktorFormDialog({
+  open,
+  onOpenChange,
+  editing = null,
+  onSaved,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  editing?: Kontraktor | null
+  onSaved: (kontraktor: Kontraktor) => void
+}) {
+  const [form, setForm] = useState<KontraktorInput>(EMPTY)
+  const [saving, setSaving] = useState(false)
+
+  // A fresh form each time it opens
+  useEffect(() => {
+    if (!open) return
+    setForm(
+      editing
+        ? {
+            namaKontraktor: editing.namaKontraktor,
+            noVendor: editing.noVendor,
+            namaAkaun: editing.namaAkaun,
+            nomborAkaun: editing.nomborAkaun,
+            jenisBank: editing.jenisBank,
+          }
+        : EMPTY,
+    )
+  }, [open, editing])
+
+  const setField = (field: keyof KontraktorInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    // A form inside the Kontrak dialog must not submit that one too
+    e.stopPropagation()
+    if (!form.namaKontraktor.trim()) {
+      toast.error("Nama Kontraktor wajib diisi")
+      return
+    }
+    setSaving(true)
+    try {
+      const response = await fetch(editing ? `/api/kontraktor/${editing.id}` : "/api/kontraktor", {
+        method: editing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      if (!response.ok) throw new Error(await readError(response, "Gagal menyimpan kontraktor"))
+      const result = await response.json()
+      const renamed = editing && (result.kontrakUpdated > 0 || result.bayaranUpdated > 0)
+      toast.success(editing ? "Kontraktor dikemas kini" : "Kontraktor ditambah", {
+        description: renamed
+          ? `Nama baharu disalin ke ${result.kontrakUpdated} kontrak dan ${result.bayaranUpdated} rekod bayaran.`
+          : undefined,
+      })
+      onOpenChange(false)
+      // POST returns the row; PUT returns { kontraktor, kontrakUpdated, bayaranUpdated }
+      onSaved(result.kontraktor ?? result)
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit Kontraktor" : "Tambah Kontraktor"}</DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Menukar nama kontraktor turut mengemas kini kontrak dan rekod bayaran yang menggunakan nama lama."
+              : "Kontraktor baharu akan muncul dalam pilihan Nama Kontraktor di tab Kontrak."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={save} className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="kontraktor-nama">
+              Nama Kontraktor <span className="text-text-error-primary">*</span>
+            </Label>
+            <Input id="kontraktor-nama" value={form.namaKontraktor} onChange={setField("namaKontraktor")} required />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="kontraktor-vendor">No Vendor</Label>
+            <Input id="kontraktor-vendor" value={form.noVendor} onChange={setField("noVendor")} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="kontraktor-akaun-nama">Nama Akaun</Label>
+            <Input id="kontraktor-akaun-nama" value={form.namaAkaun} onChange={setField("namaAkaun")} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="kontraktor-akaun-no">Nombor Akaun</Label>
+              <Input
+                id="kontraktor-akaun-no"
+                inputMode="numeric"
+                value={form.nomborAkaun}
+                onChange={setField("nomborAkaun")}
+                placeholder="Contoh: 5621-2345-6789"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="kontraktor-bank">Jenis Bank</Label>
+              <Input id="kontraktor-bank" list="kontraktor-bank-options" value={form.jenisBank} onChange={setField("jenisBank")} />
+              <datalist id="kontraktor-bank-options">
+                {BANK_SUGGESTIONS.map((bank) => (
+                  <option key={bank} value={bank} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+          <DialogFooter className="pt-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving && <RiLoader4Line className="animate-spin" />}
+              {saving ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
