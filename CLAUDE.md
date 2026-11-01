@@ -593,7 +593,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 1. **Main Dashboard** ([app/dashboard/page.tsx](app/dashboard/page.tsx)) - Dashboard and Statistik in one page
    - Bayaran / Surat toggle (each shown only with that page's permission) and a period filter (12 bulan, tahun ini, semua)
-   - Bayaran: KPIs, monthly paid vs unpaid value, process funnel, unpaid ageing, value by kawasan/kategori/kontraktor, unpaid by penerima, status
+   - Bayaran: KPIs, monthly paid vs unpaid value, Bayaran mengikut No Kontrak ([components/dashboard/kontrak-chart.tsx](components/dashboard/kontrak-chart.tsx): paid / unpaid per kawasan + no kontrak from `kontrakBayaran()`, Kawasan and Kategori filters saved in localStorage `dashboard:kontrak:kawasan` / `dashboard:kontrak:kategori`, % of Nilai Kontrak from `kontrakInfoByKawasan`, top 10 with "Tunjuk semua"; records without a no kontrak and batal are left out), process funnel, unpaid ageing, value by kawasan/kategori/kontraktor, unpaid by penerima, status
    - Surat: KPIs, monthly masuk vs keluar, status, open-letter ageing, open letters by PIC, by unit
    - Aggregations are pure functions in [lib/dashboard-stats.ts](lib/dashboard-stats.ts)
 
