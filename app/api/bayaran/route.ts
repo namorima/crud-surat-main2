@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
       namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
       // A WCP bayaran has no Bayaran Ke
       bayaranKe: validatedData.jenisBayaran === "WCP" ? "" : validatedData.bayaranKe,
+      // Only a KEMAJUAN bayaran keeps Wang Tahanan (left as is when not sent)
+      wangTahanan:
+        validatedData.wangTahanan === undefined || validatedData.jenisBayaran === "KEMAJUAN" ? validatedData.wangTahanan : "",
     }
 
     // Step 4: Add to database

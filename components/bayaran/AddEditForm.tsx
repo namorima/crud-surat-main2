@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_BAYARAN, PIECERATE, WCP } from "@/types/bayaran-schema"
+import { JENIS_BAYARAN, KEMAJUAN, PIECERATE, WCP } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
 
 interface AddEditFormProps {
@@ -194,7 +194,9 @@ export function AddEditForm({
   const isPiecerate = formData.jenisBayaran === PIECERATE
   // WCP is paid once, so it has no Bayaran Ke
   const isWcp = formData.jenisBayaran === WCP
-  const showWangTahanan = !!formData.adaWangTahanan
+  // The Wang Tahanan tick is only offered for KEMAJUAN
+  const canWangTahanan = formData.jenisBayaran === KEMAJUAN
+  const showWangTahanan = canWangTahanan && !!formData.adaWangTahanan
   const needsKategori = !isEdit && kategoriOptions.length > 0
   const needsKontrak = !isEdit && kontrakOptions.length > 0
   // PIECERATE: no kontrak, so the contractor is picked from the Daripada's
@@ -415,17 +417,19 @@ export function AddEditForm({
                       />
                     </div>
                   </Field>
-                  <Checkbox
-                    id="adaWangTahanan"
-                    isSelected={showWangTahanan}
-                    isDisabled={locked}
-                    onChange={(checked) =>
-                      // Unticked: the amount is cleared, the record has no Wang Tahanan
-                      setFormData((prev: any) => ({ ...prev, adaWangTahanan: checked, wangTahanan: checked ? prev.wangTahanan : "" }))
-                    }
-                  >
-                    <span className="whitespace-nowrap">Wang Tahanan</span>
-                  </Checkbox>
+                  {canWangTahanan && (
+                    <Checkbox
+                      id="adaWangTahanan"
+                      isSelected={showWangTahanan}
+                      isDisabled={locked}
+                      onChange={(checked) =>
+                        // Unticked: the amount is cleared, the record has no Wang Tahanan
+                        setFormData((prev: any) => ({ ...prev, adaWangTahanan: checked, wangTahanan: checked ? prev.wangTahanan : "" }))
+                      }
+                    >
+                      <span className="whitespace-nowrap">Wang Tahanan</span>
+                    </Checkbox>
+                  )}
                 </div>
                 {showWangTahanan && (
                   <Field label="Wang Tahanan" htmlFor="wangTahanan">

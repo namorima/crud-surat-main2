@@ -33,6 +33,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
       // A WCP bayaran has no Bayaran Ke
       bayaranKe: validatedData.jenisBayaran === "WCP" ? "" : validatedData.bayaranKe,
+      // Only a KEMAJUAN bayaran keeps Wang Tahanan (left as is when not sent)
+      wangTahanan:
+        validatedData.wangTahanan === undefined || validatedData.jenisBayaran === "KEMAJUAN" ? validatedData.wangTahanan : "",
       tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
       tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
       tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",
