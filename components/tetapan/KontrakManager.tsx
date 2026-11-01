@@ -9,12 +9,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -34,6 +32,7 @@ import { RowActions } from "@/components/dashboard/row-actions"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
+import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
 
 /** The form keeps nilai as typed text; the server parses it. */
 type KontrakForm = Omit<KontrakInput, "nilaiKontrak"> & { nilaiKontrak: string }
@@ -44,6 +43,7 @@ const formatNilai = (value: number) =>
 const EMPTY: KontrakForm = {
   kawasan: "",
   noKontrak: "",
+  noPo: "",
   kategori: "",
   namaKontraktor: "",
   tarikhMula: "",
@@ -64,8 +64,22 @@ function StatusChip({ status }: { status: KontrakStatus }) {
   )
 }
 
+/** The Status filter survives reloads (per browser). */
+const STATUS_FILTER_KEY = "tetapan:kontrak:status"
+const STATUS_FILTERS: readonly (KontrakStatus | "ALL")[] = ["ALL", ...KONTRAK_STATUS]
+
 /** Radix Select cannot hold "", so an unset optional field uses this value. */
 const NONE = "__none"
+
+/** A titled group of fields in the Tambah / Edit Kontrak form. */
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-border-table p-3 sm:p-4">
+      <h3 className="text-body-semibold text-text-primary">{title}</h3>
+      {children}
+    </section>
+  )
+}
 
 /** YYYY-MM-DD → DD/MM/YYYY for display. */
 function formatTarikh(value: string) {
@@ -102,6 +116,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<KontrakStatus | "ALL">("ALL")
+  // Restore the saved Status filter once in the browser (localStorage may be blocked)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STATUS_FILTER_KEY) as KontrakStatus | "ALL" | null
+      if (saved && STATUS_FILTERS.includes(saved)) setStatusFilter(saved)
+    } catch {}
+  }, [])
+  const changeStatusFilter = (value: KontrakStatus | "ALL") => {
+    setStatusFilter(value)
+    try {
+      localStorage.setItem(STATUS_FILTER_KEY, value)
+    } catch {}
+  }
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Kontrak | null>(null)
   const [form, setForm] = useState<KontrakForm>(EMPTY)
@@ -157,7 +184,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     const byStatus = statusFilter === "ALL" ? items : items.filter((item) => item.status === statusFilter)
     if (!q) return byStatus
     return byStatus.filter((item) =>
-      [item.kawasan, item.noKontrak, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? ""), String(item.nilaiKontrak ?? "")].some(
+      [item.kawasan, item.noKontrak, item.noPo, item.kategori, item.namaKontraktor, item.kerja, item.jenisKerja, String(item.tahunKontrak ?? ""), String(item.nilaiKontrak ?? "")].some(
         (value) => value.toLowerCase().includes(q),
       ),
     )
@@ -176,6 +203,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     setForm({
       kawasan: item.kawasan,
       noKontrak: item.noKontrak,
+      noPo: item.noPo,
       kategori: item.kategori,
       namaKontraktor: item.namaKontraktor,
       tarikhMula: item.tarikhMula,
@@ -300,12 +328,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari no kontrak, kerja, kontraktor, kawasan atau tahun…"
+              placeholder="Cari no kontrak, no PO, kerja, kontraktor, kawasan atau tahun…"
               className="pl-8"
               aria-label="Cari kontrak"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as KontrakStatus | "ALL")}>
+          <Select value={statusFilter} onValueChange={(value) => value && changeStatusFilter(value as KontrakStatus | "ALL")}>
             <SelectTrigger className="w-[148px] shrink-0 sm:w-[160px]" aria-label="Tapis status">
               <SelectValue />
             </SelectTrigger>
@@ -340,7 +368,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     <tr>
                       <th>
                         No Kontrak
-                        <span className="block text-caption-1-regular">Kawasan</span>
+                        <span className="block text-caption-1-regular">Kawasan · No PO</span>
                       </th>
                       <th className="min-w-[200px]">
                         Kerja
@@ -368,7 +396,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                             <span className="text-body-semibold">{item.noKontrak}</span>
                             <StatusChip status={item.status} />
                           </span>
-                          <span className="block text-caption-1-regular text-text-tertiary">{item.kawasan}</span>
+                          <span className="block text-caption-1-regular text-text-tertiary">
+                            {item.kawasan}
+                            {item.noPo && <> · PO {item.noPo}</>}
+                          </span>
                         </td>
                         <td className="max-w-[320px]">
                           {item.kerja ? (
@@ -441,7 +472,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </div>
                     {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
-                      {[item.kawasan, item.jenisKerja].filter(Boolean).join(" · ")}
+                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja].filter(Boolean).join(" · ")}
                     </span>
                     {(item.tarikhMula || item.tarikhAkhir) && (
                       <span className="text-caption-1-regular text-text-secondary">
@@ -471,182 +502,169 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       </CardFooter>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Kontrak" : "Tambah Kontrak"}</DialogTitle>
-            <DialogDescription>
+        {/* Fixed size on desktop (the body scrolls), a full-width sheet on phones */}
+        <DialogContent className={cx(dialogFrameClass, "max-h-[92dvh] sm:h-[min(680px,90dvh)] sm:w-[680px] sm:max-w-[calc(100vw-2rem)]")}>
+          <DialogHeader className={dialogHeaderClass}>
+            <DialogTitle className="pr-8 text-headline-semibold text-text-primary">{editing ? "Edit Kontrak" : "Tambah Kontrak"}</DialogTitle>
+            <DialogDescription className="text-caption-1-regular text-text-secondary">
               {editing
-                ? "Nama kontraktor yang baru akan disalin ke semua rekod bayaran dengan No Kontrak ini."
+                ? "Nama kontraktor yang baru akan disalin ke rekod bayaran kawasan ini dengan No Kontrak ini."
                 : "Kontrak baru akan muncul dalam pilihan No Kontrak di borang Bayaran."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={save} className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-kawasan">
-                  Kawasan <span className="text-text-error-primary">*</span>
-                </Label>
-                <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
-                <datalist id="kontrak-kawasan-options">
-                  {kawasanOptions.map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-status">Status</Label>
-                <Select value={form.status} onValueChange={(value) => setForm((prev) => ({ ...prev, status: value as KontrakStatus }))}>
-                  <SelectTrigger id="kontrak-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KONTRAK_STATUS.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
+            <div className={cx(dialogBodyClass, "gap-4")}>
+              <FormSection title="Maklumat Kontrak">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Kawasan" htmlFor="kontrak-kawasan" required>
+                    <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
+                    <datalist id="kontrak-kawasan-options">
+                      {kawasanOptions.map((value) => (
+                        <option key={value} value={value} />
+                      ))}
+                    </datalist>
+                  </FormField>
+                  <FormField
+                    label="Status"
+                    htmlFor="kontrak-status"
+                    hint={form.status !== "AKTIF" ? "Tidak dipaparkan di Tambah Rekod Bayaran; rekod sedia ada tidak berubah." : undefined}
+                  >
+                    <Select value={form.status} onValueChange={(value) => value && setForm((prev) => ({ ...prev, status: value as KontrakStatus }))}>
+                      <SelectTrigger id="kontrak-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {KONTRAK_STATUS.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="No Kontrak" htmlFor="kontrak-no" required>
+                    <Input id="kontrak-no" value={form.noKontrak} onChange={setField("noKontrak")} required />
+                  </FormField>
+                  <FormField label="No Purchase Order (PO)" htmlFor="kontrak-po">
+                    <Input id="kontrak-po" value={form.noPo} onChange={setField("noPo")} placeholder="Pilihan" autoComplete="off" />
+                  </FormField>
+                  <FormField label="Kategori" htmlFor="kontrak-kategori">
+                    <Select
+                      value={form.kategori || NONE}
+                      onValueChange={(value) => value && setForm((prev) => ({ ...prev, kategori: value === NONE ? "" : value }))}
+                    >
+                      <SelectTrigger id="kontrak-kategori">
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Tiada</SelectItem>
+                        {kategoriOptions.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="Jenis Kerja" htmlFor="kontrak-jenis">
+                    <Select
+                      value={form.jenisKerja || NONE}
+                      onValueChange={(value) => value && setForm((prev) => ({ ...prev, jenisKerja: value === NONE ? "" : value }))}
+                    >
+                      <SelectTrigger id="kontrak-jenis">
+                        <SelectValue placeholder="Pilih jenis kerja" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Tiada</SelectItem>
+                        {JENIS_KERJA.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+              </FormSection>
+
+              <FormSection title="Kerja & Kontraktor">
+                <FormField label="Kerja" htmlFor="kontrak-kerja">
+                  <Textarea
+                    id="kontrak-kerja"
+                    rows={2}
+                    value={form.kerja}
+                    onChange={setField("kerja")}
+                    placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
+                    className="min-h-[60px]"
+                  />
+                </FormField>
+                <FormField label="Nama Kontraktor" htmlFor="kontrak-nama" hint="Tiada dalam senarai? Tambah dahulu di tab Kontraktor.">
+                  <Select
+                    value={form.namaKontraktor || NONE}
+                    onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
+                  >
+                    <SelectTrigger id="kontrak-nama">
+                      <SelectValue placeholder="Pilih kontraktor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Tiada</SelectItem>
+                      {namaOptions.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </FormSection>
+
+              <FormSection title="Nilai & Tempoh">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="Nilai Kontrak" htmlFor="kontrak-nilai" className="col-span-2 sm:col-span-1">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+                      <Input
+                        id="kontrak-nilai"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={form.nilaiKontrak}
+                        onChange={setField("nilaiKontrak")}
+                        onBlur={() => {
+                          const n = parseNilai(form.nilaiKontrak)
+                          if (n !== null && !Number.isNaN(n)) setForm((prev) => ({ ...prev, nilaiKontrak: formatNilai(n) }))
+                        }}
+                        placeholder="0.00"
+                        className="pl-9 tabular-nums"
+                      />
+                    </div>
+                  </FormField>
+                  <FormField label="Tahun Kontrak" htmlFor="kontrak-tahun" hint="Daripada Tarikh Mula" className="col-span-2 sm:col-span-1">
+                    <Input id="kontrak-tahun" value={tahunFromTarikh(form.tarikhMula) ?? ""} placeholder="Auto" readOnly tabIndex={-1} />
+                  </FormField>
+                  <FormField label="Tarikh Mula" htmlFor="kontrak-mula">
+                    <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
+                  </FormField>
+                  <FormField label="Tarikh Akhir" htmlFor="kontrak-akhir">
+                    <Input
+                      id="kontrak-akhir"
+                      type="date"
+                      min={form.tarikhMula || undefined}
+                      value={form.tarikhAkhir}
+                      onChange={setField("tarikhAkhir")}
+                    />
+                  </FormField>
+                </div>
+              </FormSection>
             </div>
-            {form.status !== "AKTIF" && (
-              <p className="-mt-1 text-caption-1-regular text-text-tertiary">
-                No Kontrak ini tidak dipaparkan di Tambah Rekod Bayaran. Rekod bayaran sedia ada tidak berubah.
-              </p>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-no">
-                  No Kontrak <span className="text-text-error-primary">*</span>
-                </Label>
-                <Input id="kontrak-no" value={form.noKontrak} onChange={setField("noKontrak")} required />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-kategori">Kategori</Label>
-                <Select
-                  value={form.kategori || NONE}
-                  onValueChange={(value) => setForm((prev) => ({ ...prev, kategori: value === NONE ? "" : value }))}
-                >
-                  <SelectTrigger id="kontrak-kategori">
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Tiada</SelectItem>
-                    {kategoriOptions.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontrak-kerja">Kerja</Label>
-              <Textarea
-                id="kontrak-kerja"
-                rows={2}
-                value={form.kerja}
-                onChange={setField("kerja")}
-                placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
-                className="min-h-[60px]"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontrak-nama">Nama Kontraktor</Label>
-              <Select
-                value={form.namaKontraktor || NONE}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
-              >
-                <SelectTrigger id="kontrak-nama">
-                  <SelectValue placeholder="Pilih kontraktor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Tiada</SelectItem>
-                  {namaOptions.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-caption-1-regular text-text-tertiary">Tiada dalam senarai? Tambah dahulu di tab Kontraktor.</p>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontrak-jenis">Jenis Kerja</Label>
-              <Select
-                value={form.jenisKerja || NONE}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, jenisKerja: value === NONE ? "" : value }))}
-              >
-                <SelectTrigger id="kontrak-jenis">
-                  <SelectValue placeholder="Pilih jenis kerja" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Tiada</SelectItem>
-                  {JENIS_KERJA.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="kontrak-nilai">Nilai Kontrak</Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
-                <Input
-                  id="kontrak-nilai"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={form.nilaiKontrak}
-                  onChange={setField("nilaiKontrak")}
-                  onBlur={() => {
-                    const n = parseNilai(form.nilaiKontrak)
-                    if (n !== null && !Number.isNaN(n)) setForm((prev) => ({ ...prev, nilaiKontrak: formatNilai(n) }))
-                  }}
-                  placeholder="0.00"
-                  className="pl-9 tabular-nums"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_auto]">
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-mula">Tarikh Mula</Label>
-                <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="kontrak-akhir">Tarikh Akhir</Label>
-                <Input
-                  id="kontrak-akhir"
-                  type="date"
-                  min={form.tarikhMula || undefined}
-                  value={form.tarikhAkhir}
-                  onChange={setField("tarikhAkhir")}
-                />
-              </div>
-              <div className="col-span-2 grid gap-1.5 sm:col-span-1">
-                <Label htmlFor="kontrak-tahun">Tahun Kontrak</Label>
-                <Input
-                  id="kontrak-tahun"
-                  value={tahunFromTarikh(form.tarikhMula) ?? ""}
-                  placeholder="Auto"
-                  readOnly
-                  tabIndex={-1}
-                  className="sm:w-24"
-                  title="Diambil daripada Tarikh Mula"
-                />
-              </div>
-            </div>
-            <DialogFooter className="pt-1">
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+            <footer className={dialogFooterClass}>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="flex-1 sm:flex-none">
                 Batal
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving} className="flex-1 sm:flex-none">
                 {saving && <RiLoader4Line className="animate-spin" />}
                 {saving ? "Menyimpan..." : "Simpan"}
               </Button>
-            </DialogFooter>
+            </footer>
           </form>
         </DialogContent>
       </Dialog>

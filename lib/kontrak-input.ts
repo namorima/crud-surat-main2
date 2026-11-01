@@ -25,6 +25,7 @@ export function parseKontrakInput(body: any): KontrakInput | string {
   const input: KontrakInput = {
     kawasan: text(body?.kawasan).toUpperCase(),
     noKontrak: text(body?.noKontrak).toUpperCase(),
+    noPo: text(body?.noPo).toUpperCase(),
     kategori: text(body?.kategori).toUpperCase(),
     namaKontraktor: text(body?.namaKontraktor).toUpperCase(),
     tarikhMula: text(body?.tarikhMula),
