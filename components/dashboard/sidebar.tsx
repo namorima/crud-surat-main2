@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-provider"
 import {
   RiCloseLine,
   RiDownload2Line,
-  RiHome5Line,
+  RiDonutChartFill,
   RiLogoutBoxRLine,
   RiMailOpenLine,
   RiMailSendLine,
@@ -40,7 +40,7 @@ const navigation: NavigationItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
-    icon: RiHome5Line,
+    icon: RiDonutChartFill,
     requiredPermission: { resource: 'dashboard', action: 'view' },
     // Statistik was merged into Dashboard; its viewers keep access
     alsoPermissions: [{ resource: 'statistik', action: 'view' }],
@@ -255,7 +255,8 @@ export function Sidebar({
             collapsed ? "flex-col-reverse items-start gap-2.5" : "flex-row items-center justify-between gap-2",
           )}
         >
-          <div className="flex min-w-0 items-center gap-2">
+          {/* The logo and name are hidden while collapsed; only the expand control stays */}
+          <div className={cx("min-w-0 items-center gap-2", collapsed ? "hidden" : "flex")}>
             <span className="flex size-9 shrink-0 items-center justify-center rounded-2lg bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected">
               <RiMailOpenLine className="size-5 text-white" aria-hidden />
             </span>
