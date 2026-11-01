@@ -58,7 +58,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
-import { PIECERATE, WCP, bayaranFormErrors } from "@/types/bayaran-schema";
+import { KEMAJUAN, PIECERATE, WCP, bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -537,7 +537,9 @@ export default function BayaranPage() {
     setFormData((prev) => {
       if (value === PIECERATE) return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "" };
       // WCP is paid once: Bayaran Ke is hidden and cleared
-      const next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
+      let next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
+      // Only KEMAJUAN offers the Wang Tahanan tick
+      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "" };
       if (prev.jenisBayaran === PIECERATE) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
       return next;
     });
@@ -866,8 +868,8 @@ export default function BayaranPage() {
       const { adaWangTahanan, ...fields } = formData;
       const payload = {
         ...fields,
-        // Unticked: the record has no Wang Tahanan; WCP: no Bayaran Ke
-        wangTahanan: adaWangTahanan ? fields.wangTahanan : "",
+        // Unticked or not KEMAJUAN: the record has no Wang Tahanan; WCP: no Bayaran Ke
+        wangTahanan: adaWangTahanan && fields.jenisBayaran === KEMAJUAN ? fields.wangTahanan : "",
         bayaranKe: fields.jenisBayaran === WCP ? "" : fields.bayaranKe,
         user: user?.name || "Unknown",
       };
