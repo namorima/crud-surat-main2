@@ -2,6 +2,8 @@ export interface Kontrak {
   id: string
   kawasan: string
   noKontrak: string
+  /** No Purchase Order (PO), optional; "" when not set */
+  noPo: string
   kategori: string
   namaKontraktor: string
   /** YYYY-MM-DD, or "" when not set */

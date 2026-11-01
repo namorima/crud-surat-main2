@@ -860,6 +860,7 @@ function mapKontrakRow(row: any): Kontrak {
     id: row.id,
     kawasan: row.kawasan || "",
     noKontrak: row.no_kontrak || "",
+    noPo: row.no_po || "",
     kategori: row.kategori || "",
     namaKontraktor: row.nama_kontraktor || "",
     tarikhMula: row.tarikh_mula || "",
@@ -876,6 +877,7 @@ function kontrakToRow(input: KontrakInput) {
   return {
     kawasan: input.kawasan,
     no_kontrak: input.noKontrak,
+    no_po: input.noPo || null,
     kategori: input.kategori || null,
     nama_kontraktor: input.namaKontraktor || null,
     tarikh_mula: input.tarikhMula || null,
