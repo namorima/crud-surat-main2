@@ -554,7 +554,11 @@ export default function SuratPage() {
     }
 
     // Apply search filter
-    if (searchQuery) {
+    // "*135" lists only surat BIL 135
+    const bilQuery = searchQuery.trim().match(/^\*\s*(\d+)$/)
+    if (bilQuery) {
+      filtered = filtered.filter((item) => item.bil === Number(bilQuery[1]))
+    } else if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (item) =>
@@ -1049,8 +1053,8 @@ export default function SuratPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Check if the search query is a BIL reference (starts with #)
-    const bilMatch = searchQuery.match(/^#(\d+)$/)
+    // "*135" + Enter opens surat BIL 135
+    const bilMatch = searchQuery.trim().match(/^\*\s*(\d+)$/)
     if (bilMatch) {
       const bilNumber = bilMatch[1]
       // Find the surat with the matching BIL
@@ -1182,7 +1186,7 @@ export default function SuratPage() {
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <Input
                     ref={searchInputRef}
-                    placeholder="Cari..."
+                    placeholder="Cari... (*bil)"
                     value={searchQuery}
                     onChange={handleSearchInputChange}
                     className="w-[200px] md:w-[300px] pr-8 h-7 md:h-auto text-xs md:text-sm"
