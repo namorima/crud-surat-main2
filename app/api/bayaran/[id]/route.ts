@@ -31,6 +31,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // Looked up from the kontrak by supabase-db; a PIECERATE bayaran has no
       // kontrak and keeps the contractor picked in the form
       namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
+      // A WCP bayaran has no Bayaran Ke
+      bayaranKe: validatedData.jenisBayaran === "WCP" ? "" : validatedData.bayaranKe,
       tarikhTerima: validatedData.tarikhTerima ? formatDateForSheet(validatedData.tarikhTerima) : "",
       tarikhMemoLadang: validatedData.tarikhMemoLadang ? formatDateForSheet(validatedData.tarikhMemoLadang) : "",
       tarikhHantar: validatedData.tarikhHantar ? formatDateForSheet(validatedData.tarikhHantar) : "",
