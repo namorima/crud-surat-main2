@@ -5,6 +5,7 @@ import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { takeBayaranSeed } from "@/lib/bayaran-seed";
 import { useAuth } from "@/lib/auth-provider";
 import type { Bayaran } from "@/types/bayaran";
 import { Button } from "@/components/ui/button";
@@ -238,6 +239,14 @@ export default function BayaranPage() {
       setLoading(false);
     }
   }, [lastFetchTime, bayaran.length]);
+
+  // Opened from the Dashboard (?buka=): start from the rows it already had, so
+  // the Rekod Bayaran shows at once; the fetch below refreshes them
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).get("buka")) return;
+    const seed = takeBayaranSeed();
+    if (seed?.length) setBayaran((prev) => (prev.length ? prev : seed));
+  }, []);
 
   useEffect(() => {
     fetchWithCache();

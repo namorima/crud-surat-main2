@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { saveBayaranSeed } from "@/lib/bayaran-seed"
 import type { Bayaran } from "@/types/bayaran"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartCard } from "@/components/dashboard/charts"
@@ -44,6 +45,11 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   // The kontrak whose bayaran are shown in the detail dialog
   const [selected, setSelected] = useState<KontrakRow | null>(null)
   const router = useRouter()
+  // Load the Bayaran page's code while the kontrak detail is open, so opening a
+  // Rekod Bayaran from it does not wait for it
+  useEffect(() => {
+    if (selected) router.prefetch("/dashboard/bayaran")
+  }, [selected, router])
 
   useEffect(() => {
     setKawasan(readSaved(KAWASAN_KEY))
@@ -216,6 +222,8 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
         info={selected ? info[selected.kawasan]?.[selected.noKontrak] : undefined}
         onClose={() => setSelected(null)}
         onOpenBayaran={(b) => {
+          // The Bayaran page shows the record from these rows at once
+          saveBayaranSeed(bayaran)
           try {
             if (selected) sessionStorage.setItem(OPEN_KEY, selected.key)
           } catch {}
