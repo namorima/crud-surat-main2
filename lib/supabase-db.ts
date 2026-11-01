@@ -11,6 +11,7 @@ import type { AuditChange } from "@/types/audit"
 import { BAYARAN_AUDIT_FIELDS, diffRows, type Actor } from "./audit"
 import { hashPassword, isHashedPassword } from "./password"
 import { getKomenSummary } from "./surat-komen"
+import { selectAll } from "./select-all"
 
 // ===== SURAT FUNCTIONS =====
 
@@ -56,16 +57,15 @@ function formatDateFromDB(dateString: string | null): string {
 
 export async function getAllSurat(): Promise<Surat[]> {
   try {
-    const [{ data, error }, komen] = await Promise.all([
-      supabaseAdmin.from("surat").select("*").order("bil", { ascending: false }),
+    // More than 1000 surat: read them a page at a time (PostgREST row limit)
+    const [data, komen] = await Promise.all([
+      selectAll<any>((from, to) => supabaseAdmin.from("surat").select("*").order("bil", { ascending: false }).range(from, to)),
       // The list still loads if the komen tables are unreachable
       getKomenSummary().catch((e) => {
         console.error("Error fetching komen summary:", e)
         return new Map() as Awaited<ReturnType<typeof getKomenSummary>>
       }),
     ])
-
-    if (error) throw error
 
     return (
       data?.map((row) => ({
@@ -440,13 +440,15 @@ export async function deleteUser(username: string): Promise<void> {
 
 export async function getDaripadaKepadaValues() {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("surat")
-      .select("daripada_kepada")
-      .not("daripada_kepada", "is", null)
-      .not("daripada_kepada", "eq", "")
-
-    if (error) throw error
+    const data = await selectAll<{ daripada_kepada: string }>((from, to) =>
+      supabaseAdmin
+        .from("surat")
+        .select("daripada_kepada")
+        .not("daripada_kepada", "is", null)
+        .not("daripada_kepada", "eq", "")
+        .order("bil", { ascending: false })
+        .range(from, to),
+    )
 
     const values = data?.map((row) => row.daripada_kepada).filter((val) => val.trim() !== "") || []
     const uniqueValues = Array.from(new Set(values))
@@ -466,12 +468,15 @@ export async function getDaripadaKepadaValues() {
 
 export async function getAllBayaran(): Promise<Bayaran[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("bayaran")
-      .select("*")
-      .order("created_at", { ascending: false })
-
-    if (error) throw error
+    // Paged like surat, so the list keeps working past 1000 records
+    const data = await selectAll<any>((from, to) =>
+      supabaseAdmin
+        .from("bayaran")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    )
 
     return (
       data?.map((row) => ({
