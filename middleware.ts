@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session"
+import { SESSION_COOKIE, renewSessionToken, sessionCookieOptions, shouldRenewSession, verifySessionToken } from "@/lib/session"
 
 /**
  * API routes that work without a session: signing in, password recovery, and
@@ -24,7 +24,13 @@ export async function middleware(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Sila log masuk semula" }, { status: 401 })
   }
-  return NextResponse.next()
+  // Sliding session: a day after the cookie was issued, the next request gets
+  // a renewed one, so people who keep using the app are not signed out
+  const response = NextResponse.next()
+  if (shouldRenewSession(session)) {
+    response.cookies.set(SESSION_COOKIE, await renewSessionToken(session), sessionCookieOptions)
+  }
+  return response
 }
 
 export const config = {

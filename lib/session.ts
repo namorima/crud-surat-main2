@@ -10,7 +10,14 @@
  */
 
 export const SESSION_COOKIE = "crud_session"
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+/**
+ * Sliding session: a cookie lasts 30 days from its last renewal, and
+ * middleware.ts renews it (a new token, a new 30 days) on the first /api
+ * request after it is a day old. Someone who uses the app keeps their session;
+ * one who stays away for 30 days signs in again.
+ */
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+export const SESSION_RENEW_AFTER = 60 * 60 * 24 // 1 day
 
 export type SessionPayload = {
   /** username (the app's user id) */
@@ -78,6 +85,16 @@ export async function verifySessionToken(token: string | undefined | null): Prom
   } catch {
     return null
   }
+}
+
+/** True once the token is older than SESSION_RENEW_AFTER (it was issued SESSION_MAX_AGE before exp). */
+export function shouldRenewSession(session: SessionPayload, now = Date.now() / 1000): boolean {
+  return session.exp - now < SESSION_MAX_AGE - SESSION_RENEW_AFTER
+}
+
+/** A fresh token for the same user, valid for another SESSION_MAX_AGE. */
+export function renewSessionToken(session: SessionPayload): Promise<string> {
+  return createSessionToken({ uid: session.uid, role: session.role, roleId: session.roleId })
 }
 
 /** Reads the session from a request's Cookie header (route handlers). */
