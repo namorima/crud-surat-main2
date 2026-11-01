@@ -136,7 +136,8 @@ Located in `types/` directory:
 #### Authentication & Authorization
 
 0. **Server-side session (API protection)**
-   - Login ([app/api/auth/login/route.ts](app/api/auth/login/route.ts)) sets an HttpOnly signed cookie `crud_session` ([lib/session.ts](lib/session.ts), HMAC-SHA256 with `SESSION_SECRET`, falling back to `SUPABASE_SERVICE_ROLE_KEY`); `/api/auth/logout` clears it
+   - Login ([app/api/auth/login/route.ts](app/api/auth/login/route.ts)) sets an HttpOnly signed cookie `crud_session` ([lib/session.ts](lib/session.ts), HMAC-SHA256 with `SESSION_SECRET`, falling back to `SUPABASE_SERVICE_ROLE_KEY`); `/api/auth/logout` clears it. Deploys do not sign anyone out (the secret is constant)
+   - Sliding session: the cookie lasts 30 days (`SESSION_MAX_AGE`) and middleware renews it on the first `/api` request after it is a day old (`shouldRenewSession()` / `renewSessionToken()`), so active users stay signed in. `/api/auth/session` (checked when the app opens) signs out an account that no longer exists or is deactivated
    - [middleware.ts](middleware.ts) rejects every `/api` request without a valid cookie (401), except login/logout, forgot/reset password and the public share-link routes (`GET /api/share-link/[id]`, `GET /api/share-link/[id]/bayaran`, `POST /api/share-link/[id]/increment`)
    - Sensitive routes also check permissions server-side with `requirePermission()` ([lib/server-auth.ts](lib/server-auth.ts)): users/roles/permissions (pengguna), kontrak/kontraktor and share-link management (tetapan)
    - The client logs out on any 401 from `/api` ([lib/auth-provider.tsx](lib/auth-provider.tsx))
