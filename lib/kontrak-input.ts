@@ -35,6 +35,7 @@ export function parseKontrakInput(body: any): KontrakInput | string {
     kerja: text(body?.kerja).replace(/\s+/g, " "),
     nilaiKontrak: parseNilai(body?.nilaiKontrak),
     wcp: parseNilai(body?.wcp),
+    vo: parseNilai(body?.vo),
     eot: [],
     status: (text(body?.status).toUpperCase() || "AKTIF") as KontrakStatus,
   }
@@ -46,6 +47,8 @@ export function parseKontrakInput(body: any): KontrakInput | string {
   if (input.nilaiKontrak !== null && input.nilaiKontrak > 999_999_999_999.99) return "Nilai kontrak terlalu besar"
   if (Number.isNaN(input.wcp)) return "Nilai WCP tidak sah (contoh: 6250.00)"
   if (input.wcp !== null && input.wcp > 999_999_999_999.99) return "Nilai WCP terlalu besar"
+  if (Number.isNaN(input.vo)) return "Nilai Arahan Perubahan (VO) tidak sah (contoh: 15000.00)"
+  if (input.vo !== null && input.vo > 999_999_999_999.99) return "Nilai Arahan Perubahan (VO) terlalu besar"
   // Sambung Masa (EOT): rows without a date are dropped; Kali ke defaults to the row's place
   const eotRows: unknown[] = Array.isArray(body?.eot) ? body.eot : []
   const eot: KontrakEot[] = []

@@ -37,7 +37,7 @@ import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
 type EotRow = { kali: string; tarikh: string }
-type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp" | "eot"> & { nilaiKontrak: string; wcp: string; eot: EotRow[] }
+type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp" | "vo" | "eot"> & { nilaiKontrak: string; wcp: string; vo: string; eot: EotRow[] }
 
 /** The Lagi section starts with one empty Sambung Masa (EOT) row */
 const EMPTY_EOT: EotRow[] = [{ kali: "1", tarikh: "" }]
@@ -57,6 +57,7 @@ const EMPTY: KontrakForm = {
   kerja: "",
   nilaiKontrak: "",
   wcp: "",
+  vo: "",
   eot: EMPTY_EOT,
   status: "AKTIF",
 }
@@ -256,6 +257,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       kerja: item.kerja,
       nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
       wcp: item.wcp === null ? "" : formatNilai(item.wcp),
+      vo: item.vo === null ? "" : formatNilai(item.vo),
       eot: item.eot.length ? item.eot.map((e) => ({ kali: String(e.kali), tarikh: e.tarikh })) : EMPTY_EOT,
       status: item.status,
     })
@@ -278,6 +280,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     }
     if (Number.isNaN(parseNilai(form.nilaiKontrak))) {
       toast.error("Nilai kontrak tidak sah (contoh: 125000.00)")
+      return
+    }
+    if (Number.isNaN(parseNilai(form.vo))) {
+      toast.error("Nilai Arahan Perubahan (VO) tidak sah (contoh: 15000.00)")
       return
     }
     if (Number.isNaN(parseNilai(form.wcp))) {
@@ -477,6 +483,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           {item.wcp !== null && (
                             <span className="block text-caption-1-regular font-normal text-text-tertiary">WCP RM {formatNilai(item.wcp)}</span>
                           )}
+                          {item.vo !== null && (
+                            <span className="block text-caption-1-regular font-normal text-text-tertiary">VO RM {formatNilai(item.vo)}</span>
+                          )}
                         </td>
                         <td className="whitespace-nowrap text-text-secondary">
                           <Tempoh item={item} />
@@ -526,7 +535,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </div>
                     {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
-                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja, item.wcp !== null && `WCP RM ${formatNilai(item.wcp)}`]
+                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja, item.wcp !== null && `WCP RM ${formatNilai(item.wcp)}`, item.vo !== null && `VO RM ${formatNilai(item.vo)}`]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -733,8 +742,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                 >
                   <span className="flex items-baseline gap-2">
                     <span className="text-body-semibold text-text-primary">Lagi</span>
-                    {!lagiOpen && eotCount > 0 && (
-                      <span className="text-caption-1-regular text-text-secondary">{eotCount} sambung masa</span>
+                    {!lagiOpen && (eotCount > 0 || form.vo) && (
+                      <span className="text-caption-1-regular text-text-secondary">
+                        {[eotCount > 0 && `${eotCount} sambung masa`, form.vo && "VO"].filter(Boolean).join(" · ")}
+                      </span>
                     )}
                   </span>
                   <RiArrowDownSLine
@@ -793,6 +804,14 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       <RiAddLine className="size-4" aria-hidden />
                       Tambah sambung masa
                     </button>
+
+                    {/* Arahan Perubahan (VO), under Sambung Masa */}
+                    <div className="flex flex-col gap-3 border-t border-border-table pt-3">
+                      <h4 className="text-caption-1-semibold text-text-primary">Arahan Perubahan (VO)</h4>
+                      <FormField label="Nilai (RM)" htmlFor="kontrak-vo">
+                        <RmInput id="kontrak-vo" value={form.vo} onChange={(value) => setForm((prev) => ({ ...prev, vo: value }))} />
+                      </FormField>
+                    </div>
                   </div>
                 )}
               </section>
