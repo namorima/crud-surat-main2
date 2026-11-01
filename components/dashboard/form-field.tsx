@@ -30,8 +30,13 @@ export function FormField({
   )
 }
 
-/** Header / scrolling body / footer frame for a BoardUI form dialog's content. */
+/**
+ * Header / scrolling body / footer frame for a BoardUI form dialog's content.
+ * The body's rows are max-content (auto-rows-max): Safari (iPad / iPhone) let an
+ * `overflow-hidden` child shrink to the space left in the body, clipping it
+ * instead of scrolling (the Dashboard kontrak table lost its last rows).
+ */
 export const dialogFrameClass = "flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:p-0"
 export const dialogHeaderClass = "space-y-1 border-b border-border-table px-4 pt-4 pb-3 text-left sm:px-6 sm:pt-5"
-export const dialogBodyClass = "grid min-h-0 flex-1 content-start gap-3 overflow-y-auto px-4 py-4 sm:px-6"
+export const dialogBodyClass = "grid min-h-0 flex-1 auto-rows-max content-start gap-3 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6"
 export const dialogFooterClass = "flex gap-2 border-t border-border-table px-4 py-3 sm:justify-end sm:px-6"
