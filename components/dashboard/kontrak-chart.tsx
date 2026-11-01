@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useRouter } from "next/navigation"
-import { useIsMobile } from "@/hooks/use-mobile"
 import type { Bayaran } from "@/types/bayaran"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartCard } from "@/components/dashboard/charts"
@@ -145,7 +143,55 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
         <p className="py-4 text-center text-caption-1-regular text-text-tertiary">Tiada bayaran berkontrak dalam tempoh dan tapisan ini.</p>
       ) : (
         <>
-          <KontrakBars rows={shown} info={info} showKawasan={kawasanShown === ALL} onSelect={setSelected} />
+          <ul className="flex flex-col gap-3">
+            {shown.map((row, i) => {
+              const total = row.paid + row.unpaid
+              const nilai = info[row.kawasan]?.[row.noKontrak]?.nilaiKontrak ?? null
+              const used = nilai ? Math.round((total / nilai) * 100) : null
+              return (
+                <li key={row.key}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(row)}
+                    className="motion-press -mx-2 flex w-[calc(100%+1rem)] cursor-pointer flex-col gap-1 rounded-xl px-2 py-1 text-start outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+                    title={`${row.noKontrak} (${row.kawasan}): dibayar ${formatRM(row.paid)}, belum dibayar ${formatRM(row.unpaid)}. Klik untuk butiran.`}
+                  >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="text-caption-1-semibold text-text-primary">{row.noKontrak}</span>
+                      <span className="ms-1.5 text-caption-1-regular text-text-secondary [overflow-wrap:anywhere]">
+                        {[kawasanShown === ALL && row.kawasan, row.kontraktor].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right text-caption-1-semibold text-text-primary tabular-nums">
+                      {formatRM(total, true)}
+                      <span className="ms-1 font-normal text-text-tertiary">· {row.count} rekod</span>
+                    </span>
+                  </div>
+                  <div className="flex h-1.5 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+                    <div
+                      className="motion-bar h-full"
+                      style={{ width: `${(row.paid / top) * 100}%`, background: "var(--viz-1)", animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                    />
+                    <div
+                      className="motion-bar h-full"
+                      style={{ width: `${(row.unpaid / top) * 100}%`, background: "var(--viz-2)", animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                    />
+                  </div>
+                  <span className="text-caption-2-regular text-text-tertiary tabular-nums">
+                    Dibayar {formatRM(row.paid, true)} · Belum {formatRM(row.unpaid, true)}
+                    {used !== null && (
+                      <span className={cx(used > 100 && "font-medium text-text-destructive")}>
+                        {" "}
+                        · {used}% daripada nilai kontrak {formatRM(nilai!, true)}
+                      </span>
+                    )}
+                  </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
           {rows.length > SHOWN && (
             <button
               type="button"
@@ -170,115 +216,6 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
         }}
       />
     </ChartCard>
-  )
-}
-
-type BarDatum = { label: string; paid: number; unpaid: number; total: number; row: KontrakRow; nilai: number | null }
-
-const axisRM = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}j` : v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))
-
-/** Horizontal stacked bars (paid / unpaid) per kontrak; a bar or its label opens the detail. */
-function KontrakBars({
-  rows,
-  info,
-  showKawasan,
-  onSelect,
-}: {
-  rows: KontrakRow[]
-  info: Record<string, Record<string, KontrakInfo>>
-  showKawasan: boolean
-  onSelect: (row: KontrakRow) => void
-}) {
-  const isMobile = useIsMobile()
-  const data: BarDatum[] = rows.map((row) => ({
-    label: showKawasan && !isMobile ? `${row.noKontrak} · ${row.kawasan}` : row.noKontrak,
-    paid: row.paid,
-    unpaid: row.unpaid,
-    total: row.paid + row.unpaid,
-    row,
-    nilai: info[row.kawasan]?.[row.noKontrak]?.nilaiKontrak ?? null,
-  }))
-  const pick = (entry: unknown) => {
-    const datum = (entry as { payload?: BarDatum })?.payload
-    if (datum?.row) onSelect(datum.row)
-  }
-  const labelWidth = isMobile ? 84 : showKawasan ? 200 : 120
-
-  return (
-    <div className="w-full" style={{ height: data.length * (isMobile ? 34 : 38) + 36 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 0, right: isMobile ? 44 : 64, left: 0, bottom: 0 }}
-          barCategoryGap="22%"
-          onClick={(state) => {
-            const i = (state as { activeTooltipIndex?: number | string } | null)?.activeTooltipIndex
-            const datum = i === undefined || i === null ? undefined : data[Number(i)]
-            if (datum) onSelect(datum.row)
-          }}
-          className="cursor-pointer"
-        >
-          <CartesianGrid horizontal={false} stroke="var(--color-border-table)" />
-          <XAxis
-            type="number"
-            tickLine={false}
-            axisLine={{ stroke: "var(--color-border-table)" }}
-            tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }}
-            tickFormatter={axisRM}
-            allowDecimals={false}
-          />
-          <YAxis
-            type="category"
-            dataKey="label"
-            width={labelWidth}
-            tickLine={false}
-            axisLine={false}
-            interval={0}
-            tick={{ fontSize: 11, fill: "var(--color-text-secondary)" }}
-          />
-          <Tooltip
-            cursor={{ fill: "var(--viz-track)" }}
-            content={({ active, payload }) => {
-              const d = active ? (payload?.[0]?.payload as BarDatum | undefined) : undefined
-              if (!d) return null
-              const used = d.nilai ? Math.round((d.total / d.nilai) * 100) : null
-              return (
-                <div className="max-w-64 rounded-xl border border-border-table bg-background-primary-default px-3 py-2 text-caption-1-regular shadow-md">
-                  <p className="text-caption-1-semibold text-text-primary">{d.row.noKontrak}</p>
-                  <p className="mb-1 text-text-tertiary">{[d.row.kawasan, d.row.kontraktor].filter(Boolean).join(" · ")}</p>
-                  <p className="flex items-center gap-1.5 text-text-secondary">
-                    <span className="size-2 rounded-sm" style={{ background: "var(--viz-1)" }} aria-hidden />
-                    Sudah dibayar: <span className="font-semibold text-text-primary tabular-nums">{formatRM(d.paid)}</span>
-                  </p>
-                  <p className="flex items-center gap-1.5 text-text-secondary">
-                    <span className="size-2 rounded-sm" style={{ background: "var(--viz-2)" }} aria-hidden />
-                    Belum dibayar: <span className="font-semibold text-text-primary tabular-nums">{formatRM(d.unpaid)}</span>
-                  </p>
-                  <p className="mt-1 text-text-secondary tabular-nums">
-                    {d.row.count} rekod
-                    {used !== null && (
-                      <span className={cx(used > 100 && "font-medium text-text-destructive")}> · {used}% daripada nilai kontrak {formatRM(d.nilai!, true)}</span>
-                    )}
-                  </p>
-                  <p className="mt-1 text-caption-2-regular text-text-tertiary">Klik untuk butiran bayaran</p>
-                </div>
-              )
-            }}
-          />
-          <Bar dataKey="paid" stackId="k" fill="var(--viz-1)" isAnimationActive={false} onClick={pick} />
-          <Bar dataKey="unpaid" stackId="k" fill="var(--viz-2)" radius={[0, 4, 4, 0]} isAnimationActive={false} onClick={pick}>
-            <LabelList
-              dataKey="total"
-              position="right"
-              // Phones: "72.0k" so the label stays on one line
-              formatter={(v: unknown) => (isMobile ? formatRM(Number(v), true).replace("RM ", "") : formatRM(Number(v), true))}
-              style={{ fontSize: 11, fill: "var(--color-text-primary)", fontWeight: 600 }}
-            />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
   )
 }
 
