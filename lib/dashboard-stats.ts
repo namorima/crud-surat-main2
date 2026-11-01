@@ -222,6 +222,52 @@ export function kontrakBayaran(
   return [...map.values()].sort((a, b) => b.paid + b.unpaid - (a.paid + a.unpaid))
 }
 
+export type KontrakDetail = {
+  /** Every non-batal bayaran of the kontrak (any period), oldest tarikh terima first */
+  rows: Bayaran[]
+  jumlahNilai: number
+  jumlahWangTahanan: number
+  /** Nilai of the WCP bayaran */
+  jumlahWcp: number
+  /** Kemajuan claimed: nilai + wang tahanan of every bayaran except WCP and WANG TAHANAN (release) */
+  kemajuan: number
+}
+
+/**
+ * The bayaran of one kontrak (kawasan + no kontrak) for the Dashboard detail.
+ * Peratus Bayaran = kemajuan / Nilai Kontrak: KEMAJUAN (and records keyed before
+ * Jenis Bayaran, and PIECERATE) count their nilai plus the wang tahanan held
+ * back; WCP is left out, and a WANG TAHANAN bayaran (the retention paid out
+ * later) too, since its amount is already counted with its kemajuan.
+ */
+export function kontrakDetail(all: Bayaran[], kawasan: string, noKontrak: string): KontrakDetail {
+  const rows = all
+    .filter(
+      (b) =>
+        !isCancelled(b) &&
+        (b.noKontrak || "").trim().toUpperCase() === noKontrak &&
+        clean(b.daripada, "Tidak diketahui").toUpperCase() === kawasan,
+    )
+    .sort(
+      (a, b) =>
+        (parseDate(a.tarikhTerima)?.getTime() ?? 0) - (parseDate(b.tarikhTerima)?.getTime() ?? 0) || (a.ids ?? 0) - (b.ids ?? 0),
+    )
+  let jumlahNilai = 0
+  let jumlahWangTahanan = 0
+  let jumlahWcp = 0
+  let kemajuan = 0
+  for (const b of rows) {
+    const nilai = parseAmount(b.nilaiBayaran)
+    const tahanan = parseAmount(b.wangTahanan)
+    const jenis = (b.jenisBayaran || "").toUpperCase()
+    jumlahNilai += nilai
+    jumlahWangTahanan += tahanan
+    if (jenis === "WCP") jumlahWcp += nilai
+    else if (jenis !== "WANG TAHANAN") kemajuan += nilai + tahanan
+  }
+  return { rows, jumlahNilai, jumlahWangTahanan, jumlahWcp, kemajuan }
+}
+
 // ---------------------------------------------------------------- Surat
 
 const isDone = (s: Surat) => s.status === "SELESAI"

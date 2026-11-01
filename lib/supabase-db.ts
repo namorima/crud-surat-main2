@@ -758,8 +758,9 @@ export async function getContractCategoryData() {
     const contractorData: Record<string, string> = {}
     // Kerja and nilai per kawasan and no kontrak (rows of one kontrak share them;
     // first filled value wins). kontrakInfo (by number only) is the first kawasan's
-    const kontrakInfoByKawasan: Record<string, Record<string, { kerja: string; nilaiKontrak: number | null }>> = {}
-    const kontrakInfo: Record<string, { kerja: string; nilaiKontrak: number | null }> = {}
+    type Info = { kerja: string; nilaiKontrak: number | null; wcp: number | null }
+    const kontrakInfoByKawasan: Record<string, Record<string, Info>> = {}
+    const kontrakInfo: Record<string, Info> = {}
     const allContracts: string[] = []
     const allCategories: string[] = []
     // A kontrak (kawasan + no kontrak) with an AKTIF row stays selectable in Tambah Rekod Bayaran
@@ -802,11 +803,12 @@ export async function getContractCategoryData() {
       }
 
       if (noKontrak) {
-        const info = ((kontrakInfoByKawasan[kawasan] ??= {})[noKontrak] ??= { kerja: "", nilaiKontrak: null })
+        const info = ((kontrakInfoByKawasan[kawasan] ??= {})[noKontrak] ??= { kerja: "", nilaiKontrak: null, wcp: null })
         if (!info.kerja && row.kerja) info.kerja = row.kerja
         if (info.nilaiKontrak === null && row.nilai_kontrak !== null && row.nilai_kontrak !== undefined) {
           info.nilaiKontrak = Number(row.nilai_kontrak)
         }
+        if (info.wcp === null && row.wcp !== null && row.wcp !== undefined) info.wcp = Number(row.wcp)
         kontrakInfo[noKontrak] ??= info
       }
 
