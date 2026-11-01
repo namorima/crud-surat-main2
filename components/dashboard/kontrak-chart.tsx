@@ -150,8 +150,15 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
               const used = nilai ? Math.round((total / nilai) * 100) : null
               return (
                 <li key={row.key}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        setSelected(row)
+                      }
+                    }}
                     onClick={() => setSelected(row)}
                     className="motion-press -mx-2 flex w-[calc(100%+1rem)] cursor-pointer flex-col gap-1 rounded-xl px-2 py-1 text-start outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
                     title={`${row.noKontrak} (${row.kawasan}): dibayar ${formatRM(row.paid)}, belum dibayar ${formatRM(row.unpaid)}. Klik untuk butiran.`}
@@ -168,7 +175,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
                       <span className="ms-1 font-normal text-text-tertiary">· {row.count} rekod</span>
                     </span>
                   </div>
-                  <div className="flex h-1.5 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
                     <div
                       className="motion-bar h-full"
                       style={{ width: `${(row.paid / top) * 100}%`, background: "var(--viz-1)", animationDelay: `${Math.min(i, 8) * 40}ms` }}
@@ -187,7 +194,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
                       </span>
                     )}
                   </span>
-                  </button>
+                  </div>
                 </li>
               )
             })}
