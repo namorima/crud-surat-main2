@@ -22,6 +22,8 @@ export const BayaranSchema = z.object({
   bayaranKe: z.string().optional(),
   // Optional; only sent when "Wang Tahanan" is ticked in the form
   wangTahanan: z.string().optional(),
+  // "Akhir" tick under Bayaran Ke; only kept for KEMAJUAN
+  bayaranAkhir: z.boolean().optional(),
   kategori: z.string().optional(),
   noKontrak: z.string().optional(),
   // Only kept for a PIECERATE bayaran (no kontrak to look the name up from)

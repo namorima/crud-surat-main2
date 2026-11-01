@@ -112,7 +112,10 @@ export function KontrakDetailDialog({
                         <IdLink b={b} onOpen={onOpenBayaran} />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{b.tarikhTerima || "-"}</td>
-                      <td className="px-3 py-2">{b.bayaranKe || "-"}</td>
+                      <td className="px-3 py-2">
+                        {b.bayaranKe || "-"}
+                        {b.bayaranAkhir && <span className="ms-1 text-caption-1-medium text-text-secondary">(Akhir)</span>}
+                      </td>
                       <td className="px-3 py-2">{b.jenisBayaran ? <JenisChip jenis={b.jenisBayaran} /> : <span className="text-text-tertiary">-</span>}</td>
                       <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums">{rm(parseAmount(b.nilaiBayaran))}</td>
                       <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums">
@@ -150,7 +153,12 @@ export function KontrakDetailDialog({
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="flex flex-wrap items-center gap-1.5 text-body-regular">
                       {b.jenisBayaran && <JenisChip jenis={b.jenisBayaran} />}
-                      {b.bayaranKe && <span className="text-text-secondary">Bayaran ke-{b.bayaranKe}</span>}
+                      {b.bayaranKe && (
+                        <span className="text-text-secondary">
+                          Bayaran ke-{b.bayaranKe}
+                          {b.bayaranAkhir && " (Akhir)"}
+                        </span>
+                      )}
                     </span>
                     <span className="text-body-semibold tabular-nums">{rm(parseAmount(b.nilaiBayaran))}</span>
                   </div>

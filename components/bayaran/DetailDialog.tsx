@@ -253,6 +253,7 @@ export function DetailDialog({
                       {b.bayaranKe && (
                         <Chip variant="caption" color="soft" className="border border-border-button-default">
                           Bayaran ke-{b.bayaranKe}
+                          {b.bayaranAkhir && " (Akhir)"}
                         </Chip>
                       )}
                     </div>

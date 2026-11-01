@@ -11,6 +11,8 @@ export type Bayaran = {
   bayaranKe: string
   /** Wang Tahanan amount ("12,345.00"), optional; "" when the record has none */
   wangTahanan?: string
+  /** "Akhir": the last kemajuan payment; only for KEMAJUAN */
+  bayaranAkhir?: boolean
   kategori: string
   noKontrak: string
   namaKontraktor: string // New field - Column S

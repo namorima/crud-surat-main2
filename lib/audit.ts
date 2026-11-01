@@ -49,6 +49,7 @@ export const BAYARAN_AUDIT_FIELDS: Record<string, string> = {
   nilai_bayaran: "Nilai Bayaran",
   bayaran_ke: "Bayaran Ke",
   wang_tahanan: "Wang Tahanan",
+  bayaran_akhir: "Bayaran Akhir",
   jenis_bayaran: "Jenis Bayaran",
   kategori: "Kategori",
   no_kontrak: "No Kontrak",

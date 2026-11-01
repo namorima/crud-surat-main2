@@ -30,7 +30,7 @@ export function kontrakShareText(s: KontrakShare, imageLink?: string): string {
     "",
     `*Senarai Bayaran (${s.detail.rows.length} rekod)*`,
     ...s.detail.rows.flatMap((b) => {
-      const head = [`#${b.ids ?? "-"}`, b.tarikhTerima, b.bayaranKe && `Ke-${b.bayaranKe}`, b.jenisBayaran].filter(Boolean).join(" · ")
+      const head = [`#${b.ids ?? "-"}`, b.tarikhTerima, b.bayaranKe && `Ke-${b.bayaranKe}${b.bayaranAkhir ? " (Akhir)" : ""}`, b.jenisBayaran].filter(Boolean).join(" · ")
       const tahanan = b.wangTahanan ? ` (WT ${rm(parseAmount(b.wangTahanan))})` : ""
       return [`${isPaid(b) ? "✅" : "🕑"} ${head}`, `> ${rm(parseAmount(b.nilaiBayaran))}${tahanan} · _${statusOf(b)}_`]
     }),
@@ -136,7 +136,7 @@ function layout(ctx: CanvasRenderingContext2D, font: string, s: KontrakShare, dr
   y += 22
   for (const b of s.detail.rows) {
     const tahanan = b.wangTahanan ? `Wang Tahanan ${rm(parseAmount(b.wangTahanan))}` : ""
-    const sub = [b.bayaranKe && `Bayaran ke-${b.bayaranKe}`, b.jenisBayaran].filter(Boolean).join(" · ")
+    const sub = [b.bayaranKe && `Bayaran ke-${b.bayaranKe}${b.bayaranAkhir ? " (Akhir)" : ""}`, b.jenisBayaran].filter(Boolean).join(" · ")
     const h = 58 + (tahanan ? 16 : 0)
     box(PAD, y, inner, h, 12, C.page, C.border)
     text(`#${b.ids ?? "-"}`, PAD + 12, y + 11, 700, 12, C.accent)
