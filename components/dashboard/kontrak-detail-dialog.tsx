@@ -1,12 +1,16 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
+import { RiLoader4Line, RiShareLine } from "@remixicon/react"
+import { toast } from "sonner"
 import type { Bayaran } from "@/types/bayaran"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/base/buttons/button"
 import { Chip } from "@/components/base/badges/chip"
 import { dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
 import { formatRM, isPaid, kontrakDetail, parseAmount, type KontrakRow } from "@/lib/dashboard-stats"
+import { uploadToImgBB } from "@/lib/imgbb-service"
+import { kontrakShareImage, kontrakShareText } from "@/lib/kontrak-share"
 import { cx } from "@/utils/cx"
 
 export type KontrakInfo = { kerja: string; nilaiKontrak: number | null; wcp?: number | null }
@@ -35,6 +39,24 @@ export function KontrakDetailDialog({
   const detail = useMemo(() => (row ? kontrakDetail(bayaran, row.kawasan, row.noKontrak) : null), [row, bayaran])
   const nilaiKontrak = info?.nilaiKontrak ?? null
   const peratus = detail && nilaiKontrak ? (detail.kemajuan / nilaiKontrak) * 100 : null
+  const [sharing, setSharing] = useState(false)
+
+  // WhatsApp: a card image (uploaded to ImgBB, link in the text) and the text
+  // summary. If the image fails, the text is still shared.
+  const share = async () => {
+    if (!row || !detail) return
+    const data = { row, detail, kerja: info?.kerja, nilaiKontrak, wcp: info?.wcp ?? null }
+    setSharing(true)
+    let link: string | undefined
+    try {
+      link = await uploadToImgBB(await kontrakShareImage(data))
+    } catch (error) {
+      console.error("Kontrak share image failed:", error)
+      toast.error("Gagal menjana imej; teks sahaja dikongsi")
+    }
+    setSharing(false)
+    window.location.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(kontrakShareText(data, link))}`
+  }
 
   return (
     <Dialog open={!!row} onOpenChange={(open) => !open && onClose()}>
@@ -90,7 +112,10 @@ export function KontrakDetailDialog({
                         <IdLink b={b} onOpen={onOpenBayaran} />
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{b.tarikhTerima || "-"}</td>
-                      <td className="px-3 py-2">{b.bayaranKe || "-"}</td>
+                      <td className="px-3 py-2">
+                        {b.bayaranKe || "-"}
+                        {b.bayaranAkhir && <span className="ms-1 text-caption-1-medium text-text-secondary">(Akhir)</span>}
+                      </td>
                       <td className="px-3 py-2">{b.jenisBayaran ? <JenisChip jenis={b.jenisBayaran} /> : <span className="text-text-tertiary">-</span>}</td>
                       <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums">{rm(parseAmount(b.nilaiBayaran))}</td>
                       <td className="px-3 py-2 text-end whitespace-nowrap tabular-nums">
@@ -128,7 +153,12 @@ export function KontrakDetailDialog({
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="flex flex-wrap items-center gap-1.5 text-body-regular">
                       {b.jenisBayaran && <JenisChip jenis={b.jenisBayaran} />}
-                      {b.bayaranKe && <span className="text-text-secondary">Bayaran ke-{b.bayaranKe}</span>}
+                      {b.bayaranKe && (
+                        <span className="text-text-secondary">
+                          Bayaran ke-{b.bayaranKe}
+                          {b.bayaranAkhir && " (Akhir)"}
+                        </span>
+                      )}
                     </span>
                     <span className="text-body-semibold tabular-nums">{rm(parseAmount(b.nilaiBayaran))}</span>
                   </div>
@@ -167,6 +197,22 @@ export function KontrakDetailDialog({
         <footer className={dialogFooterClass}>
           <Button variant="secondary" size="small" onClick={onClose} className="flex-1 sm:flex-none">
             Tutup
+          </Button>
+          <Button
+            size="small"
+            leadingIcon={sharing ? undefined : RiShareLine}
+            onClick={share}
+            disabled={sharing || !detail}
+            className="flex-1 sm:flex-none"
+          >
+            {sharing ? (
+              <span className="inline-flex items-center gap-1.5">
+                <RiLoader4Line className="size-4 animate-spin" aria-hidden />
+                Menjana…
+              </span>
+            ) : (
+              "Share"
+            )}
           </Button>
         </footer>
       </DialogContent>

@@ -66,6 +66,7 @@ const EMPTY_FORM = {
   adaWangTahanan: false,
   wangTahanan: "",
   bayaranKe: "",
+  bayaranAkhir: false,
   kategori: "",
   noKontrak: "",
   namaKontraktor: "",
@@ -449,16 +450,29 @@ export function AddEditForm({
                   </Field>
                 )}
                 {!isWcp && (
-                  <Field label="Bayaran Ke" htmlFor="bayaranKe" required={!isEdit} error={formErrors.bayaranKe}>
-                    <Input
-                      id="bayaranKe"
-                      className={cx(formErrors.bayaranKe && errorRing)}
-                      inputMode="numeric"
-                      value={formData.bayaranKe}
-                      onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
-                      disabled={locked}
-                    />
-                  </Field>
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Field label="Bayaran Ke" htmlFor="bayaranKe" required={!isEdit} error={formErrors.bayaranKe}>
+                      <Input
+                        id="bayaranKe"
+                        className={cx(formErrors.bayaranKe && errorRing)}
+                        inputMode="numeric"
+                        value={formData.bayaranKe}
+                        onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
+                        disabled={locked}
+                      />
+                    </Field>
+                    {/* The last kemajuan payment of the kontrak; KEMAJUAN only */}
+                    {canWangTahanan && (
+                      <Checkbox
+                        id="bayaranAkhir"
+                        isSelected={!!formData.bayaranAkhir}
+                        isDisabled={locked}
+                        onChange={(checked) => setFormData((prev: any) => ({ ...prev, bayaranAkhir: checked }))}
+                      >
+                        <span className="whitespace-nowrap">Akhir</span>
+                      </Checkbox>
+                    )}
+                  </div>
                 )}
               </div>
 

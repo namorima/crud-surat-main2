@@ -5,6 +5,7 @@ import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { takeBayaranSeed } from "@/lib/bayaran-seed";
 import { useAuth } from "@/lib/auth-provider";
 import type { Bayaran } from "@/types/bayaran";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ export default function BayaranPage() {
     adaWangTahanan: false,
     wangTahanan: "",
     bayaranKe: "",
+    bayaranAkhir: false,
     kategori: "",
     noKontrak: "",
     namaKontraktor: "",
@@ -237,6 +239,14 @@ export default function BayaranPage() {
       setLoading(false);
     }
   }, [lastFetchTime, bayaran.length]);
+
+  // Opened from the Dashboard (?buka=): start from the rows it already had, so
+  // the Rekod Bayaran shows at once; the fetch below refreshes them
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).get("buka")) return;
+    const seed = takeBayaranSeed();
+    if (seed?.length) setBayaran((prev) => (prev.length ? prev : seed));
+  }, []);
 
   useEffect(() => {
     fetchWithCache();
@@ -540,7 +550,7 @@ export default function BayaranPage() {
       // WCP is paid once: Bayaran Ke is hidden and cleared
       let next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
       // Only KEMAJUAN offers the Wang Tahanan tick
-      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "" };
+      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "", bayaranAkhir: false };
       if (prev.jenisBayaran === PIECERATE) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
       return next;
     });
@@ -901,6 +911,8 @@ export default function BayaranPage() {
         // Unticked or not KEMAJUAN: the record has no Wang Tahanan; WCP: no Bayaran Ke
         wangTahanan: adaWangTahanan && fields.jenisBayaran === KEMAJUAN ? fields.wangTahanan : "",
         bayaranKe: fields.jenisBayaran === WCP ? "" : fields.bayaranKe,
+        // Akhir: KEMAJUAN only
+        bayaranAkhir: fields.jenisBayaran === KEMAJUAN && fields.bayaranAkhir,
         user: user?.name || "Unknown",
       };
 
@@ -938,6 +950,7 @@ export default function BayaranPage() {
           adaWangTahanan: false,
           wangTahanan: "",
           bayaranKe: "",
+          bayaranAkhir: false,
           kategori: "",
           noKontrak: "",
           namaKontraktor: "",
@@ -1003,6 +1016,7 @@ export default function BayaranPage() {
       adaWangTahanan: !!bayaran.wangTahanan,
       wangTahanan: (bayaran.wangTahanan || "").replace(/[^\d.-]/g, ""),
       bayaranKe: bayaran.bayaranKe,
+      bayaranAkhir: !!bayaran.bayaranAkhir,
       kategori: bayaran.kategori,
       noKontrak: bayaran.noKontrak,
       namaKontraktor: bayaran.namaKontraktor || "",
