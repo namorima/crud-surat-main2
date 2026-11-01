@@ -179,6 +179,47 @@ export function bayaranStats(all: Bayaran[], period: Period, now = new Date()) {
   }
 }
 
+export type KontrakRow = {
+  key: string
+  kawasan: string
+  noKontrak: string
+  kontraktor: string
+  kategori: string
+  paid: number
+  unpaid: number
+  count: number
+}
+
+/**
+ * Bayaran per kontrak (kawasan + no kontrak) in the period, largest total
+ * first. Batal records and records without a no kontrak are left out;
+ * kawasan / kategori "" means all.
+ */
+export function kontrakBayaran(
+  all: Bayaran[],
+  period: Period,
+  filter: { kawasan?: string; kategori?: string } = {},
+  now = new Date(),
+): KontrakRow[] {
+  const start = periodStart(period, now)
+  const map = new Map<string, KontrakRow>()
+  for (const b of all) {
+    const noKontrak = (b.noKontrak || "").trim().toUpperCase()
+    if (!noKontrak || isCancelled(b) || !inPeriod(parseDate(b.tarikhTerima), start)) continue
+    const kawasan = clean(b.daripada, "Tidak diketahui").toUpperCase()
+    const kategori = clean(b.kategori, "Tiada kategori")
+    if (filter.kawasan && kawasan !== filter.kawasan) continue
+    if (filter.kategori && kategori !== filter.kategori) continue
+    const key = `${kawasan}|${noKontrak}`
+    const row = map.get(key) ?? { key, kawasan, noKontrak, kontraktor: "", kategori, paid: 0, unpaid: 0, count: 0 }
+    row[isPaid(b) ? "paid" : "unpaid"] += parseAmount(b.nilaiBayaran)
+    row.count += 1
+    if (!row.kontraktor && b.namaKontraktor) row.kontraktor = b.namaKontraktor.trim().toUpperCase()
+    map.set(key, row)
+  }
+  return [...map.values()].sort((a, b) => b.paid + b.unpaid - (a.paid + a.unpaid))
+}
+
 // ---------------------------------------------------------------- Surat
 
 const isDone = (s: Surat) => s.status === "SELESAI"

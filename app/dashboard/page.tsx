@@ -16,6 +16,7 @@ import { PageLoader } from "@/components/dashboard/page-loader"
 import { useNavigation } from "@/components/dashboard/sidebar"
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control"
 import { BarList, ChartCard, KpiGrid, MonthlyStack, ORDINAL } from "@/components/dashboard/charts"
+import { KontrakChart } from "@/components/dashboard/kontrak-chart"
 import {
   PERIOD_LABEL,
   bayaranStats,
@@ -118,7 +119,7 @@ export default function DashboardPage() {
       ) : error ? (
         <p className="rounded-2xl border border-border-table bg-background-primary-default p-6 text-center text-body-regular text-text-secondary">{error}</p>
       ) : shown === "bayaran" ? (
-        <BayaranSection stats={b} />
+        <BayaranSection stats={b} bayaran={bayaran} period={period} />
       ) : shown === "surat" ? (
         <SuratSection stats={s} />
       ) : (
@@ -130,7 +131,7 @@ export default function DashboardPage() {
   )
 }
 
-function BayaranSection({ stats }: { stats: ReturnType<typeof bayaranStats> }) {
+function BayaranSection({ stats, bayaran, period }: { stats: ReturnType<typeof bayaranStats>; bayaran: Bayaran[]; period: Period }) {
   const paidShare = stats.total.amount ? Math.round((stats.paid.amount / stats.total.amount) * 100) : 0
   const funnelStart = stats.funnel[0]?.value ?? 0
 
@@ -156,6 +157,8 @@ function BayaranSection({ stats }: { stats: ReturnType<typeof bayaranStats> }) {
           axisFormat={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))}
         />
       </ChartCard>
+
+      <KontrakChart bayaran={bayaran} period={period} />
 
       <div className="motion-stagger grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <ChartCard title="Peringkat proses" caption="Berapa rekod sudah melepasi setiap peringkat">
