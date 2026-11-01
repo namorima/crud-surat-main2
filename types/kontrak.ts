@@ -17,6 +17,8 @@ export interface Kontrak {
   kerja: string
   /** Contract value in RM, or null when not set */
   nilaiKontrak: number | null
+  /** Wang Cagaran Prestasi (WCP) in RM, or null when not set */
+  wcp: number | null
   /** Only AKTIF contracts are offered in Tambah Rekod Bayaran */
   status: KontrakStatus
 }
