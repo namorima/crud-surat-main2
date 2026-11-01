@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { RiAddLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiRefreshLine, RiSearchLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiRefreshLine, RiSearchLine } from "@remixicon/react"
 import type { Kontrak, KontrakInput, KontrakStatus } from "@/types/kontrak"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,7 +36,11 @@ import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialog
 import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
-type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp"> & { nilaiKontrak: string; wcp: string }
+type EotRow = { kali: string; tarikh: string }
+type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp" | "vo" | "eot"> & { nilaiKontrak: string; wcp: string; vo: string; eot: EotRow[] }
+
+/** The Lagi section starts with one empty Sambung Masa (EOT) row */
+const EMPTY_EOT: EotRow[] = [{ kali: "1", tarikh: "" }]
 
 const formatNilai = (value: number) =>
   value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -53,6 +57,8 @@ const EMPTY: KontrakForm = {
   kerja: "",
   nilaiKontrak: "",
   wcp: "",
+  vo: "",
+  eot: EMPTY_EOT,
   status: "AKTIF",
 }
 
@@ -112,10 +118,17 @@ function formatTarikh(value: string) {
 }
 
 function Tempoh({ item }: { item: Kontrak }) {
-  if (!item.tarikhMula && !item.tarikhAkhir) return <span className="text-text-tertiary">-</span>
+  const eot = item.eot.at(-1)
+  if (!item.tarikhMula && !item.tarikhAkhir && !eot) return <span className="text-text-tertiary">-</span>
   return (
     <span className="tabular-nums">
       {formatTarikh(item.tarikhMula) || "?"} – {formatTarikh(item.tarikhAkhir) || "?"}
+      {/* The latest Sambung Masa (EOT) */}
+      {eot && (
+        <span className="block text-caption-1-regular text-text-secondary">
+          EOT ke-{eot.kali}: {formatTarikh(eot.tarikh)}
+        </span>
+      )}
     </span>
   )
 }
@@ -155,8 +168,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     } catch {}
   }
   const [formOpen, setFormOpen] = useState(false)
+  // "Lagi" (Sambung Masa / EOT) starts collapsed every time the form opens
+  const [lagiOpen, setLagiOpen] = useState(false)
+  const setEot = (update: (rows: EotRow[]) => EotRow[]) => setForm((prev) => ({ ...prev, eot: update(prev.eot) }))
   const [editing, setEditing] = useState<Kontrak | null>(null)
   const [form, setForm] = useState<KontrakForm>(EMPTY)
+  const eotCount = form.eot.filter((row) => row.tarikh).length
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
@@ -221,6 +238,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     loadKontraktorNames()
     setEditing(null)
     setForm(EMPTY)
+    setLagiOpen(false)
     setFormOpen(true)
   }
 
@@ -239,8 +257,11 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       kerja: item.kerja,
       nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
       wcp: item.wcp === null ? "" : formatNilai(item.wcp),
+      vo: item.vo === null ? "" : formatNilai(item.vo),
+      eot: item.eot.length ? item.eot.map((e) => ({ kali: String(e.kali), tarikh: e.tarikh })) : EMPTY_EOT,
       status: item.status,
     })
+    setLagiOpen(false)
     setFormOpen(true)
   }
 
@@ -259,6 +280,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     }
     if (Number.isNaN(parseNilai(form.nilaiKontrak))) {
       toast.error("Nilai kontrak tidak sah (contoh: 125000.00)")
+      return
+    }
+    if (Number.isNaN(parseNilai(form.vo))) {
+      toast.error("Nilai Arahan Perubahan (VO) tidak sah (contoh: 15000.00)")
       return
     }
     if (Number.isNaN(parseNilai(form.wcp))) {
@@ -458,6 +483,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                           {item.wcp !== null && (
                             <span className="block text-caption-1-regular font-normal text-text-tertiary">WCP RM {formatNilai(item.wcp)}</span>
                           )}
+                          {item.vo !== null && (
+                            <span className="block text-caption-1-regular font-normal text-text-tertiary">VO RM {formatNilai(item.vo)}</span>
+                          )}
                         </td>
                         <td className="whitespace-nowrap text-text-secondary">
                           <Tempoh item={item} />
@@ -507,7 +535,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </div>
                     {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
-                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja, item.wcp !== null && `WCP RM ${formatNilai(item.wcp)}`]
+                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja, item.wcp !== null && `WCP RM ${formatNilai(item.wcp)}`, item.vo !== null && `VO RM ${formatNilai(item.vo)}`]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -540,7 +568,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         {/* Fixed size on desktop (the body scrolls), a full-width sheet on phones.
-            From md: Maklumat Kontrak on the left, Nilai & Tempoh over Kerja & Kontraktor on the right */}
+            From md: a 2 x 2 grid, Maklumat Projek | Nilai & Tempoh, then Kerja & Kontraktor | Lagi */}
         <DialogContent
           className={cx(
             dialogFrameClass,
@@ -557,7 +585,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </DialogHeader>
           <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
             <div className={cx(dialogBodyClass, "gap-4 md:grid md:grid-cols-2 md:items-start")}>
-              <FormSection title="Maklumat Kontrak">
+              <FormSection title="Maklumat Projek">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Kawasan" htmlFor="kontrak-kawasan" required>
                     <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
@@ -630,80 +658,163 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                 </div>
               </FormSection>
 
-              <div className="flex flex-col gap-4">
-                <FormSection title="Nilai & Tempoh">
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Nilai Kontrak" htmlFor="kontrak-nilai" className="col-span-2 sm:col-span-1">
-                      <RmInput id="kontrak-nilai" value={form.nilaiKontrak} onChange={(value) => setForm((prev) => ({ ...prev, nilaiKontrak: value }))} />
-                    </FormField>
-                    <FormField label="Wang Cagaran Prestasi (WCP)" htmlFor="kontrak-wcp" className="col-span-2 sm:col-span-1">
-                      <RmInput id="kontrak-wcp" value={form.wcp} onChange={(value) => setForm((prev) => ({ ...prev, wcp: value }))} />
-                    </FormField>
-                    <FormField label="Tarikh Mula" htmlFor="kontrak-mula">
-                      <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
-                    </FormField>
-                    <FormField label="Tarikh Akhir" htmlFor="kontrak-akhir">
-                      <Input
-                        id="kontrak-akhir"
-                        type="date"
-                        min={form.tarikhMula || undefined}
-                        value={form.tarikhAkhir}
-                        onChange={setField("tarikhAkhir")}
-                      />
-                    </FormField>
-                    <FormField label="Tahun Kontrak" htmlFor="kontrak-tahun" hint="Daripada Tarikh Mula">
-                      <Input id="kontrak-tahun" value={tahunFromTarikh(form.tarikhMula) ?? ""} placeholder="Auto" readOnly tabIndex={-1} />
-                    </FormField>
-                  </div>
-                </FormSection>
-
-                <FormSection title="Kerja & Kontraktor">
-                  <FormField label="Kerja" htmlFor="kontrak-kerja">
-                    <Textarea
-                      id="kontrak-kerja"
-                      rows={2}
-                      value={form.kerja}
-                      onChange={setField("kerja")}
-                      placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
-                      className="min-h-[60px]"
+              <FormSection title="Nilai & Tempoh">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="Nilai Kontrak" htmlFor="kontrak-nilai" className="col-span-2 sm:col-span-1">
+                    <RmInput id="kontrak-nilai" value={form.nilaiKontrak} onChange={(value) => setForm((prev) => ({ ...prev, nilaiKontrak: value }))} />
+                  </FormField>
+                  <FormField label="Wang Cagaran Prestasi (WCP)" htmlFor="kontrak-wcp" className="col-span-2 sm:col-span-1">
+                    <RmInput id="kontrak-wcp" value={form.wcp} onChange={(value) => setForm((prev) => ({ ...prev, wcp: value }))} />
+                  </FormField>
+                  <FormField label="Tarikh Mula" htmlFor="kontrak-mula">
+                    <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
+                  </FormField>
+                  <FormField label="Tarikh Akhir" htmlFor="kontrak-akhir">
+                    <Input
+                      id="kontrak-akhir"
+                      type="date"
+                      min={form.tarikhMula || undefined}
+                      value={form.tarikhAkhir}
+                      onChange={setField("tarikhAkhir")}
                     />
                   </FormField>
-                  <FormField
-                    label="Nama Kontraktor"
-                    htmlFor="kontrak-nama"
-                    hint={
-                      <span className="inline-flex flex-wrap items-center gap-x-1">
-                        Tiada dalam senarai?
+                  <FormField label="Tahun Kontrak" htmlFor="kontrak-tahun" hint="Daripada Tarikh Mula">
+                    <Input id="kontrak-tahun" value={tahunFromTarikh(form.tarikhMula) ?? ""} placeholder="Auto" readOnly tabIndex={-1} />
+                  </FormField>
+                </div>
+              </FormSection>
+
+              <FormSection title="Kerja & Kontraktor">
+                <FormField label="Kerja" htmlFor="kontrak-kerja">
+                  <Textarea
+                    id="kontrak-kerja"
+                    rows={2}
+                    value={form.kerja}
+                    onChange={setField("kerja")}
+                    placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
+                    className="min-h-[60px]"
+                  />
+                </FormField>
+                <FormField
+                  label="Nama Kontraktor"
+                  htmlFor="kontrak-nama"
+                  hint={
+                    <span className="inline-flex flex-wrap items-center gap-x-1">
+                      Tiada dalam senarai?
+                      <button
+                        type="button"
+                        onClick={() => setKontraktorFormOpen(true)}
+                        className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm font-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                      >
+                        <RiAddLine className="size-3.5" aria-hidden />
+                        Tambah kontraktor baru
+                      </button>
+                    </span>
+                  }
+                >
+                  <Select
+                    value={form.namaKontraktor || NONE}
+                    onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
+                  >
+                    <SelectTrigger id="kontrak-nama">
+                      <SelectValue placeholder="Pilih kontraktor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Tiada</SelectItem>
+                      {namaOptions.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </FormSection>
+
+              {/* Lagi: collapsed by default; Sambung Masa (EOT) rows, + adds the next one */}
+              <section className="flex flex-col rounded-2xl border border-border-table">
+                <button
+                  type="button"
+                  onClick={() => setLagiOpen((open) => !open)}
+                  aria-expanded={lagiOpen}
+                  aria-controls="kontrak-lagi"
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded-2xl p-3 text-start outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring sm:p-4"
+                >
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-body-semibold text-text-primary">Lagi</span>
+                    {!lagiOpen && (eotCount > 0 || form.vo) && (
+                      <span className="text-caption-1-regular text-text-secondary">
+                        {[eotCount > 0 && `${eotCount} sambung masa`, form.vo && "VO"].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  <RiArrowDownSLine
+                    className={cx("size-5 text-foreground-icon-secondary transition-transform duration-200", lagiOpen && "rotate-180")}
+                    aria-hidden
+                  />
+                </button>
+                {lagiOpen && (
+                  <div id="kontrak-lagi" className="flex flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4">
+                    {form.eot.map((row, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_5.5rem_auto] items-end gap-2">
+                        <FormField label="Sambung Masa (EOT)" htmlFor={`kontrak-eot-${i}`}>
+                          <Input
+                            id={`kontrak-eot-${i}`}
+                            type="date"
+                            min={form.tarikhAkhir || undefined}
+                            value={row.tarikh}
+                            onChange={(e) => setEot((rows) => rows.map((r, j) => (j === i ? { ...r, tarikh: e.target.value } : r)))}
+                          />
+                        </FormField>
+                        <FormField label="Kali ke" htmlFor={`kontrak-eot-kali-${i}`}>
+                          <Input
+                            id={`kontrak-eot-kali-${i}`}
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={99}
+                            value={row.kali}
+                            onChange={(e) => setEot((rows) => rows.map((r, j) => (j === i ? { ...r, kali: e.target.value } : r)))}
+                            className="tabular-nums"
+                          />
+                        </FormField>
                         <button
                           type="button"
-                          onClick={() => setKontraktorFormOpen(true)}
-                          className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm font-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                          aria-label={`Buang sambung masa kali ke-${row.kali || i + 1}`}
+                          disabled={form.eot.length === 1 && !row.tarikh}
+                          onClick={() =>
+                            setEot((rows) => (rows.length === 1 ? [{ kali: "1", tarikh: "" }] : rows.filter((_, j) => j !== i)))
+                          }
+                          className="mb-0.5 flex size-9 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-default disabled:opacity-40"
                         >
-                          <RiAddLine className="size-3.5" aria-hidden />
-                          Tambah kontraktor baru
+                          <RiCloseLine className="size-4" aria-hidden />
                         </button>
-                      </span>
-                    }
-                  >
-                    <Select
-                      value={form.namaKontraktor || NONE}
-                      onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEot((rows) => [
+                          ...rows,
+                          { kali: String(Math.max(0, ...rows.map((r) => Number(r.kali) || 0)) + 1), tarikh: "" },
+                        ])
+                      }
+                      className="inline-flex cursor-pointer items-center gap-1 self-start rounded-md text-caption-1-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
                     >
-                      <SelectTrigger id="kontrak-nama">
-                        <SelectValue placeholder="Pilih kontraktor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>Tiada</SelectItem>
-                        {namaOptions.map((value) => (
-                          <SelectItem key={value} value={value}>
-                            {value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                </FormSection>
-              </div>
+                      <RiAddLine className="size-4" aria-hidden />
+                      Tambah sambung masa
+                    </button>
+
+                    {/* Arahan Perubahan (VO), under Sambung Masa */}
+                    <div className="flex flex-col gap-3 border-t border-border-table pt-3">
+                      <h4 className="text-caption-1-semibold text-text-primary">Arahan Perubahan (VO)</h4>
+                      <FormField label="Nilai (RM)" htmlFor="kontrak-vo">
+                        <RmInput id="kontrak-vo" value={form.vo} onChange={(value) => setForm((prev) => ({ ...prev, vo: value }))} />
+                      </FormField>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
             <footer className={dialogFooterClass}>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="flex-1 sm:flex-none">

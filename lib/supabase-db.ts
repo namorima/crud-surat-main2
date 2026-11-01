@@ -883,6 +883,8 @@ function mapKontrakRow(row: any): Kontrak {
     kerja: row.kerja || "",
     nilaiKontrak: row.nilai_kontrak === null || row.nilai_kontrak === undefined ? null : Number(row.nilai_kontrak),
     wcp: row.wcp === null || row.wcp === undefined ? null : Number(row.wcp),
+    vo: row.vo === null || row.vo === undefined ? null : Number(row.vo),
+    eot: Array.isArray(row.eot) ? row.eot : [],
     status: row.status || "AKTIF",
   }
 }
@@ -900,6 +902,8 @@ function kontrakToRow(input: KontrakInput) {
     kerja: input.kerja || null,
     nilai_kontrak: input.nilaiKontrak,
     wcp: input.wcp,
+    vo: input.vo,
+    eot: input.eot ?? [],
     status: input.status || "AKTIF",
   }
 }
