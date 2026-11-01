@@ -179,6 +179,7 @@ Located in `types/` directory:
    - Helper functions: `formatDateToDB()`, `formatDateFromDB()`
    - Auto-increment BIL field using database sequence
    - Audit logging for payment operations
+   - PostgREST returns at most 1000 rows per request: whole-table reads of `surat` / `bayaran` (and the Daripada / Kepada suggestions) go through `selectAll()` ([lib/select-all.ts](lib/select-all.ts)), which pages with `.range()` over a stable order. Use it for any table that can pass 1000 rows
 
 2. **Key Functions**:
    - Surat: `getAllSurat()`, `addSurat()`, `updateSurat()`, `deleteSurat()`
@@ -601,12 +602,13 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 2. **Surat (Letters)** ([app/dashboard/surat/page.tsx](app/dashboard/surat/page.tsx))
    - Full CRUD operations
-   - Search, filter, pagination
+   - Search, filter, pagination; `*135` lists only BIL 135 and Enter opens it (notes still link with `#123`)
    - Status tracking
    - Reference linking
 
 3. **Bayaran (Payments)** ([app/dashboard/bayaran/page.tsx](app/dashboard/bayaran/page.tsx))
    - Payment record management
+   - Search ([lib/bayaran-search.ts](lib/bayaran-search.ts)): `*119` lists only record 119 and Enter opens it; a plain number also matches the ID and Nilai Bayaran
    - Bulk status updates
    - Audit trail
    - Export functionality

@@ -333,8 +333,8 @@ export default function BayaranPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // "#119" + Enter opens that record directly
-    if (searchQuery.trim().startsWith("#")) {
+    // "*119" + Enter opens that record directly
+    if (searchQuery.trim().startsWith("*")) {
       const recordNumber = parseRecordNumber(searchQuery);
       const foundBayaran = recordNumber !== null ? bayaran.find((item) => item.ids === recordNumber) : undefined;
       if (foundBayaran) {
