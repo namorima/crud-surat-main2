@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import type { Bayaran } from "@/types/bayaran"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartCard } from "@/components/dashboard/charts"
@@ -13,6 +14,9 @@ const SHOWN = 10
 // The chosen filters survive reloads (per browser)
 const KAWASAN_KEY = "dashboard:kontrak:kawasan"
 const KATEGORI_KEY = "dashboard:kontrak:kategori"
+// The kontrak whose detail was open when a Rekod Bayaran was opened from it, so
+// coming back to the Dashboard opens it again (per tab)
+const OPEN_KEY = "dashboard:kontrak:buka"
 
 const readSaved = (key: string) => {
   try {
@@ -39,6 +43,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   const [info, setInfo] = useState<Record<string, Record<string, KontrakInfo>>>({})
   // The kontrak whose bayaran are shown in the detail dialog
   const [selected, setSelected] = useState<KontrakRow | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     setKawasan(readSaved(KAWASAN_KEY))
@@ -51,6 +56,18 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   }, [])
 
   const all = useMemo(() => kontrakBayaran(bayaran, period), [bayaran, period])
+
+  // Back from a Rekod Bayaran opened in the detail: show that kontrak again
+  useEffect(() => {
+    if (!all.length) return
+    let key: string | null = null
+    try {
+      key = sessionStorage.getItem(OPEN_KEY)
+      sessionStorage.removeItem(OPEN_KEY)
+    } catch {}
+    const row = key ? all.find((r) => r.key === key) : undefined
+    if (row) setSelected(row)
+  }, [all])
   const kawasanOptions = useMemo(() => [...new Set(all.map((r) => r.kawasan))].sort(), [all])
   const kategoriOptions = useMemo(
     () => [...new Set(all.filter((r) => kawasan === ALL || r.kawasan === kawasan).map((r) => r.kategori))].sort(),
@@ -151,7 +168,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
                       <span className="ms-1 font-normal text-text-tertiary">· {row.count} rekod</span>
                     </span>
                   </div>
-                  <div className="flex h-2 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+                  <div className="flex h-1.5 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
                     <div
                       className="motion-bar h-full"
                       style={{ width: `${(row.paid / top) * 100}%`, background: "var(--viz-1)", animationDelay: `${Math.min(i, 8) * 40}ms` }}
@@ -191,6 +208,12 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
         bayaran={bayaran}
         info={selected ? info[selected.kawasan]?.[selected.noKontrak] : undefined}
         onClose={() => setSelected(null)}
+        onOpenBayaran={(b) => {
+          try {
+            if (selected) sessionStorage.setItem(OPEN_KEY, selected.key)
+          } catch {}
+          router.push(`/dashboard/bayaran?buka=${encodeURIComponent(b.id)}&dari=dashboard`)
+        }}
       />
     </ChartCard>
   )

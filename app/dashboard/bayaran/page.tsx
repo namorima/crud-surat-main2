@@ -4,6 +4,7 @@ import { PageLoader } from "@/components/dashboard/page-loader"
 import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-provider";
 import type { Bayaran } from "@/types/bayaran";
 import { Button } from "@/components/ui/button";
@@ -818,6 +819,35 @@ export default function BayaranPage() {
 
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+
+  // /dashboard/bayaran?buka=<id>[&dari=dashboard] opens that Rekod Bayaran (from
+  // the Dashboard's kontrak detail). Coming from the Dashboard, closing the
+  // detail (or the edit form opened from it) goes back there.
+  const router = useRouter();
+  const backToDashboard = useRef<"idle" | "opening" | "open">("idle");
+  useEffect(() => {
+    if (!bayaran.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("buka");
+    if (!id) return;
+    const found = bayaran.find((item) => item.id === id || String(item.ids) === id);
+    window.history.replaceState(null, "", window.location.pathname);
+    if (!found) {
+      toast.error("Rekod bayaran tidak dijumpai");
+      return;
+    }
+    if (params.get("dari") === "dashboard") backToDashboard.current = "opening";
+    setSelectedBayaran(found);
+    setShowDetailDialog(true);
+  }, [bayaran]);
+  useEffect(() => {
+    const open = showDetailDialog || showEditDialog;
+    if (backToDashboard.current === "opening" && open) backToDashboard.current = "open";
+    else if (backToDashboard.current === "open" && !open) {
+      backToDashboard.current = "idle";
+      router.back();
+    }
+  }, [showDetailDialog, showEditDialog, router]);
 
   // The detail dialog shows kerja / nilai kontrak from the form data; load it once
   useEffect(() => {
