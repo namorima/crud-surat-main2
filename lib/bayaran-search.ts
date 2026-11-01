@@ -1,8 +1,8 @@
 import type { Bayaran } from "@/types/bayaran"
 
-/** "#119" or "119" → 119; anything else → null. */
+/** "*119" or "119" → 119; anything else → null. */
 export function parseRecordNumber(query: string): number | null {
-  const m = query.trim().match(/^#?\s*(\d+)$/)
+  const m = query.trim().match(/^\*?\s*(\d+)$/)
   return m ? Number(m[1]) : null
 }
 
@@ -13,7 +13,7 @@ function amountDigits(value: string): string {
 
 /**
  * Search box match for a bayaran row.
- * - "#119": only the record with that number
+ * - "*119": only the record with that number (Enter opens it)
  * - a plain number also matches the record number exactly, and Nilai Bayaran
  *   (typed as 4053.05, 4,053.05, RM 4053 or 4053.0)
  * - any text: daripada, perkara, kategori, bayaran ke, penerima, baucer,
@@ -24,7 +24,7 @@ export function matchesBayaranSearch(item: Bayaran, rawQuery: string): boolean {
   if (!query) return true
 
   const recordNumber = parseRecordNumber(query)
-  if (query.startsWith("#")) return recordNumber !== null && item.ids === recordNumber
+  if (query.startsWith("*")) return recordNumber !== null && item.ids === recordNumber
   if (recordNumber !== null && item.ids === recordNumber) return true
 
   const queryAmount = amountDigits(query)
