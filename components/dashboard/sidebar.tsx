@@ -2,12 +2,13 @@
 
 import { useAuth } from "@/lib/auth-provider"
 import {
-  RiBankCardLine,
   RiCloseLine,
   RiDownload2Line,
   RiHome5Line,
   RiLogoutBoxRLine,
   RiMailOpenLine,
+  RiMailSendLine,
+  RiMoneyDollarCircleLine,
   RiRefreshLine,
   RiSettings4Line,
   RiSideBarFill,
@@ -48,14 +49,14 @@ const navigation: NavigationItem[] = [
   {
     name: "Surat",
     href: "/dashboard/surat",
-    icon: RiMailOpenLine,
+    icon: RiMailSendLine,
     requiredPermission: { resource: 'surat', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
   {
     name: "Bayaran",
     href: "/dashboard/bayaran",
-    icon: RiBankCardLine,
+    icon: RiMoneyDollarCircleLine,
     requiredPermission: { resource: 'bayaran', action: 'view' },
     legacyRoles: ["semua", "Super Admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"]
   },
