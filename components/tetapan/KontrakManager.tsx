@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { RiAddLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiRefreshLine, RiSearchLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiEditLine, RiLoader4Line, RiRefreshLine, RiSearchLine } from "@remixicon/react"
 import type { Kontrak, KontrakInput, KontrakStatus } from "@/types/kontrak"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,7 +36,11 @@ import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialog
 import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
-type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp"> & { nilaiKontrak: string; wcp: string }
+type EotRow = { kali: string; tarikh: string }
+type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp" | "eot"> & { nilaiKontrak: string; wcp: string; eot: EotRow[] }
+
+/** The Lagi section starts with one empty Sambung Masa (EOT) row */
+const EMPTY_EOT: EotRow[] = [{ kali: "1", tarikh: "" }]
 
 const formatNilai = (value: number) =>
   value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -53,6 +57,7 @@ const EMPTY: KontrakForm = {
   kerja: "",
   nilaiKontrak: "",
   wcp: "",
+  eot: EMPTY_EOT,
   status: "AKTIF",
 }
 
@@ -112,10 +117,17 @@ function formatTarikh(value: string) {
 }
 
 function Tempoh({ item }: { item: Kontrak }) {
-  if (!item.tarikhMula && !item.tarikhAkhir) return <span className="text-text-tertiary">-</span>
+  const eot = item.eot.at(-1)
+  if (!item.tarikhMula && !item.tarikhAkhir && !eot) return <span className="text-text-tertiary">-</span>
   return (
     <span className="tabular-nums">
       {formatTarikh(item.tarikhMula) || "?"} – {formatTarikh(item.tarikhAkhir) || "?"}
+      {/* The latest Sambung Masa (EOT) */}
+      {eot && (
+        <span className="block text-caption-1-regular text-text-secondary">
+          EOT ke-{eot.kali}: {formatTarikh(eot.tarikh)}
+        </span>
+      )}
     </span>
   )
 }
@@ -155,8 +167,12 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     } catch {}
   }
   const [formOpen, setFormOpen] = useState(false)
+  // "Lagi" (Sambung Masa / EOT) starts collapsed every time the form opens
+  const [lagiOpen, setLagiOpen] = useState(false)
+  const setEot = (update: (rows: EotRow[]) => EotRow[]) => setForm((prev) => ({ ...prev, eot: update(prev.eot) }))
   const [editing, setEditing] = useState<Kontrak | null>(null)
   const [form, setForm] = useState<KontrakForm>(EMPTY)
+  const eotCount = form.eot.filter((row) => row.tarikh).length
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
@@ -221,6 +237,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     loadKontraktorNames()
     setEditing(null)
     setForm(EMPTY)
+    setLagiOpen(false)
     setFormOpen(true)
   }
 
@@ -239,8 +256,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       kerja: item.kerja,
       nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
       wcp: item.wcp === null ? "" : formatNilai(item.wcp),
+      eot: item.eot.length ? item.eot.map((e) => ({ kali: String(e.kali), tarikh: e.tarikh })) : EMPTY_EOT,
       status: item.status,
     })
+    setLagiOpen(false)
     setFormOpen(true)
   }
 
@@ -703,6 +722,81 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </Select>
                   </FormField>
                 </FormSection>
+
+                {/* Lagi: collapsed by default; Sambung Masa (EOT) rows, + adds the next one */}
+                <section className="flex flex-col rounded-2xl border border-border-table">
+                  <button
+                    type="button"
+                    onClick={() => setLagiOpen((open) => !open)}
+                    aria-expanded={lagiOpen}
+                    aria-controls="kontrak-lagi"
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-2xl p-3 text-start outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring sm:p-4"
+                  >
+                    <span className="flex items-baseline gap-2">
+                      <span className="text-body-semibold text-text-primary">Lagi</span>
+                      {!lagiOpen && eotCount > 0 && (
+                        <span className="text-caption-1-regular text-text-secondary">{eotCount} sambung masa</span>
+                      )}
+                    </span>
+                    <RiArrowDownSLine
+                      className={cx("size-5 text-foreground-icon-secondary transition-transform duration-200", lagiOpen && "rotate-180")}
+                      aria-hidden
+                    />
+                  </button>
+                  {lagiOpen && (
+                    <div id="kontrak-lagi" className="flex flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4">
+                      {form.eot.map((row, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_5.5rem_auto] items-end gap-2">
+                          <FormField label="Sambung Masa (EOT)" htmlFor={`kontrak-eot-${i}`}>
+                            <Input
+                              id={`kontrak-eot-${i}`}
+                              type="date"
+                              min={form.tarikhAkhir || undefined}
+                              value={row.tarikh}
+                              onChange={(e) => setEot((rows) => rows.map((r, j) => (j === i ? { ...r, tarikh: e.target.value } : r)))}
+                            />
+                          </FormField>
+                          <FormField label="Kali ke" htmlFor={`kontrak-eot-kali-${i}`}>
+                            <Input
+                              id={`kontrak-eot-kali-${i}`}
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={99}
+                              value={row.kali}
+                              onChange={(e) => setEot((rows) => rows.map((r, j) => (j === i ? { ...r, kali: e.target.value } : r)))}
+                              className="tabular-nums"
+                            />
+                          </FormField>
+                          <button
+                            type="button"
+                            aria-label={`Buang sambung masa kali ke-${row.kali || i + 1}`}
+                            disabled={form.eot.length === 1 && !row.tarikh}
+                            onClick={() =>
+                              setEot((rows) => (rows.length === 1 ? [{ kali: "1", tarikh: "" }] : rows.filter((_, j) => j !== i)))
+                            }
+                            className="mb-0.5 flex size-9 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-default disabled:opacity-40"
+                          >
+                            <RiCloseLine className="size-4" aria-hidden />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEot((rows) => [
+                            ...rows,
+                            { kali: String(Math.max(0, ...rows.map((r) => Number(r.kali) || 0)) + 1), tarikh: "" },
+                          ])
+                        }
+                        className="inline-flex cursor-pointer items-center gap-1 self-start rounded-md text-caption-1-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                      >
+                        <RiAddLine className="size-4" aria-hidden />
+                        Tambah sambung masa
+                      </button>
+                    </div>
+                  )}
+                </section>
               </div>
             </div>
             <footer className={dialogFooterClass}>
