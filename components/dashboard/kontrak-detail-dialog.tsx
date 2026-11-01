@@ -23,11 +23,14 @@ export function KontrakDetailDialog({
   bayaran,
   info,
   onClose,
+  onOpenBayaran,
 }: {
   row: KontrakRow | null
   bayaran: Bayaran[]
   info?: KontrakInfo
   onClose: () => void
+  /** Opens one bayaran as a Rekod Bayaran (detail, edit) */
+  onOpenBayaran?: (b: Bayaran) => void
 }) {
   const detail = useMemo(() => (row ? kontrakDetail(bayaran, row.kawasan, row.noKontrak) : null), [row, bayaran])
   const nilaiKontrak = info?.nilaiKontrak ?? null
@@ -83,7 +86,9 @@ export function KontrakDetailDialog({
                 <tbody className="motion-stagger divide-y divide-border-table">
                   {detail.rows.map((b) => (
                     <tr key={b.id}>
-                      <td className="px-3 py-2 tabular-nums text-text-secondary">#{b.ids ?? "-"}</td>
+                      <td className="px-3 py-2 tabular-nums">
+                        <IdLink b={b} onOpen={onOpenBayaran} />
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">{b.tarikhTerima || "-"}</td>
                       <td className="px-3 py-2">{b.bayaranKe || "-"}</td>
                       <td className="px-3 py-2">{b.jenisBayaran ? <JenisChip jenis={b.jenisBayaran} /> : <span className="text-text-tertiary">-</span>}</td>
@@ -116,7 +121,7 @@ export function KontrakDetailDialog({
                 <li key={b.id} className="flex flex-col gap-1 rounded-2xl border border-border-button-default p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-caption-1-medium text-text-secondary tabular-nums">
-                      #{b.ids ?? "-"} · {b.tarikhTerima || "-"}
+                      <IdLink b={b} onOpen={onOpenBayaran} /> · {b.tarikhTerima || "-"}
                     </span>
                     <PaidChip b={b} />
                   </div>
@@ -152,7 +157,7 @@ export function KontrakDetailDialog({
                 <dd className="tabular-nums">{rm(detail.jumlahWcp)}</dd>
               </div>
               <p className="text-caption-2-regular text-text-tertiary">
-                Semua rekod kontrak ini (tidak ikut tempoh Dashboard), rekod batal tidak dikira. Peratus Bayaran = Nilai Bayaran +
+                Klik ID untuk buka dan edit Rekod Bayaran. Semua rekod kontrak ini (tidak ikut tempoh Dashboard), rekod batal tidak dikira. Peratus Bayaran = Nilai Bayaran +
                 Wang Tahanan bagi semua bayaran kecuali WCP dan Wang Tahanan (pelepasan), dibahagi Nilai Kontrak.
               </p>
             </dl>
@@ -166,6 +171,21 @@ export function KontrakDetailDialog({
         </footer>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** "#501" as a link-style button that opens the Rekod Bayaran */
+function IdLink({ b, onOpen }: { b: Bayaran; onOpen?: (b: Bayaran) => void }) {
+  if (!onOpen) return <span className="text-text-secondary">#{b.ids ?? "-"}</span>
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(b)}
+      className="cursor-pointer rounded-sm font-semibold text-accent-600 underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+      title={`Buka Rekod Bayaran #${b.ids ?? ""}`}
+    >
+      #{b.ids ?? "-"}
+    </button>
   )
 }
 
