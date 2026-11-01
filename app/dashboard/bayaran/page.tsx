@@ -127,6 +127,7 @@ export default function BayaranPage() {
     adaWangTahanan: false,
     wangTahanan: "",
     bayaranKe: "",
+    bayaranAkhir: false,
     kategori: "",
     noKontrak: "",
     namaKontraktor: "",
@@ -540,7 +541,7 @@ export default function BayaranPage() {
       // WCP is paid once: Bayaran Ke is hidden and cleared
       let next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
       // Only KEMAJUAN offers the Wang Tahanan tick
-      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "" };
+      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "", bayaranAkhir: false };
       if (prev.jenisBayaran === PIECERATE) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
       return next;
     });
@@ -901,6 +902,8 @@ export default function BayaranPage() {
         // Unticked or not KEMAJUAN: the record has no Wang Tahanan; WCP: no Bayaran Ke
         wangTahanan: adaWangTahanan && fields.jenisBayaran === KEMAJUAN ? fields.wangTahanan : "",
         bayaranKe: fields.jenisBayaran === WCP ? "" : fields.bayaranKe,
+        // Akhir: KEMAJUAN only
+        bayaranAkhir: fields.jenisBayaran === KEMAJUAN && fields.bayaranAkhir,
         user: user?.name || "Unknown",
       };
 
@@ -938,6 +941,7 @@ export default function BayaranPage() {
           adaWangTahanan: false,
           wangTahanan: "",
           bayaranKe: "",
+          bayaranAkhir: false,
           kategori: "",
           noKontrak: "",
           namaKontraktor: "",
@@ -1003,6 +1007,7 @@ export default function BayaranPage() {
       adaWangTahanan: !!bayaran.wangTahanan,
       wangTahanan: (bayaran.wangTahanan || "").replace(/[^\d.-]/g, ""),
       bayaranKe: bayaran.bayaranKe,
+      bayaranAkhir: !!bayaran.bayaranAkhir,
       kategori: bayaran.kategori,
       noKontrak: bayaran.noKontrak,
       namaKontraktor: bayaran.namaKontraktor || "",

@@ -488,6 +488,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
         nilaiBayaran: row.nilai_bayaran,
         bayaranKe: row.bayaran_ke || "",
         wangTahanan: row.wang_tahanan || "",
+        bayaranAkhir: !!row.bayaran_akhir,
         jenisBayaran: row.jenis_bayaran || "",
         kategori: row.kategori || "",
         noKontrak: row.no_kontrak || "",
@@ -538,6 +539,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
         nilai_bayaran: bayaran.nilaiBayaran,
         bayaran_ke: bayaran.bayaranKe || null,
         wang_tahanan: bayaran.wangTahanan || null,
+        bayaran_akhir: !!bayaran.bayaranAkhir,
         jenis_bayaran: bayaran.jenisBayaran || null,
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
@@ -594,6 +596,7 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, ac
         bayaran_ke: bayaran.bayaranKe || null,
         // Callers that don't send these (older clients) leave them as they are
         ...(bayaran.wangTahanan !== undefined && { wang_tahanan: bayaran.wangTahanan || null }),
+        ...(bayaran.bayaranAkhir !== undefined && { bayaran_akhir: !!bayaran.bayaranAkhir }),
         ...(bayaran.jenisBayaran !== undefined && { jenis_bayaran: bayaran.jenisBayaran || null }),
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
