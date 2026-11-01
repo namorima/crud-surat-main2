@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
+import { supabaseAdmin } from "@/lib/supabase"
+import { getSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session"
 
-/** Whether the browser still holds a valid session cookie (middleware already rejects missing ones). */
+const signedOut = () => {
+  const response = NextResponse.json({ error: "Sila log masuk semula" }, { status: 401 })
+  response.cookies.set(SESSION_COOKIE, "", { ...sessionCookieOptions, maxAge: 0 })
+  return response
+}
+
+/**
+ * Whether the browser still holds a valid session (middleware already rejects
+ * missing ones, and renews old ones). Checked when the app opens: since the
+ * session now slides, an account that was deleted or deactivated is signed
+ * out here instead of staying in.
+ */
 export async function GET(request: Request) {
   const session = await getSession(request)
-  if (!session) return NextResponse.json({ error: "Sila log masuk semula" }, { status: 401 })
+  if (!session) return signedOut()
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("username, is_active")
+    .eq("username", session.uid)
+    .maybeSingle()
+  // A database hiccup must not sign everyone out; only a missing or inactive account does
+  if (!error && (!data || data.is_active === false)) return signedOut()
   return NextResponse.json({ uid: session.uid, exp: session.exp })
 }

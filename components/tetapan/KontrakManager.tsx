@@ -139,7 +139,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [items, setItems] = useState<Kontrak[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<KontrakStatus | "ALL">("ALL")
+  // AKTIF by default; a choice the user made is kept (localStorage)
+  const [statusFilter, setStatusFilter] = useState<KontrakStatus | "ALL">("AKTIF")
   // Restore the saved Status filter once in the browser (localStorage may be blocked)
   useEffect(() => {
     try {
