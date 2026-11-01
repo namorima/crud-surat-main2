@@ -17,6 +17,8 @@ import { useNavigation } from "@/components/dashboard/sidebar"
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control"
 import { BarList, ChartCard, KpiGrid, MonthlyStack, ORDINAL } from "@/components/dashboard/charts"
 import { KontrakChart } from "@/components/dashboard/kontrak-chart"
+import { DashboardPdfButton } from "@/components/dashboard/dashboard-pdf-dialog"
+import { useAuth } from "@/lib/auth-provider"
 import {
   PERIOD_LABEL,
   bayaranStats,
@@ -34,6 +36,7 @@ const rekod = (n?: number) => (n === undefined ? undefined : `${count(n)} rekod`
 /** Dashboard + Statistik in one page: Bayaran and Surat analysis, per permission. */
 export default function DashboardPage() {
   const nav = useNavigation()
+  const { user } = useAuth()
   const canBayaran = nav.some((item) => item.href === "/dashboard/bayaran")
   const canSurat = nav.some((item) => item.href === "/dashboard/surat")
 
@@ -109,9 +112,15 @@ export default function DashboardPage() {
           <SegmentedControlItem id="year">Tahun ini</SegmentedControlItem>
           <SegmentedControlItem id="all">Semua</SegmentedControlItem>
         </SegmentedControl>
-        <span className="text-caption-1-regular text-text-tertiary">
-          {shown === "surat" ? "Ikut tarikh surat" : "Ikut tarikh terima"} · {PERIOD_LABEL[period]}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-caption-1-regular text-text-tertiary">
+            {shown === "surat" ? "Ikut tarikh surat" : "Ikut tarikh terima"} · {PERIOD_LABEL[period]}
+          </span>
+          {/* Bayaran analysis as a PDF, for one kawasan or all kawasan grouped */}
+          {shown === "bayaran" && !loading && !error && (
+            <DashboardPdfButton bayaran={bayaran} period={period} dijanaOleh={user?.name || user?.username || "-"} />
+          )}
+        </div>
       </div>
 
       {loading ? (
