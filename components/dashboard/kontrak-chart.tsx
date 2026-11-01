@@ -1,19 +1,22 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import type { Bayaran } from "@/types/bayaran"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartCard } from "@/components/dashboard/charts"
-import { formatRM, kontrakBayaran, type Period } from "@/lib/dashboard-stats"
+import { KontrakDetailDialog, type KontrakInfo } from "@/components/dashboard/kontrak-detail-dialog"
+import { formatRM, kontrakBayaran, type KontrakRow, type Period } from "@/lib/dashboard-stats"
 import { cx } from "@/utils/cx"
-
-type KontrakInfo = { kerja: string; nilaiKontrak: number | null }
 
 const ALL = "__all"
 const SHOWN = 10
 // The chosen filters survive reloads (per browser)
 const KAWASAN_KEY = "dashboard:kontrak:kawasan"
 const KATEGORI_KEY = "dashboard:kontrak:kategori"
+// The kontrak whose detail was open when a Rekod Bayaran was opened from it, so
+// coming back to the Dashboard opens it again (per tab)
+const OPEN_KEY = "dashboard:kontrak:buka"
 
 const readSaved = (key: string) => {
   try {
@@ -38,6 +41,9 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   const [kategori, setKategori] = useState(ALL)
   const [showAll, setShowAll] = useState(false)
   const [info, setInfo] = useState<Record<string, Record<string, KontrakInfo>>>({})
+  // The kontrak whose bayaran are shown in the detail dialog
+  const [selected, setSelected] = useState<KontrakRow | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     setKawasan(readSaved(KAWASAN_KEY))
@@ -50,6 +56,18 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   }, [])
 
   const all = useMemo(() => kontrakBayaran(bayaran, period), [bayaran, period])
+
+  // Back from a Rekod Bayaran opened in the detail: show that kontrak again
+  useEffect(() => {
+    if (!all.length) return
+    let key: string | null = null
+    try {
+      key = sessionStorage.getItem(OPEN_KEY)
+      sessionStorage.removeItem(OPEN_KEY)
+    } catch {}
+    const row = key ? all.find((r) => r.key === key) : undefined
+    if (row) setSelected(row)
+  }, [all])
   const kawasanOptions = useMemo(() => [...new Set(all.map((r) => r.kawasan))].sort(), [all])
   const kategoriOptions = useMemo(
     () => [...new Set(all.filter((r) => kawasan === ALL || r.kawasan === kawasan).map((r) => r.kategori))].sort(),
@@ -70,7 +88,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
   return (
     <ChartCard
       title="Bayaran mengikut No Kontrak"
-      caption="Ikut kawasan; rekod tanpa No Kontrak (cth. Piecerate) dan rekod batal tidak dikira"
+      caption="Ikut kawasan; rekod tanpa No Kontrak (cth. Piecerate) dan rekod batal tidak dikira. Klik kontrak untuk butiran bayaran."
     >
       <div className="flex flex-wrap items-center gap-2">
         <Select
@@ -131,11 +149,20 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
               const nilai = info[row.kawasan]?.[row.noKontrak]?.nilaiKontrak ?? null
               const used = nilai ? Math.round((total / nilai) * 100) : null
               return (
-                <li
-                  key={row.key}
-                  className="flex flex-col gap-1"
-                  title={`${row.noKontrak} (${row.kawasan}): dibayar ${formatRM(row.paid)}, belum dibayar ${formatRM(row.unpaid)}`}
-                >
+                <li key={row.key}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        setSelected(row)
+                      }
+                    }}
+                    onClick={() => setSelected(row)}
+                    className="motion-press -mx-2 flex w-[calc(100%+1rem)] cursor-pointer flex-col gap-1 rounded-xl px-2 py-1 text-start outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+                    title={`${row.noKontrak} (${row.kawasan}): dibayar ${formatRM(row.paid)}, belum dibayar ${formatRM(row.unpaid)}. Klik untuk butiran.`}
+                  >
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0">
                       <span className="text-caption-1-semibold text-text-primary">{row.noKontrak}</span>
@@ -148,7 +175,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
                       <span className="ms-1 font-normal text-text-tertiary">· {row.count} rekod</span>
                     </span>
                   </div>
-                  <div className="flex h-2 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
                     <div
                       className="motion-bar h-full"
                       style={{ width: `${(row.paid / top) * 100}%`, background: "var(--viz-1)", animationDelay: `${Math.min(i, 8) * 40}ms` }}
@@ -167,6 +194,7 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
                       </span>
                     )}
                   </span>
+                  </div>
                 </li>
               )
             })}
@@ -182,6 +210,18 @@ export function KontrakChart({ bayaran, period }: { bayaran: Bayaran[]; period: 
           )}
         </>
       )}
+      <KontrakDetailDialog
+        row={selected}
+        bayaran={bayaran}
+        info={selected ? info[selected.kawasan]?.[selected.noKontrak] : undefined}
+        onClose={() => setSelected(null)}
+        onOpenBayaran={(b) => {
+          try {
+            if (selected) sessionStorage.setItem(OPEN_KEY, selected.key)
+          } catch {}
+          router.push(`/dashboard/bayaran?buka=${encodeURIComponent(b.id)}&dari=dashboard`)
+        }}
+      />
     </ChartCard>
   )
 }
