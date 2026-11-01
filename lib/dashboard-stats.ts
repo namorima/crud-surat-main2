@@ -176,6 +176,8 @@ export function bayaranStats(all: Bayaran[], period: Period, now = new Date()) {
     ),
     unpaidByPenerima: groupRows(unpaid, (b) => clean(b.penerima, "Belum ditetapkan"), amount, 6),
     unpaidAge: ageBuckets(unpaid, (b) => parseDate(b.tarikhTerima), [30, 60, 90], amount, now),
+    // From Tarikh Hantar (to Kewangan); records not sent yet are left out
+    unpaidAgeHantar: ageBuckets(unpaid, (b) => parseDate(b.tarikhHantar), [30, 60, 90], amount, now),
   }
 }
 

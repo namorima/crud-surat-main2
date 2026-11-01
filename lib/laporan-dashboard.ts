@@ -89,7 +89,7 @@ function pageHeader(doc: any, kawasanLabel: string, period: Period, dijanaOleh: 
 const small = { ...tableStyle, styles: { ...tableStyle.styles, fontSize: 7.8 } }
 const right = { halign: "right" as const }
 
-/** One kawasan: KPIs, per no kontrak, kategori / status, unpaid age / penerima. */
+/** One kawasan: KPIs, per no kontrak, kategori / status, tempoh tertunggak from terima / hantar. */
 function seksyen(doc: any, autoTable: any, rows: Bayaran[], kawasan: string, period: Period, info: Record<string, Record<string, KontrakInfo>>, now: Date, y: number) {
   const stats = bayaranStats(rows, period, now)
   const paidShare = stats.total.amount ? Math.round((stats.paid.amount / stats.total.amount) * 100) : 0
@@ -173,8 +173,8 @@ function seksyen(doc: any, autoTable: any, rows: Bayaran[], kawasan: string, per
     { title: "Status bayaran", rows: stats.status },
   ])
   pair([
-    { title: "Umur bayaran tertunggak", rows: stats.unpaidAge, value: nilai },
-    { title: "Belum dibayar mengikut penerima", rows: stats.unpaidByPenerima, value: nilai },
+    { title: "Tempoh tertunggak (Tarikh Terima)", rows: stats.unpaidAge, value: nilai },
+    { title: "Tempoh tertunggak (Tarikh Hantar)", rows: stats.unpaidAgeHantar, value: nilai },
   ])
   return y
 }

@@ -142,7 +142,6 @@ export default function DashboardPage() {
 
 function BayaranSection({ stats, bayaran, period }: { stats: ReturnType<typeof bayaranStats>; bayaran: Bayaran[]; period: Period }) {
   const paidShare = stats.total.amount ? Math.round((stats.paid.amount / stats.total.amount) * 100) : 0
-  const funnelStart = stats.funnel[0]?.value ?? 0
 
   return (
     <>
@@ -170,18 +169,7 @@ function BayaranSection({ stats, bayaran, period }: { stats: ReturnType<typeof b
       <KontrakChart bayaran={bayaran} period={period} />
 
       <div className="motion-stagger grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-        <ChartCard title="Peringkat proses" caption="Berapa rekod sudah melepasi setiap peringkat">
-          <BarList
-            rows={stats.funnel}
-            max={funnelStart}
-            format={count}
-            sub={(row) => (funnelStart ? `${Math.round((row.value / funnelStart) * 100)}%` : undefined)}
-          />
-        </ChartCard>
-
-        <ChartCard title="Umur bayaran tertunggak" caption="Rekod belum dibayar, dikira dari tarikh terima">
-          <BarList rows={stats.unpaidAge} format={(v) => formatRM(v)} sub={(r) => rekod(r.count)} colors={ORDINAL} empty="Tiada bayaran tertunggak." />
-        </ChartCard>
+        <TertunggakCard stats={stats} />
 
         <ChartCard title="Nilai mengikut kawasan" caption="Daripada (ladang / unit)">
           <BarList rows={stats.kawasan} format={(v) => formatRM(v, true)} sub={(r) => rekod(r.count)} />
@@ -195,15 +183,61 @@ function BayaranSection({ stats, bayaran, period }: { stats: ReturnType<typeof b
           <BarList rows={stats.kontraktor} format={(v) => formatRM(v, true)} sub={(r) => rekod(r.count)} empty="Tiada rekod dengan nama kontraktor." />
         </ChartCard>
 
-        <ChartCard title="Belum dibayar mengikut penerima" caption="Siapa sedang memegang bayaran tertunggak">
-          <BarList rows={stats.unpaidByPenerima} format={(v) => formatRM(v, true)} sub={(r) => rekod(r.count)} empty="Tiada bayaran tertunggak." />
-        </ChartCard>
-
         <ChartCard title="Status bayaran" caption={stats.cancelled ? `Termasuk ${stats.cancelled} rekod batal` : undefined} className="lg:col-span-2">
           <BarList rows={stats.status} format={(v) => `${count(v)} rekod`} />
         </ChartCard>
       </div>
     </>
+  )
+}
+
+type AgeFrom = "terima" | "hantar"
+const AGE_FROM_KEY = "dashboard:tertunggak:dari"
+
+/** Unpaid bayaran by age, counted from Tarikh Terima or Tarikh Hantar Kewangan (saved per browser). */
+function TertunggakCard({ stats }: { stats: ReturnType<typeof bayaranStats> }) {
+  const [from, setFrom] = useState<AgeFrom>("terima")
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(AGE_FROM_KEY) === "hantar") setFrom("hantar")
+    } catch {}
+  }, [])
+  const choose = (value: AgeFrom) => {
+    setFrom(value)
+    try {
+      localStorage.setItem(AGE_FROM_KEY, value)
+    } catch {}
+  }
+  const hantar = from === "hantar"
+  return (
+    <ChartCard
+      title="Tempoh bayaran (Tertunggak)"
+      caption={
+        hantar
+          ? "Rekod belum dibayar, dikira dari tarikh hantar ke Kewangan (rekod belum dihantar tidak dikira)"
+          : "Rekod belum dibayar, dikira dari tarikh terima"
+      }
+    >
+      <SegmentedControl
+        aria-label="Kira tempoh dari"
+        className="self-start"
+        selectedKeys={[from]}
+        onSelectionChange={(keys) => {
+          const value = String([...keys][0] ?? "")
+          if (value === "terima" || value === "hantar") choose(value)
+        }}
+      >
+        <SegmentedControlItem id="terima">Tarikh Terima</SegmentedControlItem>
+        <SegmentedControlItem id="hantar">Tarikh Hantar Kewangan</SegmentedControlItem>
+      </SegmentedControl>
+      <BarList
+        rows={hantar ? stats.unpaidAgeHantar : stats.unpaidAge}
+        format={(v) => formatRM(v)}
+        sub={(r) => rekod(r.count)}
+        colors={ORDINAL}
+        empty={hantar ? "Tiada bayaran tertunggak yang sudah dihantar ke Kewangan." : "Tiada bayaran tertunggak."}
+      />
+    </ChartCard>
   )
 }
 
