@@ -10,7 +10,7 @@ export type Tempoh = { jenis: Jenis; from: Date; to: Date; label: string }
 
 const BULAN = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"]
 
-const pad = (n: number) => String(n).padStart(2, "0")
+export const pad = (n: number) => String(n).padStart(2, "0")
 export const ddmmyyyy = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
@@ -65,17 +65,17 @@ export function namaFail(laporan: "Surat" | "Rekod-Bayaran", t: Tempoh) {
 type Meta = { tempoh: Tempoh; dijanaOleh: string; unit?: string }
 
 // A4 portrait, millimetres
-const PAGE_W = 210
-const PAGE_H = 297
-const M = 14
-const INK: [number, number, number] = [17, 24, 39]
-const MUTED: [number, number, number] = [107, 114, 128]
-const LINE: [number, number, number] = [209, 213, 219]
+export const PAGE_W = 210
+export const PAGE_H = 297
+export const M = 14
+export const INK: [number, number, number] = [17, 24, 39]
+export const MUTED: [number, number, number] = [107, 114, 128]
+export const LINE: [number, number, number] = [209, 213, 219]
 
 // The PDF's built-in font has no en dash
 const pdfLabel = (t: Tempoh) => (t.jenis === "bulanan" ? t.label : `${ddmmyyyy(t.from)} hingga ${ddmmyyyy(t.to)}`)
 
-async function loadPdf() {
+export async function loadPdf() {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")])
   return { jsPDF, autoTable }
 }
@@ -129,7 +129,7 @@ function tandatangan(doc: any, startY: number) {
 }
 
 /** "Halaman 1 / 3" and the report name on every page. */
-function footer(doc: any, nama: string) {
+export function footer(doc: any, nama: string) {
   const pages = doc.getNumberOfPages()
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p)
@@ -139,7 +139,7 @@ function footer(doc: any, nama: string) {
   }
 }
 
-const tableStyle = {
+export const tableStyle = {
   theme: "grid" as const,
   margin: { left: M, right: M, top: M, bottom: 16 },
   styles: { font: "helvetica", fontSize: 8, cellPadding: 1.6, textColor: INK, lineColor: LINE, lineWidth: 0.2, valign: "top" as const, overflow: "linebreak" as const },
