@@ -58,7 +58,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
-import { PIECERATE, bayaranFormErrors } from "@/types/bayaran-schema";
+import { KEMAJUAN, PIECERATE, WCP, bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -122,6 +122,9 @@ export default function BayaranPage() {
     jenisBayaran: "KEMAJUAN",
     perkara: "",
     nilaiBayaran: "",
+    // Shown and sent only while "Wang Tahanan" is ticked
+    adaWangTahanan: false,
+    wangTahanan: "",
     bayaranKe: "",
     kategori: "",
     noKontrak: "",
@@ -533,8 +536,12 @@ export default function BayaranPage() {
   const handleJenisBayaranChange = (value: string) => {
     setFormData((prev) => {
       if (value === PIECERATE) return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "" };
-      if (prev.jenisBayaran === PIECERATE) return { ...prev, jenisBayaran: value, kategori: "", noKontrak: "", namaKontraktor: "" };
-      return { ...prev, jenisBayaran: value };
+      // WCP is paid once: Bayaran Ke is hidden and cleared
+      let next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
+      // Only KEMAJUAN offers the Wang Tahanan tick
+      if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "" };
+      if (prev.jenisBayaran === PIECERATE) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
+      return next;
     });
   };
 
@@ -702,12 +709,16 @@ export default function BayaranPage() {
   };
 
   // Handle currency input change - Updated to handle larger amounts
-  const handleCurrencyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Nilai Bayaran, or Wang Tahanan when field says so
+  const handleCurrencyInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "nilaiBayaran" | "wangTahanan" = "nilaiBayaran",
+  ) => {
     // Get the current cursor position
     const cursorPos = e.target.selectionStart || 0;
 
     // Get the current value without commas
-    const currentValue = formData.nilaiBayaran;
+    const currentValue = formData[field];
 
     // Get the new value from the input
     let newValue = e.target.value;
@@ -733,7 +744,7 @@ export default function BayaranPage() {
     }
 
     // Store the raw numeric value in state
-    setFormData((prev) => ({ ...prev, nilaiBayaran: newValue }));
+    setFormData((prev) => ({ ...prev, [field]: newValue }));
 
     // Calculate new cursor position based on added/removed commas
     const oldCommaCount = (formatCurrencyInput(currentValue).match(/,/g) || []).length;
@@ -854,8 +865,12 @@ export default function BayaranPage() {
         return;
       }
 
+      const { adaWangTahanan, ...fields } = formData;
       const payload = {
-        ...formData,
+        ...fields,
+        // Unticked or not KEMAJUAN: the record has no Wang Tahanan; WCP: no Bayaran Ke
+        wangTahanan: adaWangTahanan && fields.jenisBayaran === KEMAJUAN ? fields.wangTahanan : "",
+        bayaranKe: fields.jenisBayaran === WCP ? "" : fields.bayaranKe,
         user: user?.name || "Unknown",
       };
 
@@ -890,6 +905,8 @@ export default function BayaranPage() {
           jenisBayaran: "KEMAJUAN",
           perkara: "",
           nilaiBayaran: "",
+          adaWangTahanan: false,
+          wangTahanan: "",
           bayaranKe: "",
           kategori: "",
           noKontrak: "",
@@ -953,6 +970,8 @@ export default function BayaranPage() {
       jenisBayaran: bayaran.jenisBayaran || "",
       perkara: bayaran.perkara,
       nilaiBayaran: bayaran.nilaiBayaran.replace(/[^\d.-]/g, ""), // Remove currency formatting
+      adaWangTahanan: !!bayaran.wangTahanan,
+      wangTahanan: (bayaran.wangTahanan || "").replace(/[^\d.-]/g, ""),
       bayaranKe: bayaran.bayaranKe,
       kategori: bayaran.kategori,
       noKontrak: bayaran.noKontrak,

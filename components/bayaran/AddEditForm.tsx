@@ -13,9 +13,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_BAYARAN, PIECERATE } from "@/types/bayaran-schema"
+import { JENIS_BAYARAN, KEMAJUAN, PIECERATE, WCP } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
 
 interface AddEditFormProps {
@@ -46,7 +47,7 @@ interface AddEditFormProps {
   getPiecerateKontraktors: () => string[]
   getAvailableKontraks: () => string[]
   getAvailableKategoris: () => string[]
-  handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>, field?: "nilaiBayaran" | "wangTahanan") => void
   formatCurrencyInput: (value: string) => string
   shouldShowAdvancedFields: () => boolean
   shouldShowHandoverFields: () => boolean
@@ -62,6 +63,8 @@ const EMPTY_FORM = {
   jenisBayaran: "KEMAJUAN",
   perkara: "",
   nilaiBayaran: "",
+  adaWangTahanan: false,
+  wangTahanan: "",
   bayaranKe: "",
   kategori: "",
   noKontrak: "",
@@ -189,6 +192,11 @@ export function AddEditForm({
   const kategoriOptions = getAvailableKategoris()
   const kontrakOptions = getAvailableKontraks()
   const isPiecerate = formData.jenisBayaran === PIECERATE
+  // WCP is paid once, so it has no Bayaran Ke
+  const isWcp = formData.jenisBayaran === WCP
+  // The Wang Tahanan tick is only offered for KEMAJUAN
+  const canWangTahanan = formData.jenisBayaran === KEMAJUAN
+  const showWangTahanan = canWangTahanan && !!formData.adaWangTahanan
   const needsKategori = !isEdit && kategoriOptions.length > 0
   const needsKontrak = !isEdit && kontrakOptions.length > 0
   // PIECERATE: no kontrak, so the contractor is picked from the Daripada's
@@ -382,32 +390,76 @@ export function AddEditForm({
                 />
               </Field>
 
-              <div className="grid grid-cols-[1fr_6rem] gap-3">
-                <Field label="Nilai Bayaran" htmlFor="nilaiBayaran" required={!isEdit} error={formErrors.nilaiBayaran}>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+              {/* Nilai Bayaran | Wang Tahanan (when ticked) | Bayaran Ke (not for WCP) */}
+              <div
+                className={cx(
+                  "grid items-start gap-3",
+                  // Phones: Bayaran Ke drops to the next row when all three show
+                  showWangTahanan && !isWcp && "grid-cols-2 sm:grid-cols-[1fr_1fr_5.5rem]",
+                  showWangTahanan && isWcp && "grid-cols-2",
+                  !showWangTahanan && !isWcp && "grid-cols-[1fr_6rem]",
+                  !showWangTahanan && isWcp && "grid-cols-1",
+                )}
+              >
+                <div className="flex min-w-0 flex-col gap-2">
+                  <Field label="Nilai Bayaran" htmlFor="nilaiBayaran" required={!isEdit} error={formErrors.nilaiBayaran}>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+                      <Input
+                        id="nilaiBayaran"
+                        type="text"
+                        inputMode="decimal"
+                        value={formatCurrencyInput(formData.nilaiBayaran)}
+                        onChange={handleCurrencyInputChange}
+                        placeholder="0.00"
+                        className={cx("pl-9 tabular-nums", formErrors.nilaiBayaran && errorRing)}
+                        disabled={locked}
+                      />
+                    </div>
+                  </Field>
+                  {canWangTahanan && (
+                    <Checkbox
+                      id="adaWangTahanan"
+                      isSelected={showWangTahanan}
+                      isDisabled={locked}
+                      onChange={(checked) =>
+                        // Unticked: the amount is cleared, the record has no Wang Tahanan
+                        setFormData((prev: any) => ({ ...prev, adaWangTahanan: checked, wangTahanan: checked ? prev.wangTahanan : "" }))
+                      }
+                    >
+                      <span className="whitespace-nowrap">Wang Tahanan</span>
+                    </Checkbox>
+                  )}
+                </div>
+                {showWangTahanan && (
+                  <Field label="Wang Tahanan" htmlFor="wangTahanan">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+                      <Input
+                        id="wangTahanan"
+                        type="text"
+                        inputMode="decimal"
+                        value={formatCurrencyInput(formData.wangTahanan)}
+                        onChange={(e) => handleCurrencyInputChange(e, "wangTahanan")}
+                        placeholder="0.00"
+                        className="pl-9 tabular-nums"
+                        disabled={locked}
+                      />
+                    </div>
+                  </Field>
+                )}
+                {!isWcp && (
+                  <Field label="Bayaran Ke" htmlFor="bayaranKe" required={!isEdit} error={formErrors.bayaranKe}>
                     <Input
-                      id="nilaiBayaran"
-                      type="text"
-                      inputMode="decimal"
-                      value={formatCurrencyInput(formData.nilaiBayaran)}
-                      onChange={handleCurrencyInputChange}
-                      placeholder="0.00"
-                      className={cx("pl-9 tabular-nums", formErrors.nilaiBayaran && errorRing)}
+                      id="bayaranKe"
+                      className={cx(formErrors.bayaranKe && errorRing)}
+                      inputMode="numeric"
+                      value={formData.bayaranKe}
+                      onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
                       disabled={locked}
                     />
-                  </div>
-                </Field>
-                <Field label="Bayaran Ke" htmlFor="bayaranKe" required={!isEdit} error={formErrors.bayaranKe}>
-                  <Input
-                    id="bayaranKe"
-                    className={cx(formErrors.bayaranKe && errorRing)}
-                    inputMode="numeric"
-                    value={formData.bayaranKe}
-                    onChange={(e) => setFormData((prev: any) => ({ ...prev, bayaranKe: e.target.value }))}
-                    disabled={locked}
-                  />
-                </Field>
+                  </Field>
+                )}
               </div>
 
               {isPiecerate ? (

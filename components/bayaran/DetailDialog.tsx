@@ -237,6 +237,11 @@ export function DetailDialog({
                   <div className="min-w-0">
                     <p className="text-caption-1-medium text-text-tertiary">Nilai Bayaran</p>
                     <p className="text-title-2-semibold text-text-primary tabular-nums">{formatCurrency(b.nilaiBayaran)}</p>
+                    {b.wangTahanan && (
+                      <p className="text-caption-1-regular text-text-secondary tabular-nums">
+                        Wang Tahanan <span className="font-medium text-text-primary">{formatCurrency(b.wangTahanan)}</span>
+                      </p>
+                    )}
                   </div>
                   {(b.jenisBayaran || b.bayaranKe) && (
                     <div className="flex shrink-0 flex-col items-end gap-1">

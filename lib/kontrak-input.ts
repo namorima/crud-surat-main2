@@ -34,6 +34,7 @@ export function parseKontrakInput(body: any): KontrakInput | string {
     // Free text: kept as typed rather than upper-cased.
     kerja: text(body?.kerja).replace(/\s+/g, " "),
     nilaiKontrak: parseNilai(body?.nilaiKontrak),
+    wcp: parseNilai(body?.wcp),
     status: (text(body?.status).toUpperCase() || "AKTIF") as KontrakStatus,
   }
   if (!input.kawasan || !input.noKontrak) return "Kawasan dan No Kontrak wajib diisi"
@@ -42,6 +43,8 @@ export function parseKontrakInput(body: any): KontrakInput | string {
   // other values, so the server does not reject them.
   if (Number.isNaN(input.nilaiKontrak)) return "Nilai kontrak tidak sah (contoh: 125000.00)"
   if (input.nilaiKontrak !== null && input.nilaiKontrak > 999_999_999_999.99) return "Nilai kontrak terlalu besar"
+  if (Number.isNaN(input.wcp)) return "Nilai WCP tidak sah (contoh: 6250.00)"
+  if (input.wcp !== null && input.wcp > 999_999_999_999.99) return "Nilai WCP terlalu besar"
   if (input.jenisKerja && !(JENIS_KERJA as readonly string[]).includes(input.jenisKerja)) {
     return `Jenis kerja tidak sah: ${input.jenisKerja}`
   }

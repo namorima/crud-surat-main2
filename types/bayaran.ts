@@ -3,11 +3,14 @@ export type Bayaran = {
   ids?: number  // Original numeric ID from Google Sheets
   daripada: string
   tarikhTerima: string
-  /** KEMAJUAN | WCP | WANG TAHANAN; empty on records keyed before it */
+  /** KEMAJUAN | WCP | WANG TAHANAN | PIECERATE; empty on records keyed before it */
   jenisBayaran?: string
   perkara: string
   nilaiBayaran: string
+  /** Empty for a WCP bayaran (Bayaran Ke is not asked) */
   bayaranKe: string
+  /** Wang Tahanan amount ("12,345.00"), optional; "" when the record has none */
+  wangTahanan?: string
   kategori: string
   noKontrak: string
   namaKontraktor: string // New field - Column S

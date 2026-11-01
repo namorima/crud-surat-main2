@@ -482,6 +482,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
         perkara: row.perkara,
         nilaiBayaran: row.nilai_bayaran,
         bayaranKe: row.bayaran_ke || "",
+        wangTahanan: row.wang_tahanan || "",
         jenisBayaran: row.jenis_bayaran || "",
         kategori: row.kategori || "",
         noKontrak: row.no_kontrak || "",
@@ -531,6 +532,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
         perkara: bayaran.perkara,
         nilai_bayaran: bayaran.nilaiBayaran,
         bayaran_ke: bayaran.bayaranKe || null,
+        wang_tahanan: bayaran.wangTahanan || null,
         jenis_bayaran: bayaran.jenisBayaran || null,
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
@@ -585,7 +587,8 @@ export async function updateBayaran(id: string, bayaran: Omit<Bayaran, "id">, ac
         perkara: bayaran.perkara,
         nilai_bayaran: bayaran.nilaiBayaran,
         bayaran_ke: bayaran.bayaranKe || null,
-        // Callers that don't send it (older clients) leave it as it is
+        // Callers that don't send these (older clients) leave them as they are
+        ...(bayaran.wangTahanan !== undefined && { wang_tahanan: bayaran.wangTahanan || null }),
         ...(bayaran.jenisBayaran !== undefined && { jenis_bayaran: bayaran.jenisBayaran || null }),
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
@@ -869,6 +872,7 @@ function mapKontrakRow(row: any): Kontrak {
     jenisKerja: row.jenis_kerja || "",
     kerja: row.kerja || "",
     nilaiKontrak: row.nilai_kontrak === null || row.nilai_kontrak === undefined ? null : Number(row.nilai_kontrak),
+    wcp: row.wcp === null || row.wcp === undefined ? null : Number(row.wcp),
     status: row.status || "AKTIF",
   }
 }
@@ -885,6 +889,7 @@ function kontrakToRow(input: KontrakInput) {
     jenis_kerja: input.jenisKerja || null,
     kerja: input.kerja || null,
     nilai_kontrak: input.nilaiKontrak,
+    wcp: input.wcp,
     status: input.status || "AKTIF",
   }
 }

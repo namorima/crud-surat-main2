@@ -33,9 +33,10 @@ import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
 import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
+import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
-type KontrakForm = Omit<KontrakInput, "nilaiKontrak"> & { nilaiKontrak: string }
+type KontrakForm = Omit<KontrakInput, "nilaiKontrak" | "wcp"> & { nilaiKontrak: string; wcp: string }
 
 const formatNilai = (value: number) =>
   value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -51,6 +52,7 @@ const EMPTY: KontrakForm = {
   jenisKerja: "",
   kerja: "",
   nilaiKontrak: "",
+  wcp: "",
   status: "AKTIF",
 }
 
@@ -78,6 +80,28 @@ function FormSection({ title, children }: { title: string; children: React.React
       <h3 className="text-body-semibold text-text-primary">{title}</h3>
       {children}
     </section>
+  )
+}
+
+/** An RM amount typed as text; tidied to "1,234.50" when the field is left. */
+function RmInput({ id, value, onChange }: { id: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+      <Input
+        id={id}
+        inputMode="decimal"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => {
+          const n = parseNilai(value)
+          if (n !== null && !Number.isNaN(n)) onChange(formatNilai(n))
+        }}
+        placeholder="0.00"
+        className="pl-9 tabular-nums"
+      />
+    </div>
   )
 }
 
@@ -135,6 +159,8 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
+  // Tambah Kontraktor opened from the Nama Kontraktor field, on top of this form
+  const [kontraktorFormOpen, setKontraktorFormOpen] = useState(false)
 
   // Nama Kontraktor choices come from Tetapan → Kontraktor; refreshed each time the form opens.
   const loadKontraktorNames = async () => {
@@ -211,6 +237,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       jenisKerja: item.jenisKerja,
       kerja: item.kerja,
       nilaiKontrak: item.nilaiKontrak === null ? "" : formatNilai(item.nilaiKontrak),
+      wcp: item.wcp === null ? "" : formatNilai(item.wcp),
       status: item.status,
     })
     setFormOpen(true)
@@ -231,6 +258,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     }
     if (Number.isNaN(parseNilai(form.nilaiKontrak))) {
       toast.error("Nilai kontrak tidak sah (contoh: 125000.00)")
+      return
+    }
+    if (Number.isNaN(parseNilai(form.wcp))) {
+      toast.error("Nilai WCP tidak sah (contoh: 6250.00)")
       return
     }
     setSaving(true)
@@ -423,6 +454,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                         <td>{item.namaKontraktor || <span className="text-text-tertiary">-</span>}</td>
                         <td className="whitespace-nowrap text-end text-body-semibold tabular-nums">
                           {item.nilaiKontrak === null ? <span className="font-normal text-text-tertiary">-</span> : `RM ${formatNilai(item.nilaiKontrak)}`}
+                          {item.wcp !== null && (
+                            <span className="block text-caption-1-regular font-normal text-text-tertiary">WCP RM {formatNilai(item.wcp)}</span>
+                          )}
                         </td>
                         <td className="whitespace-nowrap text-text-secondary">
                           <Tempoh item={item} />
@@ -472,7 +506,9 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </div>
                     {item.kerja && <span className="line-clamp-2 text-body-regular text-text-secondary">{item.kerja}</span>}
                     <span className="truncate text-caption-1-regular text-text-tertiary">
-                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja].filter(Boolean).join(" · ")}
+                      {[item.kawasan, item.noPo && `PO ${item.noPo}`, item.jenisKerja, item.wcp !== null && `WCP RM ${formatNilai(item.wcp)}`]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                     {(item.tarikhMula || item.tarikhAkhir) && (
                       <span className="text-caption-1-regular text-text-secondary">
@@ -502,8 +538,14 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
       </CardFooter>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        {/* Fixed size on desktop (the body scrolls), a full-width sheet on phones */}
-        <DialogContent className={cx(dialogFrameClass, "max-h-[92dvh] sm:h-[min(680px,90dvh)] sm:w-[680px] sm:max-w-[calc(100vw-2rem)]")}>
+        {/* Fixed size on desktop (the body scrolls), a full-width sheet on phones.
+            From md: Maklumat Kontrak on the left, Nilai & Tempoh over Kerja & Kontraktor on the right */}
+        <DialogContent
+          className={cx(
+            dialogFrameClass,
+            "max-h-[92dvh] sm:h-[min(680px,90dvh)] sm:w-[680px] sm:max-w-[calc(100vw-2rem)] md:h-[min(720px,90dvh)] md:w-[960px]",
+          )}
+        >
           <DialogHeader className={dialogHeaderClass}>
             <DialogTitle className="pr-8 text-headline-semibold text-text-primary">{editing ? "Edit Kontrak" : "Tambah Kontrak"}</DialogTitle>
             <DialogDescription className="text-caption-1-regular text-text-secondary">
@@ -513,7 +555,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
-            <div className={cx(dialogBodyClass, "gap-4")}>
+            <div className={cx(dialogBodyClass, "gap-4 md:grid md:grid-cols-2 md:items-start")}>
               <FormSection title="Maklumat Kontrak">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Kawasan" htmlFor="kontrak-kawasan" required>
@@ -587,74 +629,80 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                 </div>
               </FormSection>
 
-              <FormSection title="Kerja & Kontraktor">
-                <FormField label="Kerja" htmlFor="kontrak-kerja">
-                  <Textarea
-                    id="kontrak-kerja"
-                    rows={2}
-                    value={form.kerja}
-                    onChange={setField("kerja")}
-                    placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
-                    className="min-h-[60px]"
-                  />
-                </FormField>
-                <FormField label="Nama Kontraktor" htmlFor="kontrak-nama" hint="Tiada dalam senarai? Tambah dahulu di tab Kontraktor.">
-                  <Select
-                    value={form.namaKontraktor || NONE}
-                    onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
-                  >
-                    <SelectTrigger id="kontrak-nama">
-                      <SelectValue placeholder="Pilih kontraktor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>Tiada</SelectItem>
-                      {namaOptions.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              </FormSection>
-
-              <FormSection title="Nilai & Tempoh">
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Nilai Kontrak" htmlFor="kontrak-nilai" className="col-span-2 sm:col-span-1">
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-body-medium text-text-tertiary">RM</span>
+              <div className="flex flex-col gap-4">
+                <FormSection title="Nilai & Tempoh">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Nilai Kontrak" htmlFor="kontrak-nilai" className="col-span-2 sm:col-span-1">
+                      <RmInput id="kontrak-nilai" value={form.nilaiKontrak} onChange={(value) => setForm((prev) => ({ ...prev, nilaiKontrak: value }))} />
+                    </FormField>
+                    <FormField label="Wang Cagaran Prestasi (WCP)" htmlFor="kontrak-wcp" className="col-span-2 sm:col-span-1">
+                      <RmInput id="kontrak-wcp" value={form.wcp} onChange={(value) => setForm((prev) => ({ ...prev, wcp: value }))} />
+                    </FormField>
+                    <FormField label="Tarikh Mula" htmlFor="kontrak-mula">
+                      <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
+                    </FormField>
+                    <FormField label="Tarikh Akhir" htmlFor="kontrak-akhir">
                       <Input
-                        id="kontrak-nilai"
-                        inputMode="decimal"
-                        autoComplete="off"
-                        value={form.nilaiKontrak}
-                        onChange={setField("nilaiKontrak")}
-                        onBlur={() => {
-                          const n = parseNilai(form.nilaiKontrak)
-                          if (n !== null && !Number.isNaN(n)) setForm((prev) => ({ ...prev, nilaiKontrak: formatNilai(n) }))
-                        }}
-                        placeholder="0.00"
-                        className="pl-9 tabular-nums"
+                        id="kontrak-akhir"
+                        type="date"
+                        min={form.tarikhMula || undefined}
+                        value={form.tarikhAkhir}
+                        onChange={setField("tarikhAkhir")}
                       />
-                    </div>
-                  </FormField>
-                  <FormField label="Tahun Kontrak" htmlFor="kontrak-tahun" hint="Daripada Tarikh Mula" className="col-span-2 sm:col-span-1">
-                    <Input id="kontrak-tahun" value={tahunFromTarikh(form.tarikhMula) ?? ""} placeholder="Auto" readOnly tabIndex={-1} />
-                  </FormField>
-                  <FormField label="Tarikh Mula" htmlFor="kontrak-mula">
-                    <Input id="kontrak-mula" type="date" value={form.tarikhMula} onChange={setField("tarikhMula")} />
-                  </FormField>
-                  <FormField label="Tarikh Akhir" htmlFor="kontrak-akhir">
-                    <Input
-                      id="kontrak-akhir"
-                      type="date"
-                      min={form.tarikhMula || undefined}
-                      value={form.tarikhAkhir}
-                      onChange={setField("tarikhAkhir")}
+                    </FormField>
+                    <FormField label="Tahun Kontrak" htmlFor="kontrak-tahun" hint="Daripada Tarikh Mula">
+                      <Input id="kontrak-tahun" value={tahunFromTarikh(form.tarikhMula) ?? ""} placeholder="Auto" readOnly tabIndex={-1} />
+                    </FormField>
+                  </div>
+                </FormSection>
+
+                <FormSection title="Kerja & Kontraktor">
+                  <FormField label="Kerja" htmlFor="kontrak-kerja">
+                    <Textarea
+                      id="kontrak-kerja"
+                      rows={2}
+                      value={form.kerja}
+                      onChange={setField("kerja")}
+                      placeholder="Contoh: Kerja Mengangkut BTS Di Ladang …"
+                      className="min-h-[60px]"
                     />
                   </FormField>
-                </div>
-              </FormSection>
+                  <FormField
+                    label="Nama Kontraktor"
+                    htmlFor="kontrak-nama"
+                    hint={
+                      <span className="inline-flex flex-wrap items-center gap-x-1">
+                        Tiada dalam senarai?
+                        <button
+                          type="button"
+                          onClick={() => setKontraktorFormOpen(true)}
+                          className="inline-flex cursor-pointer items-center gap-0.5 rounded-sm font-medium text-accent-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring dark:text-accent-400"
+                        >
+                          <RiAddLine className="size-3.5" aria-hidden />
+                          Tambah kontraktor baru
+                        </button>
+                      </span>
+                    }
+                  >
+                    <Select
+                      value={form.namaKontraktor || NONE}
+                      onValueChange={(value) => value && setForm((prev) => ({ ...prev, namaKontraktor: value === NONE ? "" : value }))}
+                    >
+                      <SelectTrigger id="kontrak-nama">
+                        <SelectValue placeholder="Pilih kontraktor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Tiada</SelectItem>
+                        {namaOptions.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </FormSection>
+              </div>
             </div>
             <footer className={dialogFooterClass}>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving} className="flex-1 sm:flex-none">
@@ -668,6 +716,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Outside the kontrak <form>, so saving a contractor never submits the kontrak */}
+      <KontraktorFormDialog
+        open={kontraktorFormOpen}
+        onOpenChange={setKontraktorFormOpen}
+        onSaved={(kontraktor) => {
+          setKontraktorNames((prev) =>
+            prev.includes(kontraktor.namaKontraktor) ? prev : [...prev, kontraktor.namaKontraktor].sort((a, b) => a.localeCompare(b)),
+          )
+          // The new contractor is picked for this kontrak
+          setForm((prev) => ({ ...prev, namaKontraktor: kontraktor.namaKontraktor }))
+        }}
+      />
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>
