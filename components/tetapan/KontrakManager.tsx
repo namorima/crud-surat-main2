@@ -624,25 +624,6 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                       </SelectContent>
                     </Select>
                   </FormField>
-                  <FormField label="No Kontrak" htmlFor="kontrak-no" required>
-                    <Input
-                      id="kontrak-no"
-                      value={form.noKontrak}
-                      onChange={setField("noKontrak")}
-                      required
-                      aria-invalid={!!duplicateNo}
-                      aria-describedby={duplicateNo ? "kontrak-no-dup" : undefined}
-                      className={cx(duplicateNo && "ring-2 ring-border-error-default")}
-                    />
-                    {duplicateNo && (
-                      <p id="kontrak-no-dup" role="alert" className="text-caption-2-regular text-text-destructive">
-                        Sudah wujud bagi {duplicateNo.kawasan}: {duplicateNo.noKontrak}
-                      </p>
-                    )}
-                  </FormField>
-                  <FormField label="No Purchase Order (PO)" htmlFor="kontrak-po">
-                    <Input id="kontrak-po" value={form.noPo} onChange={setField("noPo")} placeholder="Pilihan" autoComplete="off" />
-                  </FormField>
                   <FormField label="Kategori" htmlFor="kontrak-kategori">
                     <Select
                       value={form.kategori || NONE}
@@ -678,6 +659,25 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                         ))}
                       </SelectContent>
                     </Select>
+                  </FormField>
+                  <FormField label="No Kontrak" htmlFor="kontrak-no" required>
+                    <Input
+                      id="kontrak-no"
+                      value={form.noKontrak}
+                      onChange={setField("noKontrak")}
+                      required
+                      aria-invalid={!!duplicateNo}
+                      aria-describedby={duplicateNo ? "kontrak-no-dup" : undefined}
+                      className={cx(duplicateNo && "ring-2 ring-border-error-default")}
+                    />
+                    {duplicateNo && (
+                      <p id="kontrak-no-dup" role="alert" className="text-caption-2-regular text-text-destructive">
+                        Sudah wujud bagi {duplicateNo.kawasan}: {duplicateNo.noKontrak}
+                      </p>
+                    )}
+                  </FormField>
+                  <FormField label="No Purchase Order (PO)" htmlFor="kontrak-po">
+                    <Input id="kontrak-po" value={form.noPo} onChange={setField("noPo")} placeholder="Pilihan" autoComplete="off" />
                   </FormField>
                 </div>
               </FormSection>
