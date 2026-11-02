@@ -5,22 +5,26 @@ import {
   getContractCategoryData,
   getPenerimaData,
   getStatusBayaranData,
+  getKawasanNames,
 } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
     // Fetch all required data in parallel
-    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData] =
+    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData, kawasanList] =
       await Promise.all([
         getDaripadaKepadaValues(),
         getStatusLadangData(),
         getContractCategoryData(),
         getPenerimaData(),
         getStatusBayaranData(),
+        getKawasanNames(),
       ])
 
     return NextResponse.json({
       daripadaSuggestions,
+      // Daripada choices of Tambah / Edit Rekod Bayaran (Tetapan → Kawasan)
+      kawasanList,
       statusLadangData, // Use data from AUTH sheet with colors
       contractData: contractCategoryData.contractData,
       categoryData: contractCategoryData.categoryData,

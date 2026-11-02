@@ -1,7 +1,7 @@
 "use client"
 
-import type { ReactNode } from "react"
-import { RiArrowUpDownLine, RiLockLine } from "@remixicon/react"
+import { useState, type ReactNode } from "react"
+import { RiAddLine, RiLockLine } from "@remixicon/react"
 import type { Bayaran } from "@/types/bayaran"
 import type { User } from "@/types/user"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -12,12 +12,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/base/checkbox/checkbox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { JENIS_BAYARAN, KEMAJUAN, PIECERATE, WCP } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
+import { hasPermission } from "@/lib/rbac"
+import { KawasanFormDialog } from "@/components/tetapan/KawasanManager"
 
 interface AddEditFormProps {
   showAddDialog: boolean
@@ -34,10 +34,10 @@ interface AddEditFormProps {
   /** Missing required fields after a save attempt (bayaranFormErrors) */
   formErrors?: Record<string, string>
   user: User | null
-  showDaripadaDropdown: boolean
-  setShowDaripadaDropdown: (show: boolean) => void
+  /** Sets the Daripada (a kawasan) and clears the kategori / no kontrak that depend on it */
   handleDaripadaChange: (value: string) => void
-  filteredDaripadaSuggestions: string[]
+  /** A kawasan added with the + by Daripada; the page adds it to formOptions.kawasanList */
+  onKawasanAdded?: (nama: string) => void
   handleKontrakChange: (value: string) => void
   /** Sets the kategori and narrows / clears the no kontrak to match */
   handleKategoriChange: (value: string) => void
@@ -151,10 +151,8 @@ export function AddEditForm({
   saving,
   formErrors = {},
   user,
-  showDaripadaDropdown,
-  setShowDaripadaDropdown,
   handleDaripadaChange,
-  filteredDaripadaSuggestions,
+  onKawasanAdded,
   handleKontrakChange,
   handleKategoriChange,
   handleJenisBayaranChange,
@@ -171,6 +169,21 @@ export function AddEditForm({
   const isEdit = !!editingBayaran
   // KEWANGAN and PENERIMA may only change status bayaran, tarikh bayar and baucer of an existing record
   const locked = (user?.role === "KEWANGAN" || user?.type === "PENERIMA") && isEdit
+  const [addKawasanOpen, setAddKawasanOpen] = useState(false)
+
+  // Daripada is a kawasan. An older record keeps its Daripada selectable even
+  // when it is not in Tetapan → Kawasan.
+  const kawasanList: string[] = formOptions.kawasanList ?? []
+  const daripadaOptions =
+    formData.daripada && !kawasanList.includes(formData.daripada) ? [formData.daripada, ...kawasanList] : kawasanList
+  // Same rule as POST /api/kawasan: whoever adds Rekod Bayaran, or a Tetapan admin
+  const perms = user?.permissions ?? []
+  const canAddKawasan =
+    perms.length > 0
+      ? hasPermission(perms, { resource: "bayaran", action: "create" }) ||
+        (hasPermission(perms, { resource: "tetapan", action: "edit" }) &&
+          hasPermission(perms, { resource: "tetapan", action: "manage_all_units" }))
+      : ["semua", "Super Admin", "PERLADANGAN"].includes(user?.role ?? "")
 
   // One option per name (Select values must be unique), active accounts only:
   // a deactivated penerima (moved unit) cannot be picked for new records. An
@@ -285,66 +298,41 @@ export function AddEditForm({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
             <Section step={1} title="Maklumat Bayaran">
-              {/* Daripada: pick a suggestion or keep what was typed */}
+              {/* Daripada: a kawasan from Tetapan → Kawasan; + adds one */}
               <Field label="Daripada" required error={formErrors.daripada}>
-                <Popover open={showDaripadaDropdown} onOpenChange={setShowDaripadaDropdown}>
-                  <PopoverTrigger asChild>
-                    <button
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.daripada}
+                    // Radix reports "" for a value not in the list yet; never clear the Daripada for that
+                    onValueChange={(value) => value && value !== formData.daripada && handleDaripadaChange(value)}
+                    disabled={locked}
+                  >
+                    <SelectTrigger id="daripada" className={cx("min-w-0 flex-1", formErrors.daripada && errorRing)}>
+                      <SelectValue placeholder={daripadaOptions.length ? "Pilih kawasan" : "Tiada kawasan"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {daripadaOptions.map((nama) => (
+                        <SelectItem key={nama} value={nama}>
+                          {nama}
+                          {!kawasanList.includes(nama) && <span className="text-text-tertiary"> · tiada dalam senarai Kawasan</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {canAddKawasan && !locked && (
+                    <UiButton
                       type="button"
-                      role="combobox"
-                      aria-expanded={showDaripadaDropdown}
-                      disabled={locked}
-                      className={cx(
-                        "flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-2lg bg-background-tertiary-default px-2.5 text-left text-body-regular ring-2 ring-inset ring-transparent outline-none transition-[box-shadow] hover:ring-border-button-hover focus-visible:ring-border-button-active disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text",
-                        formData.daripada ? "text-text-primary" : "text-text-tertiary",
-                        formErrors.daripada && errorRing,
-                      )}
+                      variant="outline"
+                      size="icon"
+                      className="size-9 shrink-0"
+                      onClick={() => setAddKawasanOpen(true)}
+                      title="Tambah kawasan"
+                      aria-label="Tambah kawasan"
                     >
-                      <span className="truncate">{formData.daripada || "Pilih atau taip nama/organisasi..."}</span>
-                      <RiArrowUpDownLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Cari atau taip nama..."
-                        value={formData.daripada}
-                        onValueChange={handleDaripadaChange}
-                        disabled={locked}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          <div className="p-2">
-                            <p className="mb-2 text-caption-1-regular text-text-secondary">Tiada hasil dijumpai.</p>
-                            <UiButton size="sm" variant="outline" onClick={() => setShowDaripadaDropdown(false)} className="w-full" disabled={locked}>
-                              Gunakan "{formData.daripada}"
-                            </UiButton>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {filteredDaripadaSuggestions.map((suggestion) => (
-                            <CommandItem
-                              key={suggestion}
-                              value={suggestion}
-                              onSelect={() => {
-                                setFormData((prev: any) => ({
-                                  ...prev,
-                                  daripada: suggestion,
-                                  noKontrak: "",
-                                  // A PIECERATE bayaran keeps its kategori whatever the Daripada
-                                  kategori: prev.jenisBayaran === PIECERATE ? PIECERATE : "",
-                                }))
-                                setShowDaripadaDropdown(false)
-                              }}
-                            >
-                              {suggestion}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                      <RiAddLine className="size-4" />
+                    </UiButton>
+                  )}
+                </div>
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
@@ -742,6 +730,15 @@ export function AddEditForm({
           </Button>
         </footer>
       </DialogContent>
+
+      <KawasanFormDialog
+        open={addKawasanOpen}
+        onOpenChange={setAddKawasanOpen}
+        onSaved={(kawasan) => {
+          onKawasanAdded?.(kawasan.namaKawasan)
+          handleDaripadaChange(kawasan.namaKawasan)
+        }}
+      />
     </Dialog>
   )
 }
