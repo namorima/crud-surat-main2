@@ -34,6 +34,7 @@ import { cx } from "@/utils/cx"
 import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, kontrakNoKey, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
 import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
+import { KawasanFormDialog } from "@/components/tetapan/KawasanManager"
 
 /** The form keeps nilai as typed text; the server parses it. */
 type EotRow = { kali: string; tarikh: string }
@@ -187,6 +188,21 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   // Tambah Kontraktor opened from the Nama Kontraktor field, on top of this form
   const [kontraktorFormOpen, setKontraktorFormOpen] = useState(false)
 
+  // Kawasan choices come from Tetapan → Kawasan; refreshed each time the form opens.
+  const [kawasanNames, setKawasanNames] = useState<string[]>([])
+  // Tambah Kawasan opened from the + by Kawasan, on top of this form
+  const [kawasanFormOpen, setKawasanFormOpen] = useState(false)
+  const loadKawasanNames = async () => {
+    try {
+      const response = await fetch("/api/kawasan")
+      if (!response.ok) throw new Error(await readError(response, "Gagal memuatkan senarai kawasan"))
+      const list: { namaKawasan: string }[] = await response.json()
+      setKawasanNames(list.map((item) => item.namaKawasan))
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   // Nama Kontraktor choices come from Tetapan → Kontraktor; refreshed each time the form opens.
   const loadKontraktorNames = async () => {
     try {
@@ -217,7 +233,11 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     load()
   }, [])
 
-  const kawasanOptions = useMemo(() => [...new Set(items.map((item) => item.kawasan).filter(Boolean))].sort(), [items])
+  // Keep a kawasan that is not in Tetapan → Kawasan selectable on the row being edited
+  const kawasanOptions = useMemo(
+    () => (form.kawasan && !kawasanNames.includes(form.kawasan) ? [form.kawasan, ...kawasanNames] : kawasanNames),
+    [form.kawasan, kawasanNames],
+  )
   // The fixed list, plus an older value on the row being edited so it is not silently dropped.
   // Keep a name that is not (yet) in the Kontraktor list selectable on the row being edited.
   const namaOptions = useMemo(
@@ -243,6 +263,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
   const openAdd = () => {
     loadKontraktorNames()
+    loadKawasanNames()
     setEditing(null)
     setForm(EMPTY)
     setLagiOpen(false)
@@ -251,6 +272,7 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
 
   const openEdit = (item: Kontrak) => {
     loadKontraktorNames()
+    loadKawasanNames()
     setEditing(item)
     setForm({
       kawasan: item.kawasan,
@@ -599,12 +621,36 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
               <FormSection title="Maklumat Projek">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField label="Kawasan" htmlFor="kontrak-kawasan" required>
-                    <Input id="kontrak-kawasan" list="kontrak-kawasan-options" value={form.kawasan} onChange={setField("kawasan")} required />
-                    <datalist id="kontrak-kawasan-options">
-                      {kawasanOptions.map((value) => (
-                        <option key={value} value={value} />
-                      ))}
-                    </datalist>
+                    <div className="flex gap-2">
+                      <Select
+                        value={form.kawasan}
+                        // Radix reports "" for a value not in the list yet; never clear the kawasan for that
+                        onValueChange={(value) => value && setForm((prev) => ({ ...prev, kawasan: value }))}
+                      >
+                        <SelectTrigger id="kontrak-kawasan" className="min-w-0 flex-1">
+                          <SelectValue placeholder={kawasanOptions.length ? "Pilih kawasan" : "Tiada kawasan"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kawasanOptions.map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {value}
+                              {!kawasanNames.includes(value) && <span className="text-text-tertiary"> · tiada dalam senarai Kawasan</span>}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-9 shrink-0"
+                        onClick={() => setKawasanFormOpen(true)}
+                        title="Tambah kawasan"
+                        aria-label="Tambah kawasan"
+                      >
+                        <RiAddLine className="size-4" />
+                      </Button>
+                    </div>
                   </FormField>
                   <FormField
                     label="Status"
@@ -852,6 +898,19 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Outside the kontrak <form>, so saving a kawasan never submits the kontrak */}
+      <KawasanFormDialog
+        open={kawasanFormOpen}
+        onOpenChange={setKawasanFormOpen}
+        onSaved={(kawasan) => {
+          setKawasanNames((prev) =>
+            prev.includes(kawasan.namaKawasan) ? prev : [...prev, kawasan.namaKawasan].sort((a, b) => a.localeCompare(b)),
+          )
+          // The new kawasan is picked for this kontrak
+          setForm((prev) => ({ ...prev, kawasan: kawasan.namaKawasan }))
+        }}
+      />
 
       {/* Outside the kontrak <form>, so saving a contractor never submits the kontrak */}
       <KontraktorFormDialog
