@@ -23,6 +23,8 @@ import {
   PERIOD_LABEL,
   bayaranStats,
   formatRM,
+  suratForRole,
+  SEMUA_UNIT_ROLES,
   suratStats,
   type Period,
 } from "@/lib/dashboard-stats"
@@ -80,7 +82,10 @@ export default function DashboardPage() {
   }, [canBayaran, canSurat])
 
   const b = useMemo(() => bayaranStats(bayaran, period), [bayaran, period])
-  const s = useMemo(() => suratStats(surat, period), [surat, period])
+  // Surat: only the user's own unit, except for admin / PENGURUS (as on the Surat page)
+  const suratUnit = useMemo(() => suratForRole(surat, user?.role), [surat, user?.role])
+  const unitLabel = user?.role && !SEMUA_UNIT_ROLES.includes(user.role) ? user.role.toUpperCase() : null
+  const s = useMemo(() => suratStats(suratUnit, period), [suratUnit, period])
 
   return (
     <div className="flex flex-col gap-3 pb-2 sm:gap-4">
@@ -115,6 +120,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <span className="text-caption-1-regular text-text-tertiary">
             {shown === "surat" ? "Ikut tarikh surat" : "Ikut tarikh terima"} · {PERIOD_LABEL[period]}
+            {shown === "surat" && unitLabel && ` · Unit ${unitLabel}`}
           </span>
           {/* Bayaran analysis as a PDF, for one kawasan or all kawasan grouped */}
           {shown === "bayaran" && !loading && !error && (
@@ -279,7 +285,7 @@ function SuratSection({ stats }: { stats: ReturnType<typeof suratStats> }) {
           <BarList rows={stats.openAge} format={(v) => `${count(v)} surat`} colors={ORDINAL} empty="Tiada surat tertunggak." />
         </ChartCard>
 
-        <ChartCard title="Surat tertunggak mengikut PIC" caption="Belum proses, dalam tindakan dan hold">
+        <ChartCard title="Surat tertunggak mengikut PIC" caption="Semua surat yang belum SELESAI">
           <BarList rows={stats.openByPic} format={(v) => `${count(v)} surat`} empty="Tiada surat tertunggak." />
         </ChartCard>
 
