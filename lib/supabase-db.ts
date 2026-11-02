@@ -12,6 +12,7 @@ import { BAYARAN_AUDIT_FIELDS, diffRows, type Actor } from "./audit"
 import { hashPassword, isHashedPassword } from "./password"
 import { getKomenSummary } from "./surat-komen"
 import { selectAll } from "./select-all"
+import { kontrakNoKey } from "./kontrak-input"
 
 // ===== SURAT FUNCTIONS =====
 
@@ -973,18 +974,19 @@ async function lookupNamaKontraktor(noKontrak: string, daripada: string): Promis
   return (rows.find((row) => row.kawasan === daripada) ?? rows[0])?.nama_kontraktor || ""
 }
 
+/**
+ * One No Kontrak per kawasan, compared without spaces and case
+ * ("JLNDK21/26" = "JLNDK 21/26"); other kawasan may reuse the number.
+ */
 async function assertKontrakUnique(input: KontrakInput, exceptId?: string) {
-  let query = supabaseAdmin
-    .from("kontrak")
-    .select("id, kategori")
-    .eq("kawasan", input.kawasan)
-    .eq("no_kontrak", input.noKontrak)
+  let query = supabaseAdmin.from("kontrak").select("id, no_kontrak").ilike("kawasan", input.kawasan)
   if (exceptId) query = query.neq("id", exceptId)
   const { data, error } = await query
   if (error) throw error
-  const kategori = input.kategori || ""
-  if (data?.some((row) => (row.kategori || "") === kategori)) {
-    throw new Error(`Kontrak ${input.noKontrak} (${input.kawasan}${kategori ? `, ${kategori}` : ""}) sudah wujud`)
+  const key = kontrakNoKey(input.noKontrak)
+  const same = data?.find((row) => kontrakNoKey(row.no_kontrak || "") === key)
+  if (same) {
+    throw new Error(`No Kontrak ${input.noKontrak} sudah wujud bagi kawasan ${input.kawasan} (${same.no_kontrak})`)
   }
 }
 
