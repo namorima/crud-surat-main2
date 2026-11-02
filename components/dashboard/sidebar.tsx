@@ -119,6 +119,8 @@ export function useNavigation(): NavigationItem[] {
 }
 
 const COLLAPSED_STORAGE_KEY = "sidebar:collapsed"
+/** Fired by AppShell when the work area is clicked; the desktop sidebar collapses. */
+export const SIDEBAR_COLLAPSE_EVENT = "sidebar:collapse"
 
 /** Label slot that fades and shrinks away when the rail collapses. */
 function Collapsible({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
@@ -201,6 +203,22 @@ export function Sidebar({
     try {
       setCollapsedState(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1")
     } catch {}
+  }, [mobile])
+
+  // A click in the work area (AppShell's <main>) collapses the expanded sidebar
+  useEffect(() => {
+    if (mobile) return
+    const collapse = () => {
+      setCollapsedState((current) => {
+        if (current) return current
+        try {
+          window.localStorage.setItem(COLLAPSED_STORAGE_KEY, "1")
+        } catch {}
+        return true
+      })
+    }
+    window.addEventListener(SIDEBAR_COLLAPSE_EVENT, collapse)
+    return () => window.removeEventListener(SIDEBAR_COLLAPSE_EVENT, collapse)
   }, [mobile])
 
   const toggleCollapsed = () => {

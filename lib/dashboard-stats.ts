@@ -273,6 +273,16 @@ export function kontrakDetail(all: Bayaran[], kawasan: string, noKontrak: string
 const isDone = (s: Surat) => s.status === "SELESAI"
 const isOpen = (s: Surat) => s.status !== "SELESAI" && s.status !== "BATAL"
 
+/** Roles that see every unit's surat (Surat page and Dashboard); everyone else sees only the unit named like their role. */
+export const SEMUA_UNIT_ROLES = ["semua", "Super Admin", "admin", "PENGURUS"]
+
+/** Surat of the user's own unit (unit = role, ignoring case); all of them for SEMUA_UNIT_ROLES. */
+export function suratForRole(all: Surat[], role: string | undefined): Surat[] {
+  if (!role || SEMUA_UNIT_ROLES.includes(role)) return all
+  const unit = role.trim().toLowerCase()
+  return all.filter((s) => (s.unit || "").trim().toLowerCase() === unit)
+}
+
 export type Tertunggak = { surat: Surat; hari: number }
 
 /**
@@ -333,7 +343,13 @@ export function suratStats(all: Surat[], period: Period, now = new Date()) {
     monthly,
     status,
     unit: groupRows(rows, (s) => clean(s.unit, "Tiada unit").toUpperCase(), () => 1, 6),
-    openByPic: groupRows(open, (s) => clean(s.tindakanPic, "Tiada PIC").toUpperCase(), () => 1, 7),
+    // Every surat not SELESAI (BATAL included), per PIC
+    openByPic: groupRows(
+      rows.filter((s) => s.status !== "SELESAI"),
+      (s) => clean(s.tindakanPic, "Tiada PIC").toUpperCase(),
+      () => 1,
+      7,
+    ),
     openAge: ageBuckets(open, (s) => parseDate(s.tarikh), [7, 30, 90], () => 1, now),
   }
 }
