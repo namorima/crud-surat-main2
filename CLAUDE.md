@@ -83,6 +83,10 @@ The application uses a **dual-database architecture**:
    - Created by [create-kontraktor.sql](create-kontraktor.sql); RLS enabled with no policies, so only the service role (API routes) can access it
    - Feeds the Nama Kontraktor dropdown in Tetapan → Kontrak; renaming a contractor rewrites `kontrak.nama_kontraktor` and `bayaran.nama_kontraktor`
 
+8b. **`kawasan`** - Kawasan master list: `id`, `nama_kawasan` (unique, case-insensitive, upper case), `kod_lokasi` (optional), `created_at`, `updated_at`
+   - Created and seeded from `kontrak.kawasan` by [create-kawasan.sql](create-kawasan.sql); RLS enabled with no policies (service role only)
+   - Managed in Tetapan → Kawasan; renaming a kawasan rewrites `kontrak.kawasan` and `bayaran.daripada` with the old name; a kawasan used by a kontrak cannot be deleted
+
 9. **`status_config`** - Status configurations
    - Columns: `id`, `status`, `color_hex`, `kategori`, `created_at`
    - Categories: "STATUS LADANG", "STATUS BAYARAN"
@@ -690,6 +694,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `LockerManager.tsx` - Tetapan → Setup Locker tab (right of Setup Fail): Unit, Part, No. Locker and the Part badge colour (preset swatches or any colour). Writes go through `requireUnitEdit()` ([lib/server-auth.ts](lib/server-auth.ts)): `tetapan:edit`, and only the user's own unit without `tetapan:manage_all_units`
    - `part-badge.tsx` - `PartBadge` and `partWarna()`: a fail's badge colour comes from its locker (else the same part in the unit, anywhere, then the old fixed hues)
    - `KontraktorManager.tsx` - Tetapan → Kontraktor tab: vendor no and bank details per contractor. Its Tambah / Edit dialog is the exported `KontraktorFormDialog` (`onSaved` gets the saved row), also opened from Tambah / Edit Kontrak
+   - `KawasanManager.tsx` - Tetapan → Kawasan tab (right of Kontraktor): Nama Kawasan and Kod Lokasi, Tambah / Edit dialog, Padam (`/api/kawasan`, `/api/kawasan/[id]`)
    - `KontrakManager.tsx` - Tetapan → Kontrak tab: manage the `kontrak` table (table from `xl`, cards below). The Status filter starts at AKTIF and is saved in localStorage (`tetapan:kontrak:status`). Tambah / Edit Kontrak is a fixed-size dialog (960×720 from `md`, 680 wide on `sm`; body scrolls; a full-width sheet on phones) in four sections laid out 2 x 2 from `md` (stacked below): Maklumat Projek (rows: Kawasan | Status, Kategori | Jenis Kerja, No Kontrak | No PO) | Nilai & Tempoh (Nilai Kontrak, WCP, Tarikh Mula / Akhir, Tahun), then Kerja & Kontraktor | a "Lagi" section, collapsed each time the form opens (shows "N sambung masa" when filled): rows of Sambung Masa (EOT) date + Kali ke number, "Tambah sambung masa" adds the next kali, rows without a date are dropped on save; under them "Arahan Perubahan (VO)" with a Nilai (RM) field. The list shows VO under Nilai. The list shows the latest EOT under Tempoh. WCP shows under the Nilai in the list. No PO shows under the kawasan in the list and is searchable. A No Kontrak may appear once per kawasan, compared without spaces or case (`kontrakNoKey()` in [lib/kontrak-input.ts](lib/kontrak-input.ts): "JLNDK21/26" = "JLNDK 21/26"); the form warns under the field as you type and blocks Simpan, and `assertKontrakUnique()` rejects it on the server. "Tambah kontraktor baru" under Nama Kontraktor opens `KontraktorFormDialog` on top of the form (rendered outside the kontrak `<form>`); the new contractor is added to the list and picked, and the kontrak form keeps what was typed. Editing a contractor name also updates the rows of the same kawasan and `no_kontrak` and their bayaran (bayaran keeps a copy of the name; when other kawasan use the number, only bayaran whose `daripada` is this kawasan are rewritten, `applyNamaKontraktor()` in [lib/supabase-db.ts](lib/supabase-db.ts)). Status is shared by rows of the same kawasan and `no_kontrak`; a kontrak without an AKTIF row is in `closedByKawasan[kawasan]` from `/api/bayaran-form-data` and is not offered in Tambah Rekod Bayaran for that kawasan (a record that already uses it keeps it). A bayaran's contractor and Kerja / Nilai Kontrak come from its own kawasan's kontrak first (`lookupNamaKontraktor()`, `kontrakInfoByKawasan`)
 
 7. **Auth Components** ([components/auth/](components/auth/))
@@ -737,6 +742,7 @@ All UI components are located in [components/ui/](components/ui/) and are based 
 - `/api/unit-pic` - Unit PIC management ([app/api/unit-pic/route.ts](app/api/unit-pic/route.ts)); GET is open to signed-in users (Surat form), writes need `pengguna:manage_roles`
 - `/api/locker` - Locker list (signed-in users) / add; `/api/locker/[id]` edit/delete ([app/api/locker/route.ts](app/api/locker/route.ts))
 - `/api/kontraktor` - Kontraktor list/add; `/api/kontraktor/[id]` edit/delete ([app/api/kontraktor/route.ts](app/api/kontraktor/route.ts))
+- `/api/kawasan` - Kawasan list/add; `/api/kawasan/[id]` edit/delete ([app/api/kawasan/route.ts](app/api/kawasan/route.ts))
 - `/api/kontrak` - Kontrak list/add; `/api/kontrak/[id]` edit/delete; `/api/kontrak/sync` re-copies `nama_kontraktor` onto all bayaran ([app/api/kontrak/route.ts](app/api/kontrak/route.ts))
 
 ### RBAC Routes

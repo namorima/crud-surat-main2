@@ -6,6 +6,7 @@ import type { Fail } from "@/types/fail"
 import type { ShareLink } from "@/types/share-link"
 import type { Kontrak, KontrakInput } from "@/types/kontrak"
 import type { Kontraktor, KontraktorInput } from "@/types/kontraktor"
+import type { Kawasan, KawasanInput } from "@/types/kawasan"
 import type { Locker, LockerInput } from "@/types/locker"
 import type { AuditChange } from "@/types/audit"
 import { BAYARAN_AUDIT_FIELDS, diffRows, type Actor } from "./audit"
@@ -1198,6 +1199,99 @@ export async function deleteKontraktor(id: string): Promise<void> {
   }
 
   const { error } = await supabaseAdmin.from("kontraktor").delete().eq("id", id)
+  if (error) throw new Error(error.message)
+}
+
+// ============ KAWASAN (master list: nama + kod lokasi) ============
+
+function mapKawasanRow(row: any): Kawasan {
+  return { id: row.id, namaKawasan: row.nama_kawasan || "", kodLokasi: row.kod_lokasi || "" }
+}
+
+function kawasanToRow(input: KawasanInput) {
+  return { nama_kawasan: input.namaKawasan, kod_lokasi: input.kodLokasi || null }
+}
+
+function kawasanError(error: any, nama: string): Error {
+  // 23505: kawasan_nama_unique
+  if (error?.code === "23505") return new Error(`Kawasan ${nama} sudah wujud`)
+  return new Error(error?.message || String(error))
+}
+
+export async function getAllKawasan(): Promise<Kawasan[]> {
+  const { data, error } = await supabaseAdmin.from("kawasan").select("*").order("nama_kawasan")
+  if (error) {
+    console.error("Error fetching kawasan from Supabase:", error)
+    throw new Error(`Failed to fetch kawasan from Supabase: ${error.message}`)
+  }
+  return (data || []).map(mapKawasanRow)
+}
+
+export async function addKawasan(input: KawasanInput): Promise<Kawasan> {
+  const { data, error } = await supabaseAdmin.from("kawasan").insert(kawasanToRow(input)).select().single()
+  if (error) {
+    console.error("Error adding kawasan to Supabase:", error)
+    throw kawasanError(error, input.namaKawasan)
+  }
+  return mapKawasanRow(data)
+}
+
+/** A rename is carried over to kontrak.kawasan and bayaran.daripada that use the old name. */
+export async function updateKawasan(
+  id: string,
+  input: KawasanInput,
+): Promise<{ kawasan: Kawasan; kontrakUpdated: number; bayaranUpdated: number }> {
+  const { data: existing, error: findError } = await supabaseAdmin.from("kawasan").select("nama_kawasan").eq("id", id).single()
+  if (findError) throw new Error(findError.message)
+
+  const { data, error } = await supabaseAdmin
+    .from("kawasan")
+    .update({ ...kawasanToRow(input), updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) {
+    console.error("Error updating kawasan in Supabase:", error)
+    throw kawasanError(error, input.namaKawasan)
+  }
+
+  let kontrakUpdated = 0
+  let bayaranUpdated = 0
+  const oldName = existing?.nama_kawasan || ""
+  if (oldName && oldName.toUpperCase() !== input.namaKawasan) {
+    const kontrak = await supabaseAdmin
+      .from("kontrak")
+      .update({ kawasan: input.namaKawasan })
+      .ilike("kawasan", ilikeExact(oldName))
+      .select("id")
+    if (kontrak.error) throw new Error(kontrak.error.message)
+    const bayaran = await supabaseAdmin
+      .from("bayaran")
+      .update({ daripada: input.namaKawasan })
+      .ilike("daripada", ilikeExact(oldName))
+      .select("id")
+    if (bayaran.error) throw new Error(bayaran.error.message)
+    kontrakUpdated = kontrak.data?.length || 0
+    bayaranUpdated = bayaran.data?.length || 0
+  }
+  return { kawasan: mapKawasanRow(data), kontrakUpdated, bayaranUpdated }
+}
+
+/** Refuses while a kontrak still uses this kawasan. */
+export async function deleteKawasan(id: string): Promise<void> {
+  const { data: existing, error: findError } = await supabaseAdmin.from("kawasan").select("nama_kawasan").eq("id", id).single()
+  if (findError) throw new Error(findError.message)
+
+  const { count, error: countError } = await supabaseAdmin
+    .from("kontrak")
+    .select("id", { count: "exact", head: true })
+    .ilike("kawasan", ilikeExact(existing.nama_kawasan))
+  if (countError) throw new Error(countError.message)
+  if (count && count > 0) {
+    throw new Error(`Kawasan ini masih digunakan oleh ${count} kontrak. Tukar kontrak tersebut dahulu.`)
+  }
+
+  const { error } = await supabaseAdmin.from("kawasan").delete().eq("id", id)
   if (error) throw new Error(error.message)
 }
 
