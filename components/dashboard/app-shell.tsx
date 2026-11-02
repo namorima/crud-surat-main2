@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import { RiMenuLine } from "@remixicon/react"
-import { Sidebar } from "@/components/dashboard/sidebar"
+import { SIDEBAR_COLLAPSE_EVENT, Sidebar } from "@/components/dashboard/sidebar"
 import { BottomTabBar } from "@/components/dashboard/bottom-tab-bar"
 import { IconButton } from "@/components/base/buttons/icon-button"
 import { cx } from "@/utils/cx"
@@ -84,6 +84,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
 
         <main
+          // Clicking the work area collapses the expanded sidebar (iPad landscape and desktop)
+          onPointerDown={() => window.dispatchEvent(new Event(SIDEBAR_COLLAPSE_EVENT))}
           className={cx(
             "relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
             "px-2 pt-[max(0.5rem,env(safe-area-inset-top))]",
