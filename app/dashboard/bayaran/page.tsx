@@ -146,6 +146,7 @@ export default function BayaranPage() {
 
   const [formOptions, setFormOptions] = useState({
     daripadaSuggestions: [] as string[],
+    kawasanList: [] as string[], // Daripada choices (Tetapan → Kawasan)
     statusLadangData: [] as Array<{status: string, colorHex: string}>, // Array of objects with status and colorHex
     contractData: {} as Record<string, string[]>,
     categoryData: {} as Record<string, Record<string, string[]>>,
@@ -167,8 +168,6 @@ export default function BayaranPage() {
     statusBayaranData: [] as Array<{ status: string; colorHex: string }>,
   });
 
-  const [showDaripadaDropdown, setShowDaripadaDropdown] = useState(false);
-  const [filteredDaripadaSuggestions, setFilteredDaripadaSuggestions] = useState<string[]>([]);
   const [formDataLoading, setFormDataLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   // Field errors of the Tambah / Edit form, shown after a save attempt
@@ -310,6 +309,7 @@ export default function BayaranPage() {
         const data = await response.json();
         setFormOptions({
           daripadaSuggestions: data.daripadaSuggestions || [],
+          kawasanList: data.kawasanList || [],
           statusLadangData: data.statusLadangData || [], // Now it's a string array
           contractData: data.contractData || {},
           categoryData: data.categoryData || {},
@@ -324,7 +324,6 @@ export default function BayaranPage() {
           penerimaData: data.penerimaData || [],
           statusBayaranData: data.statusBayaranData || [],
         });
-        setFilteredDaripadaSuggestions(data.daripadaSuggestions || []);
         formDataLoaded.current = true;
       } else {
         console.error("Failed to fetch form data:", response.statusText);
@@ -492,12 +491,16 @@ export default function BayaranPage() {
       // A PIECERATE bayaran keeps its kategori (and contractor) whatever the Daripada
       kategori: prev.jenisBayaran === PIECERATE ? PIECERATE : "",
     }));
+  };
 
-    // Filter suggestions
-    const filtered = formOptions.daripadaSuggestions.filter((suggestion) =>
-      suggestion.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredDaripadaSuggestions(filtered);
+  // A kawasan added with the + by Daripada joins the list straight away
+  const handleKawasanAdded = (nama: string) => {
+    setFormOptions((prev) => ({
+      ...prev,
+      kawasanList: prev.kawasanList.includes(nama)
+        ? prev.kawasanList
+        : [...prev.kawasanList, nama].sort((a, b) => a.localeCompare(b)),
+    }));
   };
 
   // Kategori is picked first; No Kontrak then lists that kategori's contracts
@@ -1318,10 +1321,8 @@ Detail: ${directLink}
         saving={saving}
         formErrors={formErrors}
         user={user}
-        showDaripadaDropdown={showDaripadaDropdown}
-        setShowDaripadaDropdown={setShowDaripadaDropdown}
         handleDaripadaChange={handleDaripadaChange}
-        filteredDaripadaSuggestions={filteredDaripadaSuggestions}
+        onKawasanAdded={handleKawasanAdded}
         handleKontrakChange={handleKontrakChange}
         handleKategoriChange={handleKategoriChange}
         handleJenisBayaranChange={handleJenisBayaranChange}

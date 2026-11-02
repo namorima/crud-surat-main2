@@ -217,15 +217,16 @@ export function KawasanManager({ canEdit }: { canEdit: boolean }) {
   )
 }
 
-function KawasanFormDialog({
+/** Tambah / Edit Kawasan dialog; also opened from Tambah / Edit Rekod Bayaran (+ by Daripada). */
+export function KawasanFormDialog({
   open,
   onOpenChange,
-  editing,
+  editing = null,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  editing: Kawasan | null
+  editing?: Kawasan | null
   onSaved: (kawasan: Kawasan) => void
 }) {
   const [form, setForm] = useState<KawasanInput>(EMPTY)
@@ -241,6 +242,8 @@ function KawasanFormDialog({
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
+    // A form opened from another form must not submit that one too
+    e.stopPropagation()
     if (!form.namaKawasan.trim()) {
       toast.error("Nama Kawasan wajib diisi")
       return

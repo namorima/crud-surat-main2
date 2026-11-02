@@ -1227,6 +1227,16 @@ export async function getAllKawasan(): Promise<Kawasan[]> {
   return (data || []).map(mapKawasanRow)
 }
 
+/** Kawasan names for the Daripada list of Rekod Bayaran; [] when the table is missing. */
+export async function getKawasanNames(): Promise<string[]> {
+  const { data, error } = await supabaseAdmin.from("kawasan").select("nama_kawasan").order("nama_kawasan")
+  if (error) {
+    console.error("Error fetching kawasan names from Supabase:", error)
+    return []
+  }
+  return (data || []).map((row) => row.nama_kawasan).filter(Boolean)
+}
+
 export async function addKawasan(input: KawasanInput): Promise<Kawasan> {
   const { data, error } = await supabaseAdmin.from("kawasan").insert(kawasanToRow(input)).select().single()
   if (error) {
