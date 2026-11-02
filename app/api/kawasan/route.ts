@@ -27,11 +27,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const guard = await requirePermission(
-    request,
-    [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
-    ["semua", "Super Admin"],
-  )
+  // Tetapan admins, and users who add Rekod Bayaran (the + by Daripada)
+  let guard = await requirePermission(request, { resource: "bayaran", action: "create" }, ["semua", "Super Admin", "PERLADANGAN"])
+  if (guard.denied) {
+    guard = await requirePermission(
+      request,
+      [{ resource: "tetapan", action: "manage_all_units" }, { resource: "tetapan", action: "edit" }],
+      ["semua", "Super Admin"],
+    )
+  }
   if (guard.denied) return guard.denied
   try {
     const input = parseKawasanInput(await request.json())
