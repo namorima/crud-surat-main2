@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RowActions } from "@/components/dashboard/row-actions"
 import { bayaranKategoriChip } from "@/lib/ui-status"
 import { cx } from "@/utils/cx"
-import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
+import { JENIS_KERJA, KONTRAK_KATEGORI, KONTRAK_STATUS, kontrakNoKey, parseNilai, tahunFromTarikh } from "@/lib/kontrak-input"
 import { FormField, dialogBodyClass, dialogFooterClass, dialogFrameClass, dialogHeaderClass } from "@/components/dashboard/form-field"
 import { KontraktorFormDialog } from "@/components/tetapan/KontraktorManager"
 
@@ -174,6 +174,13 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
   const [editing, setEditing] = useState<Kontrak | null>(null)
   const [form, setForm] = useState<KontrakForm>(EMPTY)
   const eotCount = form.eot.filter((row) => row.tarikh).length
+  // The same No Kontrak (ignoring spaces and case) already in this kawasan, other than the row being edited
+  const duplicateNo = useMemo(() => {
+    const key = kontrakNoKey(form.noKontrak)
+    const kawasan = form.kawasan.trim().toUpperCase()
+    if (!key || !kawasan) return null
+    return items.find((item) => item.id !== editing?.id && item.kawasan.toUpperCase() === kawasan && kontrakNoKey(item.noKontrak) === key) ?? null
+  }, [form.noKontrak, form.kawasan, items, editing])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<Kontrak | null>(null)
   const [kontraktorNames, setKontraktorNames] = useState<string[]>([])
@@ -272,6 +279,10 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
     e.preventDefault()
     if (!form.kawasan.trim() || !form.noKontrak.trim()) {
       toast.error("Kawasan dan No Kontrak wajib diisi")
+      return
+    }
+    if (duplicateNo) {
+      toast.error(`No Kontrak ini sudah wujud bagi kawasan ${duplicateNo.kawasan} (${duplicateNo.noKontrak})`)
       return
     }
     if (form.tarikhMula && form.tarikhAkhir && form.tarikhAkhir < form.tarikhMula) {
@@ -614,7 +625,20 @@ export function KontrakManager({ canEdit }: { canEdit: boolean }) {
                     </Select>
                   </FormField>
                   <FormField label="No Kontrak" htmlFor="kontrak-no" required>
-                    <Input id="kontrak-no" value={form.noKontrak} onChange={setField("noKontrak")} required />
+                    <Input
+                      id="kontrak-no"
+                      value={form.noKontrak}
+                      onChange={setField("noKontrak")}
+                      required
+                      aria-invalid={!!duplicateNo}
+                      aria-describedby={duplicateNo ? "kontrak-no-dup" : undefined}
+                      className={cx(duplicateNo && "ring-2 ring-border-error-default")}
+                    />
+                    {duplicateNo && (
+                      <p id="kontrak-no-dup" role="alert" className="text-caption-2-regular text-text-destructive">
+                        Sudah wujud bagi {duplicateNo.kawasan}: {duplicateNo.noKontrak}
+                      </p>
+                    )}
                   </FormField>
                   <FormField label="No Purchase Order (PO)" htmlFor="kontrak-po">
                     <Input id="kontrak-po" value={form.noPo} onChange={setField("noPo")} placeholder="Pilihan" autoComplete="off" />

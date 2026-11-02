@@ -6,6 +6,14 @@ export const KONTRAK_STATUS: readonly KontrakStatus[] = ["AKTIF", "SELESAI", "TI
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
+/**
+ * No Kontrak compared for duplicates: spaces and case are ignored, so
+ * "JLNDK21/26" and "jlndk 21/26" are the same kontrak.
+ */
+export function kontrakNoKey(noKontrak: string): string {
+  return (noKontrak || "").replace(/\s+/g, "").toUpperCase()
+}
+
 /** Year shown as Tahun Kontrak: the year of tarikh mula (YYYY-MM-DD). */
 export function tahunFromTarikh(tarikhMula: string): number | null {
   return ISO_DATE.test(tarikhMula) ? Number(tarikhMula.slice(0, 4)) : null
