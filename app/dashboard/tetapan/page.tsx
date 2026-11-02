@@ -19,6 +19,7 @@ import { FailManager } from "@/components/tetapan/FailManager"
 import { LockerManager } from "@/components/tetapan/LockerManager"
 import { KontrakManager } from "@/components/tetapan/KontrakManager"
 import { KontraktorManager } from "@/components/tetapan/KontraktorManager"
+import { KawasanManager } from "@/components/tetapan/KawasanManager"
 
 export default function TetapanPage() {
   const { toast } = useToast()
@@ -186,6 +187,7 @@ export default function TetapanPage() {
             )}
             {canViewAll && <Tab id="kontrak">Kontrak</Tab>}
             {canViewAll && <Tab id="kontraktor">Kontraktor</Tab>}
+            {canViewAll && <Tab id="kawasan">Kawasan</Tab>}
           </TabList>
         </div>
 
@@ -260,6 +262,12 @@ export default function TetapanPage() {
         {canViewAll && (
           <TabPanel id="kontraktor">
             <KontraktorManager canEdit={Boolean(canEditTetapan)} />
+          </TabPanel>
+        )}
+
+        {canViewAll && (
+          <TabPanel id="kawasan">
+            <KawasanManager canEdit={Boolean(canEditTetapan)} />
           </TabPanel>
         )}
       </Tabs>
