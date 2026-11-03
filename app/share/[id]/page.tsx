@@ -67,7 +67,7 @@ export default function SharePage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex h-dvh items-center justify-center overflow-y-auto bg-background">
         <Card className="w-full max-w-md">
           <CardContent className="py-8">
             <div className="flex flex-col items-center justify-center space-y-4">
@@ -82,7 +82,7 @@ export default function SharePage({ params }: PageProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="flex h-dvh items-center justify-center overflow-y-auto bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-8">
             <Alert variant="destructive">
@@ -97,7 +97,8 @@ export default function SharePage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    // Its own scroll area: globals.css locks html/body scrolling below 768px (the dashboard scrolls its <main>)
+    <div className="h-dvh overflow-y-auto overscroll-contain bg-background">
       <div className="container max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <Card>
