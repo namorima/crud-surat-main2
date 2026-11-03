@@ -645,7 +645,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 ### Public Pages
 
-- **Share Link View** ([app/share/[id]/page.tsx](app/share/[id]/page.tsx))
+- **Share Link View** ([app/share/[id]/page.tsx](app/share/[id]/page.tsx)) - scrolls its own `h-dvh overflow-y-auto` wrapper, because [app/globals.css](app/globals.css) locks `html, body` scrolling below 768px (pages outside the dashboard shell need their own scroll area)
 
 ## Component Structure
 
