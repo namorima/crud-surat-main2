@@ -45,15 +45,17 @@ interface DetailDialogProps {
   setShowDetailDialog: (show: boolean) => void
   selectedBayaran: Bayaran | null
   kontrakInfo?: KontrakInfo
-  handleEdit: (bayaran: Bayaran) => void
-  handleShare: (bayaran: Bayaran) => void
-  isSharing: boolean
-  isGeneratingImage: boolean
-  user: User | null
-  showDeleteConfirm: boolean
-  setShowDeleteConfirm: (show: boolean) => void
-  handleDelete: () => void
-  isDeleting: boolean
+  /** Public share link: only Tutup; no audit, Padam, Edit or Share (the handlers below are then unused) */
+  readOnly?: boolean
+  handleEdit?: (bayaran: Bayaran) => void
+  handleShare?: (bayaran: Bayaran) => void
+  isSharing?: boolean
+  isGeneratingImage?: boolean
+  user?: User | null
+  showDeleteConfirm?: boolean
+  setShowDeleteConfirm?: (show: boolean) => void
+  handleDelete?: () => void
+  isDeleting?: boolean
   /** Legacy class map; kategori now uses BoardUI chips. */
   getKategoriColor?: (kategori: string) => string
   formatCurrency: (value: string) => string
@@ -124,29 +126,32 @@ export function DetailDialog({
   setShowDetailDialog,
   selectedBayaran: b,
   kontrakInfo,
+  readOnly = false,
   handleEdit,
   handleShare,
-  isSharing,
-  isGeneratingImage,
-  user,
-  showDeleteConfirm,
+  isSharing = false,
+  isGeneratingImage = false,
+  user = null,
+  showDeleteConfirm = false,
   setShowDeleteConfirm,
   handleDelete,
-  isDeleting,
+  isDeleting = false,
   formatCurrency,
   formatDate,
   extractPenerimaWithUnit,
   renderNotaKakiWithLinks,
 }: DetailDialogProps) {
   const canEdit =
-    user?.permissions && user.permissions.length > 0
+    !readOnly &&
+    (user?.permissions && user.permissions.length > 0
       ? hasPermission(user.permissions, { resource: "bayaran", action: "edit" })
-      : user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && b?.statusBayaran === "KEWANGAN")
+      : user?.role === "semua" || user?.role === "PERLADANGAN" || (user?.role === "KEWANGAN" && b?.statusBayaran === "KEWANGAN"))
 
   const canDelete =
-    user?.permissions && user.permissions.length > 0
+    !readOnly &&
+    (user?.permissions && user.permissions.length > 0
       ? hasPermission(user.permissions, { resource: "bayaran", action: "delete" })
-      : user?.role === "semua"
+      : user?.role === "semua")
 
   const cancelled = !!b && isBayaranBatal(b)
 
@@ -215,7 +220,7 @@ export function DetailDialog({
                 HOLD / KIV
               </Chip>
             )}
-            {b && canViewAudit(user) && (
+            {b && !readOnly && canViewAudit(user) && (
               <span className="ms-auto">
                 <AuditButton type="bayaran" id={b.id} title={`Rekod Bayaran #${b.ids ?? b.id}`} />
               </span>
@@ -274,7 +279,8 @@ export function DetailDialog({
                   <Field label="Nama Kontraktor" className="col-span-2">
                     {b.namaKontraktor || "-"}
                   </Field>
-                  {b.noKontrak && (
+                  {/* The public share link has no kontrak info, so these are left out there */}
+                  {b.noKontrak && (!readOnly || kontrakInfo) && (
                     <>
                       <Field label="Kerja" className="col-span-2">
                         {kontrakInfo?.kerja || "-"}
@@ -318,7 +324,7 @@ export function DetailDialog({
                 variant="danger"
                 size="small"
                 leadingIcon={RiDeleteBinLine}
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={() => setShowDeleteConfirm?.(true)}
                 aria-label="Padam"
                 title="Padam"
               >
@@ -332,17 +338,18 @@ export function DetailDialog({
               {canEdit && (
                 <Button variant="secondary" size="small" leadingIcon={RiEditLine} onClick={() => {
                     setShowDetailDialog(false)
-                    handleEdit(b)
+                    handleEdit?.(b)
                   }}
                   aria-label="Edit" title="Edit">
                   <span className="hidden min-[400px]:inline">Edit</span>
                 </Button>
               )}
+              {!readOnly && (
               <Button
                 variant="primary"
                 size="small"
                 leadingIcon={isSharing ? undefined : RiShareLine}
-                onClick={() => handleShare(b)}
+                onClick={() => handleShare?.(b)}
                 disabled={isSharing || isGeneratingImage}
                 aria-label="Share"
                 title="Share"
@@ -356,11 +363,13 @@ export function DetailDialog({
                   <span className="hidden min-[400px]:inline">Share</span>
                 )}
               </Button>
+              )}
             </div>
           </footer>
         )}
         {/* Inside the content so clicks in the confirm do not count as outside the detail */}
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        {!readOnly && (
+        <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => setShowDeleteConfirm?.(open)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Padam rekod #{b?.ids ?? b?.id}?</AlertDialogTitle>
@@ -376,6 +385,7 @@ export function DetailDialog({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        )}
       </DialogContent>
 
     </Dialog>

@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Bayaran } from "@/types/bayaran"
+import { DetailDialog } from "@/components/bayaran/DetailDialog"
 
 interface PublicBayaranTableProps {
   bayaran: Bayaran[]
@@ -17,25 +19,33 @@ const KATEGORI_COLORS: Record<string, string> = {
   KONTRAK: "bg-[#e6cff2] text-[#5b1e7b] border-[#c884e4]",
 }
 
+// Nilai is stored as text and may carry commas ("12,500.00")
 const formatCurrency = (value: string) => {
-  const num = Number.parseFloat(value)
+  if (!value) return "-"
+  const num = Number(value.replace(/[^\d.-]/g, ""))
   if (Number.isNaN(num)) return value
-  return new Intl.NumberFormat("ms-MY", {
-    style: "currency",
-    currency: "MYR",
-  }).format(num)
+  return `RM ${num.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+const BULAN = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"]
+
+// Dates come as DD/MM/YYYY (new Date() would read them as MM/DD)
 const formatDate = (dateString: string) => {
   if (!dateString) return "-"
-  return new Date(dateString).toLocaleDateString("ms-MY", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
+  const [d, m, y] = dateString.split("/")
+  const month = BULAN[Number(m) - 1]
+  return month && y ? `${Number(d)} ${month} ${y}` : dateString
 }
 
 export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
+  // Rekod Bayaran detail, read only (no Edit / Padam / Share on a public link)
+  const [selected, setSelected] = useState<Bayaran | null>(null)
+  const [open, setOpen] = useState(false)
+  const openDetail = (item: Bayaran) => {
+    setSelected(item)
+    setOpen(true)
+  }
+
   if (bayaran.length === 0) {
     return (
       <div className="flex justify-center py-8">
@@ -64,7 +74,19 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
           </TableHeader>
           <TableBody>
             {bayaran.map((item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                tabIndex={0}
+                onClick={() => openDetail(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    openDetail(item)
+                  }
+                }}
+                className="cursor-pointer"
+                title="Lihat detail"
+              >
                 <TableCell className="font-medium">#{item.ids ?? item.id}</TableCell>
                 <TableCell>{item.daripada}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatDate(item.tarikhTerima)}</TableCell>
@@ -103,7 +125,19 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
       {/* Mobile View */}
       <div className="md:hidden space-y-3">
         {bayaran.map((item) => (
-          <Card key={item.id} className="p-3">
+          <Card
+            key={item.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openDetail(item)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                openDetail(item)
+              }
+            }}
+            className="motion-press cursor-pointer p-3"
+          >
             {/* Top Row: ID + Daripada + Status */}
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col">
@@ -154,6 +188,17 @@ export function PublicBayaranTable({ bayaran }: PublicBayaranTableProps) {
           </Card>
         ))}
       </div>
+
+      <DetailDialog
+        readOnly
+        showDetailDialog={open}
+        setShowDetailDialog={setOpen}
+        selectedBayaran={selected}
+        formatCurrency={formatCurrency}
+        formatDate={formatDate}
+        extractPenerimaWithUnit={(penerima) => penerima}
+        renderNotaKakiWithLinks={(nota) => nota}
+      />
     </>
   )
 }

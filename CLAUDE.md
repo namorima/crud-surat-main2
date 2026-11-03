@@ -645,7 +645,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 ### Public Pages
 
-- **Share Link View** ([app/share/[id]/page.tsx](app/share/[id]/page.tsx))
+- **Share Link View** ([app/share/[id]/page.tsx](app/share/[id]/page.tsx)) - scrolls its own `h-dvh overflow-y-auto` wrapper, because [app/globals.css](app/globals.css) locks `html, body` scrolling below 768px (pages outside the dashboard shell need their own scroll area)
 
 ## Component Structure
 
@@ -662,7 +662,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 2. **Share Components** ([components/share/](components/share/))
    - `ShareLinkForm.tsx` - Create share link form (renders the dialog body and footer; the page owns the dialog header)
    - `ShareLinkTable.tsx` - Share links management table (table from `lg`, cards below, RowActions)
-   - `PublicBayaranTable.tsx` - Public payment table
+   - `PublicBayaranTable.tsx` - Public payment table; a row (desktop) or card (phone) opens `DetailDialog` with `readOnly` (only Tutup: no audit, Padam, Edit or Share; Kerja / Nilai Kontrak left out since the public route has no kontrak info). Dates are DD/MM/YYYY text and nilai may carry commas, so it formats them itself
    - `FilterSummaryBadges.tsx` - Filter badges display
 
 3. **Pengguna Components** ([components/pengguna/](components/pengguna/)) — the page uses BoardUI `Tabs`, a users table from `md` (cards below) and AlertDialogs for delete / reset password (no `confirm()`/`alert()`)
