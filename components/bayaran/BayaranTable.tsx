@@ -191,10 +191,11 @@ export function BayaranTable({
                   </th>
                 )}
                 {columnVisibility.daripadaTarikh && (
-                  <th className="w-[150px]">
+                  <th className="w-[140px]">
                     <SortHeader label="Terima" onClick={() => handleSort("tarikhTerima")} />
                   </th>
                 )}
+                {/* Perkara takes what is left; Kontraktor is wide enough that the leftover is not one big gap before Nilai */}
                 {columnVisibility.perkara && (
                   <th className="min-w-[240px]">
                     <SortHeader label="Perkara" onClick={() => handleSort("perkara")} />
@@ -206,7 +207,7 @@ export function BayaranTable({
                   </th>
                 )}
                 {columnVisibility.noKontrak && (
-                  <th className="hidden w-[160px] lg:table-cell">
+                  <th className="hidden w-[200px] lg:table-cell xl:w-[260px]">
                     <SortHeader label="Kontraktor" onClick={() => handleSort("namaKontraktor")} />
                   </th>
                 )}
