@@ -174,7 +174,8 @@ export function BayaranTable({
       {/* Tablet and desktop: BoardUI table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border-table md:block">
         <div ref={scrollBoxRef} className="relative max-h-[calc(100dvh-220px)] overflow-auto">
-          <table className="bui-table">
+          {/* Fixed layout: the other columns keep the widths below and Perkara gets all the rest */}
+          <table className="bui-table table-fixed">
             <thead className="sticky top-0 z-10">
               <tr>
                 <th className="w-[44px]">
@@ -186,27 +187,28 @@ export function BayaranTable({
                   />
                 </th>
                 {columnVisibility.id && (
-                  <th className="w-[68px]">
+                  <th className="w-[64px]">
                     <SortHeader label="ID" onClick={() => handleSort("ids")} />
                   </th>
                 )}
                 {columnVisibility.daripadaTarikh && (
-                  <th className="w-[150px]">
+                  <th className="w-[128px]">
                     <SortHeader label="Terima" onClick={() => handleSort("tarikhTerima")} />
                   </th>
                 )}
+                {/* Perkara: no width, so it takes every pixel the fixed columns leave */}
                 {columnVisibility.perkara && (
-                  <th className="min-w-[240px]">
+                  <th>
                     <SortHeader label="Perkara" onClick={() => handleSort("perkara")} />
                   </th>
                 )}
                 {columnVisibility.nilaiBayaran && (
-                  <th className="w-[132px] text-end">
+                  <th className="w-[136px] text-end">
                     <SortHeader label="Nilai" onClick={() => handleSort("nilaiBayaran")} end />
                   </th>
                 )}
                 {columnVisibility.noKontrak && (
-                  <th className="hidden w-[160px] lg:table-cell">
+                  <th className="hidden w-[200px] xl:table-cell 2xl:w-[240px]">
                     <SortHeader label="Kontraktor" onClick={() => handleSort("namaKontraktor")} />
                   </th>
                 )}
@@ -263,9 +265,9 @@ export function BayaranTable({
                               </Chip>
                             )}
                             <KontrakChip item={item} />
-                            {/* Kontraktor folds in here until its column appears at lg */}
+                            {/* Kontraktor folds in here until its column appears at xl (iPad keeps the width for Perkara) */}
                             {columnVisibility.noKontrak && item.namaKontraktor && (
-                              <span className="text-caption-1-regular text-text-secondary lg:hidden">{item.namaKontraktor}</span>
+                              <span className="text-caption-1-regular text-text-secondary xl:hidden">{item.namaKontraktor}</span>
                             )}
                           </div>
                           {item.notaKaki && (
@@ -277,15 +279,15 @@ export function BayaranTable({
                       </td>
                     )}
                     {columnVisibility.nilaiBayaran && (
-                      <td className="align-top text-end whitespace-nowrap">
-                        <span className="text-body-semibold text-text-primary tabular-nums">{formatCurrency(item.nilaiBayaran)}</span>
+                      <td className="align-top text-end">
+                        <span className="whitespace-nowrap text-body-semibold text-text-primary tabular-nums">{formatCurrency(item.nilaiBayaran)}</span>
                         {columnVisibility.bayaranKe && item.bayaranKe && (
                           <span className="block text-caption-1-regular text-text-tertiary">Bayaran ke-{item.bayaranKe}</span>
                         )}
                       </td>
                     )}
                     {columnVisibility.noKontrak && (
-                      <td className="hidden align-top break-words text-body-regular text-text-secondary lg:table-cell">
+                      <td className="hidden align-top break-words text-body-regular text-text-secondary xl:table-cell">
                         {item.namaKontraktor || "-"}
                       </td>
                     )}
