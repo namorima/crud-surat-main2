@@ -3,9 +3,14 @@ import { z } from "zod"
 /**
  * Jenis Bayaran in Tambah Rekod Bayaran; new records start at KEMAJUAN.
  * PIECERATE needs no kontrak: kategori is PIECERATE and the contractor is picked by name.
+ * LEBIH 5K needs no kategori or kontrak either: the contractor is picked from the
+ * whole Kontraktor list (Tetapan → Kontraktor).
  */
-export const JENIS_BAYARAN = ["KEMAJUAN", "WCP", "WANG TAHANAN", "PIECERATE"] as const
+export const JENIS_BAYARAN = ["KEMAJUAN", "WCP", "WANG TAHANAN", "PIECERATE", "LEBIH 5K"] as const
 export const PIECERATE = "PIECERATE"
+export const LEBIH_5K = "LEBIH 5K"
+/** Jenis whose contractor is picked by name (no kontrak to look it up from) */
+export const KONTRAKTOR_BY_NAME: readonly string[] = [PIECERATE, LEBIH_5K]
 /** A WCP bayaran is paid once: it has no Bayaran Ke */
 export const WCP = "WCP"
 /** Only a KEMAJUAN bayaran can carry Wang Tahanan */
@@ -26,7 +31,7 @@ export const BayaranSchema = z.object({
   bayaranAkhir: z.boolean().optional(),
   kategori: z.string().optional(),
   noKontrak: z.string().optional(),
-  // Only kept for a PIECERATE bayaran (no kontrak to look the name up from)
+  // Only kept for PIECERATE / LEBIH 5K (no kontrak to look the name up from)
   namaKontraktor: z.string().optional(),
   tarikhMemoLadang: z.string().optional(),
   statusLadang: z.string().optional(),
@@ -65,7 +70,7 @@ export const BayaranBaruSchema = BayaranSchema.extend({
 export function bayaranFormErrors(
   form: Record<string, any>,
   isNew: boolean,
-  options: { kategori: string[]; kontrak: string[]; kontraktor?: string[] },
+  options: { kategori: string[]; kontrak: string[]; kontraktor?: string[]; semuaKontraktor?: string[] },
 ): Record<string, string> {
   const errors: Record<string, string> = {}
   if (!String(form.daripada ?? "").trim()) errors.daripada = "Daripada diperlukan"
@@ -75,7 +80,12 @@ export function bayaranFormErrors(
     if (!JENIS_BAYARAN.includes(form.jenisBayaran)) errors.jenisBayaran = "Pilih Jenis Bayaran"
     if (!(amount(form.nilaiBayaran) > 0)) errors.nilaiBayaran = "Nilai Bayaran diperlukan"
     if (form.jenisBayaran !== WCP && !String(form.bayaranKe ?? "").trim()) errors.bayaranKe = "Bayaran Ke diperlukan"
-    if (form.jenisBayaran === PIECERATE) {
+    if (form.jenisBayaran === LEBIH_5K) {
+      // LEBIH 5K: no kategori or kontrak; any contractor from the Kontraktor list
+      if ((options.semuaKontraktor?.length ?? 0) > 0 && !String(form.namaKontraktor ?? "").trim()) {
+        errors.namaKontraktor = "Pilih Nama Kontraktor"
+      }
+    } else if (form.jenisBayaran === PIECERATE) {
       // PIECERATE: no kontrak; the contractor is picked from the kawasan's PIECERATE kontrak
       if ((options.kontraktor?.length ?? 0) > 0 && !String(form.namaKontraktor ?? "").trim()) {
         errors.namaKontraktor = "Pilih Nama Kontraktor"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { RiAddLine, RiLockLine } from "@remixicon/react"
+import { RiAddLine, RiArrowUpDownLine, RiCheckLine, RiLockLine } from "@remixicon/react"
 import type { Bayaran } from "@/types/bayaran"
 import type { User } from "@/types/user"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -11,10 +11,12 @@ import { Chip } from "@/components/base/badges/chip"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { bayaranKategoriChip } from "@/lib/ui-status"
-import { JENIS_BAYARAN, KEMAJUAN, PIECERATE, WCP } from "@/types/bayaran-schema"
+import { JENIS_BAYARAN, KEMAJUAN, LEBIH_5K, PIECERATE, WCP } from "@/types/bayaran-schema"
 import { cx } from "@/utils/cx"
 import { hasPermission } from "@/lib/rbac"
 import { KawasanFormDialog } from "@/components/tetapan/KawasanManager"
@@ -45,6 +47,8 @@ interface AddEditFormProps {
   handleJenisBayaranChange: (value: string) => void
   /** Nama Kontraktor choices for PIECERATE: the Daripada's PIECERATE kontrak */
   getPiecerateKontraktors: () => string[]
+  /** Nama Kontraktor choices for LEBIH 5K: every contractor in Tetapan → Kontraktor */
+  getSemuaKontraktors: () => string[]
   getAvailableKontraks: () => string[]
   getAvailableKategoris: () => string[]
   handleCurrencyInputChange: (e: React.ChangeEvent<HTMLInputElement>, field?: "nilaiBayaran" | "wangTahanan") => void
@@ -157,6 +161,7 @@ export function AddEditForm({
   handleKategoriChange,
   handleJenisBayaranChange,
   getPiecerateKontraktors,
+  getSemuaKontraktors,
   getAvailableKontraks,
   getAvailableKategoris,
   handleCurrencyInputChange,
@@ -216,6 +221,10 @@ export function AddEditForm({
   // PIECERATE: no kontrak, so the contractor is picked from the Daripada's
   // PIECERATE kontrak (an edited record keeps its own name)
   const kontraktorOptions = getPiecerateKontraktors()
+  // LEBIH 5K: no kategori or kontrak; any contractor, picked from a searchable list
+  const isLebih5k = formData.jenisBayaran === LEBIH_5K
+  const semuaKontraktor = isLebih5k ? getSemuaKontraktors() : []
+  const [kontraktorSearchOpen, setKontraktorSearchOpen] = useState(false)
 
   const close = () => {
     if (isEdit) {
@@ -464,7 +473,67 @@ export function AddEditForm({
                 )}
               </div>
 
-              {isPiecerate ? (
+              {isLebih5k ? (
+                // LEBIH 5K: Kategori and No Kontrak are hidden (and cleared); the
+                // contractor comes from the whole Kontraktor list, with search
+                <Field
+                  label="Nama Kontraktor"
+                  htmlFor="namaKontraktor5k"
+                  required={!isEdit && semuaKontraktor.length > 0}
+                  error={formErrors.namaKontraktor}
+                  hint={
+                    semuaKontraktor.length
+                      ? "Bayaran lebih RM5,000 tanpa kontrak. Taip untuk cari kontraktor."
+                      : "Tiada kontraktor lagi (daftar di Tetapan → Kontraktor)."
+                  }
+                >
+                  <Popover open={kontraktorSearchOpen} onOpenChange={setKontraktorSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        id="namaKontraktor5k"
+                        type="button"
+                        role="combobox"
+                        aria-expanded={kontraktorSearchOpen}
+                        disabled={locked || semuaKontraktor.length === 0}
+                        className={cx(
+                          "flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-2lg bg-background-tertiary-default px-2.5 text-left text-body-regular ring-2 ring-inset ring-transparent outline-none transition-[box-shadow] hover:ring-border-button-hover focus-visible:ring-border-button-active disabled:cursor-not-allowed disabled:bg-input-disabled-background disabled:text-input-disabled-text",
+                          formData.namaKontraktor ? "text-text-primary" : "text-text-tertiary",
+                          formErrors.namaKontraktor && errorRing,
+                        )}
+                      >
+                        <span className="truncate">{formData.namaKontraktor || (semuaKontraktor.length ? "Pilih nama kontraktor" : "Tiada kontraktor")}</span>
+                        <RiArrowUpDownLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Cari nama kontraktor..." />
+                        <CommandList>
+                          <CommandEmpty>Tiada kontraktor sepadan.</CommandEmpty>
+                          <CommandGroup className="max-h-[240px] overflow-y-auto">
+                            {semuaKontraktor.map((nama) => (
+                              <CommandItem
+                                key={nama}
+                                value={nama}
+                                onSelect={() => {
+                                  setFormData((prev: any) => ({ ...prev, namaKontraktor: nama }))
+                                  setKontraktorSearchOpen(false)
+                                }}
+                              >
+                                <RiCheckLine
+                                  className={cx("size-4 shrink-0", formData.namaKontraktor === nama ? "opacity-100" : "opacity-0")}
+                                  aria-hidden
+                                />
+                                {nama}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+              ) : isPiecerate ? (
                 // PIECERATE: kategori is set to PIECERATE behind the scenes, and the
                 // contractor is picked by name instead of a no kontrak
                 <Field
