@@ -136,6 +136,28 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
 }
 
 /** The raw surat row (DB columns) for a bil, or null; used for the audit trail. */
+/**
+ * "Respon To Bayaran": once the Rekod Bayaran made from a MASUK surat is saved,
+ * that surat becomes SELESAI with today's tarikh selesai (Malaysia time). A surat
+ * that is not MASUK, or is already SELESAI, is left as it is. Returns the rows
+ * before and after, or null when nothing changed.
+ */
+export async function selesaikanSuratDariBayaran(
+  bilNumber: number,
+): Promise<{ before: Record<string, any>; after: Record<string, any> } | null> {
+  const before = await getSuratRow(bilNumber)
+  if (!before || before.kategori !== "MASUK" || before.status === "SELESAI") return null
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date())
+  const { data, error } = await supabaseAdmin
+    .from("surat")
+    .update({ status: "SELESAI", tarikh_selesai: today })
+    .eq("id", before.id)
+    .select("*")
+    .single()
+  if (error) throw new Error(error.message)
+  return { before, after: data }
+}
+
 export async function getSuratRow(bilNumber: number): Promise<Record<string, any> | null> {
   const { data, error } = await supabaseAdmin.from("surat").select("*").eq("bil", bilNumber).limit(1).maybeSingle()
   if (error) throw new Error(error.message)
