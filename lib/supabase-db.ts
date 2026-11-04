@@ -88,6 +88,7 @@ export async function getAllSurat(): Promise<Surat[]> {
         kaedah: row.kaedah || "",
         untukMakluman: !!row.untuk_makluman,
         komenCount: komen.get(row.id)?.count ?? 0,
+        komenTags: komen.get(row.id)?.tags ?? [],
         komenTerakhir: komen.get(row.id)
           ? { userName: komen.get(row.id)!.latest.userName, isi: komen.get(row.id)!.latest.isi }
           : null,

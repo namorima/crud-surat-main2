@@ -20,4 +20,6 @@ export type Surat = {
   /** Komen thread (surat_komen): how many, and the newest; set by GET /api/surat */
   komenCount?: number
   komenTerakhir?: { userName: string; isi: string } | null
+  /** "#tag" found in any komen of this surat (lower case); set by GET /api/surat */
+  komenTags?: string[]
 }
