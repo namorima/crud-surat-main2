@@ -1218,9 +1218,10 @@ export default function SuratPage() {
                       setSearchQuery("")
                       setShowSearchInput(false)
                     }}
+                    title="Kosongkan carian"
                   >
                     <X className="h-4 w-4" />
-                    <span className="sr-only">Clear Search</span>
+                    <span className="sr-only">Kosongkan carian</span>
                   </Button>
                 </form>
               ) : (
