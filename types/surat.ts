@@ -22,4 +22,6 @@ export type Surat = {
   komenTerakhir?: { userName: string; isi: string } | null
   /** "#tag" found in any komen of this surat (lower case); set by GET /api/surat */
   komenTags?: string[]
+  /** Rekod Bayaran ids made from this surat with "Respon To Bayaran"; set by GET /api/surat */
+  bayaranRefs?: number[]
 }

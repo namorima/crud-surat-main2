@@ -56,6 +56,8 @@ export interface SuratDetailDialogProps {
   onRespond: (surat: Surat) => void
   /** Set only when this surat can start a Rekod Bayaran (MASUK, Daripada is a kawasan) */
   onRespondBayaran?: (surat: Surat) => void
+  /** Open a Rekod Bayaran listed under Reference Bayaran; without it the ids are plain text */
+  onBayaranClick?: (ids: number) => void
   onEdit: (surat: Surat) => void
   onShare: (surat: Surat) => void
   /** Open another surat by BIL (reference chip and #123 in notes). */
@@ -81,6 +83,7 @@ export function SuratDetailDialog({
   generatingImage,
   onRespond,
   onRespondBayaran,
+  onBayaranClick,
   onEdit,
   onShare,
   onBilClick,
@@ -151,6 +154,24 @@ export function SuratDetailDialog({
                   <button type="button" onClick={() => onBilClick(surat.reference)} className="cursor-pointer" title={`Buka surat #${surat.reference}`}>
                     <Chip variant="caption" color="blue">Respon: #{surat.reference}</Chip>
                   </button>
+                ) : (
+                  "-"
+                )}
+              </Field>
+              {/* Rekod Bayaran made from this surat with "Respon To Bayaran" */}
+              <Field label="Reference Bayaran">
+                {surat.bayaranRefs?.length ? (
+                  <span className="flex flex-wrap gap-1">
+                    {surat.bayaranRefs.map((ids) =>
+                      onBayaranClick ? (
+                        <button key={ids} type="button" onClick={() => onBayaranClick(ids)} className="cursor-pointer" title={`Buka Rekod Bayaran #${ids}`}>
+                          <Chip variant="caption" color="lime">Bayaran: #{ids}</Chip>
+                        </button>
+                      ) : (
+                        <Chip key={ids} variant="caption" color="lime">Bayaran: #{ids}</Chip>
+                      ),
+                    )}
+                  </span>
                 ) : (
                   "-"
                 )}

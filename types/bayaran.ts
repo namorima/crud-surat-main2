@@ -13,6 +13,8 @@ export type Bayaran = {
   wangTahanan?: string
   /** "Akhir": the last kemajuan payment; only for KEMAJUAN */
   bayaranAkhir?: boolean
+  /** BIL of the surat this record answers ("Respon To Bayaran"); null otherwise */
+  suratBil?: number | null
   kategori: string
   noKontrak: string
   namaKontraktor: string // New field - Column S
