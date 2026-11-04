@@ -6,6 +6,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { takeBayaranSeed } from "@/lib/bayaran-seed";
+import { takeBayaranPrefill } from "@/lib/bayaran-prefill";
 import { useAuth } from "@/lib/auth-provider";
 import type { Bayaran } from "@/types/bayaran";
 import { Button } from "@/components/ui/button";
@@ -865,6 +866,28 @@ export default function BayaranPage() {
 
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+
+  // /dashboard/bayaran?tambah=surat ("Respon To Bayaran" on a surat): Tambah
+  // Rekod Bayaran opens with Daripada, Tarikh Terima and Perkara from that surat
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tambah") !== "surat") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const prefill = takeBayaranPrefill();
+    if (!prefill) return;
+    setEditingBayaran(null);
+    setFormData((prev) => ({
+      ...prev,
+      daripada: prefill.daripada,
+      tarikhTerima: prefill.tarikhTerima,
+      perkara: prefill.perkara,
+      jenisBayaran: "KEMAJUAN",
+      kategori: "",
+      noKontrak: "",
+      namaKontraktor: "",
+    }));
+    setShowAddDialog(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // /dashboard/bayaran?buka=<id>[&dari=dashboard] opens that Rekod Bayaran (from
   // the Dashboard's kontrak detail). Coming from the Dashboard, closing the

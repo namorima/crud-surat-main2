@@ -7,8 +7,7 @@ import {
   RiEditLine,
   RiLoader4Line,
   RiReplyLine,
-  RiShareLine,
-} from "@remixicon/react"
+  RiShareLine, RiMoneyDollarCircleLine } from "@remixicon/react"
 import type { Surat } from "@/types/surat"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Chip, type ChipProps } from "@/components/base/badges/chip"
@@ -55,6 +54,8 @@ export interface SuratDetailDialogProps {
   /** Any share image is being generated (disables Share). */
   generatingImage: boolean
   onRespond: (surat: Surat) => void
+  /** Set only when this surat can start a Rekod Bayaran (MASUK, Daripada is a kawasan) */
+  onRespondBayaran?: (surat: Surat) => void
   onEdit: (surat: Surat) => void
   onShare: (surat: Surat) => void
   /** Open another surat by BIL (reference chip and #123 in notes). */
@@ -79,6 +80,7 @@ export function SuratDetailDialog({
   sharing,
   generatingImage,
   onRespond,
+  onRespondBayaran,
   onEdit,
   onShare,
   onBilClick,
@@ -186,7 +188,12 @@ export function SuratDetailDialog({
         )}
 
         {surat && (
-          <footer className="grid grid-cols-4 gap-2 border-t border-border-table px-4 py-3 sm:flex sm:justify-end sm:px-6">
+          <footer
+            className={cx(
+              "grid gap-2 border-t border-border-table px-4 py-3 sm:flex sm:justify-end sm:px-6",
+              onRespondBayaran ? "grid-cols-5" : "grid-cols-4",
+            )}
+          >
             <Button variant="secondary" size="small" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Tutup
             </Button>
@@ -202,6 +209,19 @@ export function SuratDetailDialog({
             >
               <span className="hidden min-[400px]:inline">Respon</span>
             </Button>
+            {onRespondBayaran && (
+              <Button
+                variant="secondary"
+                size="small"
+                leadingIcon={RiMoneyDollarCircleLine}
+                onClick={() => onRespondBayaran(surat)}
+                title="Respon To Bayaran: Tambah Rekod Bayaran daripada surat ini"
+                aria-label="Respon To Bayaran"
+                className="w-full sm:w-auto"
+              >
+                <span className="hidden sm:inline">Respon To Bayaran</span>
+              </Button>
+            )}
             {canEdit ? (
               <Button variant="secondary" size="small" leadingIcon={RiEditLine} onClick={() => onEdit(surat)} title="Edit" aria-label="Edit" className="w-full sm:w-auto">
                 <span className="hidden min-[400px]:inline">Edit</span>
