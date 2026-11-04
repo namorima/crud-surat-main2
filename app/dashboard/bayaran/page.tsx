@@ -55,6 +55,8 @@ import { inRange } from "@/components/dashboard/date-range-filter";
 import { parseDate } from "@/lib/dashboard-stats";
 import { BayaranTable } from "@/components/bayaran/BayaranTable";
 import { matchesBayaranSearch, parseRecordNumber } from "@/lib/bayaran-search";
+import { TAG_EVENT } from "@/lib/tags";
+import { LinkedText } from "@/components/shared/linked-text";
 import { DetailDialog, type KontrakInfo } from "@/components/bayaran/DetailDialog";
 import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
@@ -83,6 +85,19 @@ export default function BayaranPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
+
+  // A "#tag" clicked in a Nota Kaki lists the records that carry it
+  useEffect(() => {
+    const onTag = (e: Event) => {
+      const tag = (e as CustomEvent<{ tag: string }>).detail?.tag;
+      if (!tag) return;
+      setShowDetailDialog(false);
+      setSearchQuery(`#${tag}`);
+      setShowSearchInput(true);
+    };
+    window.addEventListener(TAG_EVENT, onTag);
+    return () => window.removeEventListener(TAG_EVENT, onTag);
+  }, []);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kategoriFilter, setKategoriFilter] = useState<string>("all");
   const [kontrakFilter, setKontrakFilter] = useState<string>("all");
@@ -1186,44 +1201,19 @@ Detail: ${directLink}
     }
   };
 
-  const renderNotaKakiWithLinks = (notaKaki: string) => {
-    if (!notaKaki) return null;
-
-    // Regex to find #S followed by numbers
-    const regex = /#S(\d+)/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = regex.exec(notaKaki)) !== null) {
-      // Add text before the match
-      if (match.index > lastIndex) {
-        parts.push(notaKaki.slice(lastIndex, match.index));
-      }
-
-      // Add the clickable link
-      const bilNumber = match[1];
-      parts.push(
-        <button
-          key={match.index}
-          onClick={() => handleSuratLinkClick(bilNumber)}
-          className="text-blue-600 hover:text-blue-800 underline font-medium"
-          disabled={loadingSurat}
-        >
-          #S{bilNumber}
-        </button>
-      );
-
-      lastIndex = regex.lastIndex;
+  // Nota Kaki: "#S123" opens surat 123, "#123" opens Rekod Bayaran 123 and
+  // "#tag" lists the records with that tag (LinkedText; never rendered as HTML)
+  const openBayaranById = (ids: string) => {
+    const found = bayaran.find((item) => String(item.ids) === ids);
+    if (!found) {
+      toast.error(`Rekod bayaran #${ids} tidak dijumpai`);
+      return;
     }
-
-    // Add remaining text
-    if (lastIndex < notaKaki.length) {
-      parts.push(notaKaki.slice(lastIndex));
-    }
-
-    return parts.length > 0 ? parts : notaKaki;
+    setSelectedBayaran(found);
+    setShowDetailDialog(true);
   };
+  const renderNotaKakiWithLinks = (notaKaki: string) =>
+    notaKaki ? <LinkedText text={notaKaki} onSurat={handleSuratLinkClick} onNumber={openBayaranById} /> : null;
 
   const [showSuratModal, setShowSuratModal] = useState(false);
   const [selectedSurat, setSelectedSurat] = useState<any>(null);

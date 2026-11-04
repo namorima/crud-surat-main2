@@ -54,6 +54,7 @@ import { ShareImageGenerator } from "@/components/share-image-generator"
 import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
 import { canViewAudit } from "@/components/dashboard/audit-dialog"
 import { KOMEN_OPEN_EVENT } from "@/components/surat/KomenThread"
+import { TAG_EVENT, tagQuery, tagsIn } from "@/lib/tags"
 import type { SuratKomen } from "@/types/surat-komen"
 import { parseDate, suratTertunggak } from "@/lib/dashboard-stats"
 import { DateRangeFilter, inRange, type DateRange } from "@/components/dashboard/date-range-filter"
@@ -281,6 +282,19 @@ export default function SuratPage() {
     window.addEventListener(KOMEN_OPEN_EVENT, onOpen)
     return () => window.removeEventListener(KOMEN_OPEN_EVENT, onOpen)
   }, [surat])
+
+  // A "#tag" clicked in a Nota or Komen lists the surat that carry it
+  useEffect(() => {
+    const onTag = (e: Event) => {
+      const tag = (e as CustomEvent<{ tag: string }>).detail?.tag
+      if (!tag) return
+      setIsDetailModalOpen(false)
+      setSearchQuery(`#${tag}`)
+      setShowSearchInput(true)
+    }
+    window.addEventListener(TAG_EVENT, onTag)
+    return () => window.removeEventListener(TAG_EVENT, onTag)
+  }, [])
 
   // Get unique units for filtering
   const uniqueUnits = useMemo(() => Array.from(new Set(surat.map((item) => item.unit))).filter(Boolean), [surat])
@@ -556,8 +570,12 @@ export default function SuratPage() {
     // Apply search filter
     // "*135" lists only surat BIL 135
     const bilQuery = searchQuery.trim().match(/^\*\s*(\d+)$/)
+    // "#insentif" lists the surat whose Nota or any Komen carries that tag
+    const tag = tagQuery(searchQuery)
     if (bilQuery) {
       filtered = filtered.filter((item) => item.bil === Number(bilQuery[1]))
+    } else if (tag) {
+      filtered = filtered.filter((item) => tagsIn(item.nota).includes(tag) || (item.komenTags ?? []).includes(tag))
     } else if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
