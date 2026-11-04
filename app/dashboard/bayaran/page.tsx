@@ -1242,6 +1242,10 @@ Detail: ${directLink}
           setShowSearchInput={setShowSearchInput}
           searchQuery={searchQuery}
           handleSearchInputChange={handleSearchInputChange}
+          clearSearch={() => {
+            setSearchQuery("");
+            setShowSearchInput(false);
+          }}
           handleSearchSubmit={handleSearchSubmit}
           searchInputRef={searchInputRef}
           dateFilter={dateFilter}

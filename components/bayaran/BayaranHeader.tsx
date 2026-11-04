@@ -34,6 +34,8 @@ interface BayaranHeaderProps {
   setShowSearchInput: (show: boolean) => void
   searchQuery: string
   handleSearchInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  /** X in the search box: empties the search (and its filter) and closes the box */
+  clearSearch: () => void
   handleSearchSubmit: (e: React.FormEvent) => void
   searchInputRef: React.RefObject<HTMLInputElement>
   dateFilter: [Date | undefined, Date | undefined]
@@ -63,6 +65,7 @@ export function BayaranHeader({
   setShowSearchInput,
   searchQuery,
   handleSearchInputChange,
+  clearSearch,
   handleSearchSubmit,
   searchInputRef,
   dateFilter,
@@ -135,12 +138,11 @@ export function BayaranHeader({
                 variant="ghost"
                 size="icon"
                 className="absolute right-0 top-0 h-full"
-                onClick={() => {
-                  setShowSearchInput(false)
-                }}
+                onClick={clearSearch}
+                title="Kosongkan carian"
               >
                 <X className="h-3 w-3 md:h-4 md:w-4" />
-                <span className="sr-only">Clear Search</span>
+                <span className="sr-only">Kosongkan carian</span>
               </Button>
             </form>
           ) : (
