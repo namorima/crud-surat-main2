@@ -56,6 +56,9 @@ import { canViewAudit } from "@/components/dashboard/audit-dialog"
 import { KOMEN_OPEN_EVENT } from "@/components/surat/KomenThread"
 import { TAG_EVENT, tagQuery, tagsIn } from "@/lib/tags"
 import { saveBayaranPrefill, toInputDate } from "@/lib/bayaran-prefill"
+
+/** Surat BIL to reopen after visiting one of its Reference Bayaran */
+const SURAT_BUKA_KEY = "surat:buka"
 import { useRouter } from "next/navigation"
 
 import type { SuratKomen } from "@/types/surat-komen"
@@ -277,6 +280,35 @@ export default function SuratPage() {
   const kawasanOfSurat = (item: Surat | null) =>
     item && item.kategori === "MASUK" ? kawasanByKey.get((item.daripadaKepada || "").trim().toUpperCase()) : undefined
   const router = useRouter()
+  // Reference Bayaran: open that Rekod Bayaran on the Bayaran page; closing it comes
+  // back here and reopens this surat (sessionStorage SURAT_BUKA_KEY)
+  const canViewBayaran = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'view' })
+    : ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"].includes(user?.role ?? "")
+  const openReferenceBayaran = (ids: number) => {
+    if (detailSurat) {
+      try {
+        sessionStorage.setItem(SURAT_BUKA_KEY, String(detailSurat.bil))
+      } catch {}
+    }
+    setIsDetailModalOpen(false)
+    router.push(`/dashboard/bayaran?buka=${ids}&dari=surat`)
+  }
+  // Back from a Reference Bayaran: reopen the surat it was opened from
+  useEffect(() => {
+    if (!surat.length) return
+    let bil = 0
+    try {
+      bil = Number(sessionStorage.getItem(SURAT_BUKA_KEY))
+      sessionStorage.removeItem(SURAT_BUKA_KEY)
+    } catch {}
+    const found = bil ? surat.find((s) => s.bil === bil) : undefined
+    if (found) {
+      setDetailSurat(found)
+      setIsDetailModalOpen(true)
+    }
+  }, [surat])
+
   const respondToBayaran = (item: Surat) => {
     const kawasan = kawasanOfSurat(item)
     if (!kawasan) return
@@ -1689,6 +1721,7 @@ export default function SuratPage() {
           handleOpenAddDialog(item.bil)
         }}
         onRespondBayaran={canCreateBayaran && kawasanOfSurat(detailSurat) ? respondToBayaran : undefined}
+        onBayaranClick={canViewBayaran ? openReferenceBayaran : undefined}
         onEdit={(item) => {
           setIsDetailModalOpen(false)
           openEditDialog(item)

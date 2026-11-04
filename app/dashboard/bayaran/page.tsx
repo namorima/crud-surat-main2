@@ -914,7 +914,8 @@ export default function BayaranPage() {
       toast.error("Rekod bayaran tidak dijumpai");
       return;
     }
-    if (params.get("dari") === "dashboard") backToDashboard.current = "opening";
+    // From the Dashboard or a surat's Reference Bayaran: closing goes back there
+    if (params.get("dari") === "dashboard" || params.get("dari") === "surat") backToDashboard.current = "opening";
     setSelectedBayaran(found);
     setShowDetailDialog(true);
   }, [bayaran]);

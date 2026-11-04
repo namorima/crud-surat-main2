@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       // Looked up from the kontrak by supabase-db; a PIECERATE or LEBIH 5K bayaran
       // has no kontrak and keeps the contractor picked in the form
       namaKontraktor: KONTRAKTOR_BY_NAME.includes(validatedData.jenisBayaran ?? "") ? validatedData.namaKontraktor || "" : "",
+      // "Respon To Bayaran": remember the surat it answers (Reference Bayaran)
+      suratBil: Number.isInteger(Number(dariSuratBil)) && Number(dariSuratBil) > 0 ? Number(dariSuratBil) : null,
       // LEBIH 5K has no kategori or kontrak
       ...(validatedData.jenisBayaran === LEBIH_5K ? { kategori: "", noKontrak: "" } : {}),
       // A WCP bayaran has no Bayaran Ke
