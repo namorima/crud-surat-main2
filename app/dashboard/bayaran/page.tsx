@@ -60,7 +60,7 @@ import { AddEditForm } from "@/components/bayaran/AddEditForm";
 import { BulkEditDialog } from "@/components/bayaran/BulkEditDialog";
 import { BayaranHeader } from "@/components/bayaran/BayaranHeader";
 import { toast } from "sonner";
-import { KEMAJUAN, PIECERATE, WCP, bayaranFormErrors } from "@/types/bayaran-schema";
+import { KEMAJUAN, LEBIH_5K, PIECERATE, WCP, bayaranFormErrors } from "@/types/bayaran-schema";
 
 // Number of items per page
 const ITEMS_PER_PAGE = 15;
@@ -147,6 +147,7 @@ export default function BayaranPage() {
   const [formOptions, setFormOptions] = useState({
     daripadaSuggestions: [] as string[],
     kawasanList: [] as string[], // Daripada choices (Tetapan → Kawasan)
+    kontraktorList: [] as string[], // every contractor (Nama Kontraktor of LEBIH 5K)
     statusLadangData: [] as Array<{status: string, colorHex: string}>, // Array of objects with status and colorHex
     contractData: {} as Record<string, string[]>,
     categoryData: {} as Record<string, Record<string, string[]>>,
@@ -310,6 +311,7 @@ export default function BayaranPage() {
         setFormOptions({
           daripadaSuggestions: data.daripadaSuggestions || [],
           kawasanList: data.kawasanList || [],
+          kontraktorList: data.kontraktorList || [],
           statusLadangData: data.statusLadangData || [], // Now it's a string array
           contractData: data.contractData || {},
           categoryData: data.categoryData || {},
@@ -549,12 +551,18 @@ export default function BayaranPage() {
   // and the contractor is picked by name. Leaving it clears those again.
   const handleJenisBayaranChange = (value: string) => {
     setFormData((prev) => {
-      if (value === PIECERATE) return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "" };
+      // Coming from a jenis whose contractor is picked by name, that name goes
+      const fromNamed = prev.jenisBayaran === PIECERATE || prev.jenisBayaran === LEBIH_5K;
+      if (value === PIECERATE)
+        return { ...prev, jenisBayaran: value, kategori: PIECERATE, noKontrak: "", ...(fromNamed ? { namaKontraktor: "" } : {}), adaWangTahanan: false, wangTahanan: "", bayaranAkhir: false };
+      // LEBIH 5K: no kategori or kontrak (hidden); the contractor is picked from the whole list
+      if (value === LEBIH_5K)
+        return { ...prev, jenisBayaran: value, kategori: "", noKontrak: "", ...(fromNamed ? { namaKontraktor: "" } : {}), adaWangTahanan: false, wangTahanan: "", bayaranAkhir: false };
       // WCP is paid once: Bayaran Ke is hidden and cleared
       let next = value === WCP ? { ...prev, jenisBayaran: value, bayaranKe: "" } : { ...prev, jenisBayaran: value };
       // Only KEMAJUAN offers the Wang Tahanan tick
       if (value !== KEMAJUAN) next = { ...next, adaWangTahanan: false, wangTahanan: "", bayaranAkhir: false };
-      if (prev.jenisBayaran === PIECERATE) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
+      if (fromNamed) return { ...next, kategori: "", noKontrak: "", namaKontraktor: "" };
       return next;
     });
   };
@@ -563,6 +571,14 @@ export default function BayaranPage() {
   // PIECERATE kontrak; an edited record keeps its own name
   const getPiecerateKontraktors = () => {
     const names = [...(formOptions.piecerateKontraktor[formData.daripada] || [])];
+    if (formData.namaKontraktor && !names.includes(formData.namaKontraktor)) names.unshift(formData.namaKontraktor);
+    return names;
+  };
+
+  // LEBIH 5K: Nama Kontraktor lists every contractor (Tetapan → Kontraktor); an
+  // edited record keeps its own name
+  const getSemuaKontraktors = () => {
+    const names = [...formOptions.kontraktorList];
     if (formData.namaKontraktor && !names.includes(formData.namaKontraktor)) names.unshift(formData.namaKontraktor);
     return names;
   };
@@ -594,7 +610,7 @@ export default function BayaranPage() {
       return;
     }
     setFormErrors((prev) =>
-      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() })
+      Object.keys(prev).length === 0 ? prev : bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors(), semuaKontraktor: getSemuaKontraktors() })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, showAddDialog, showEditDialog, editingBayaran]);
@@ -605,9 +621,11 @@ export default function BayaranPage() {
       formData.daripada.toUpperCase() === "LADANG NEGERI"
         ? [...formOptions.allCategories]
         : Array.from(new Set(openKontraksOf(formData.daripada).flatMap((k) => kategoriOf(k))));
+    // PIECERATE is a Jenis Bayaran, so it is not offered as a Kategori (an older record keeps its own below)
+    const options = kategoris.filter((k) => k.toUpperCase() !== PIECERATE);
     // An older record keeps its kategori selectable
-    if (formData.kategori && !kategoris.includes(formData.kategori)) kategoris.unshift(formData.kategori);
-    return kategoris;
+    if (formData.kategori && !options.includes(formData.kategori)) options.unshift(formData.kategori);
+    return options;
   };
 
   // Get status color from AUTH sheet data
@@ -901,7 +919,7 @@ export default function BayaranPage() {
 
       // Validate required fields (a new record also needs Nilai, Bayaran Ke and,
       // when the Daripada has contracts, No Kontrak)
-      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors() });
+      const errors = bayaranFormErrors(formData, !editingBayaran, { kategori: getAvailableKategoris(), kontrak: getAvailableKontraks(), kontraktor: getPiecerateKontraktors(), semuaKontraktor: getSemuaKontraktors() });
       setFormErrors(errors);
       if (Object.keys(errors).length > 0) {
         toast.error("Sila isi semua medan yang diperlukan");
@@ -1327,6 +1345,7 @@ Detail: ${directLink}
         handleKategoriChange={handleKategoriChange}
         handleJenisBayaranChange={handleJenisBayaranChange}
         getPiecerateKontraktors={getPiecerateKontraktors}
+        getSemuaKontraktors={getSemuaKontraktors}
         getAvailableKontraks={getAvailableKontraks}
         getAvailableKategoris={getAvailableKategoris}
         handleCurrencyInputChange={handleCurrencyInputChange}
