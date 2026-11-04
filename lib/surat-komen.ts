@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "./supabase"
+import { tagsIn } from "@/lib/tags"
 import type { Actor } from "./audit"
 import type { KomenNotifikasi, SuratKomen } from "@/types/surat-komen"
 
@@ -25,16 +26,18 @@ export async function getKomen(suratId: string): Promise<SuratKomen[]> {
 }
 
 /** Count and latest komen per surat, for the Surat list. */
-export async function getKomenSummary(): Promise<Map<string, { count: number; latest: SuratKomen }>> {
+export async function getKomenSummary(): Promise<Map<string, { count: number; latest: SuratKomen; tags: string[] }>> {
   const { data, error } = await supabaseAdmin
     .from("surat_komen")
     .select("*")
     .order("created_at", { ascending: true })
   if (error) throw new Error(error.message)
-  const summary = new Map<string, { count: number; latest: SuratKomen }>()
+  const summary = new Map<string, { count: number; latest: SuratKomen; tags: string[] }>()
   for (const row of data || []) {
     const prev = summary.get(row.surat_id)
-    summary.set(row.surat_id, { count: (prev?.count ?? 0) + 1, latest: toKomen(row) })
+    // Tags of every komen, so the Surat list can filter by a "#tag" found in any of them
+    const tags = prev ? [...new Set([...prev.tags, ...tagsIn(row.isi)])] : tagsIn(row.isi)
+    summary.set(row.surat_id, { count: (prev?.count ?? 0) + 1, latest: toKomen(row), tags })
   }
   return summary
 }

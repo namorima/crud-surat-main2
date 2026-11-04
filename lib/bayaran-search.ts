@@ -1,4 +1,5 @@
 import type { Bayaran } from "@/types/bayaran"
+import { tagQuery, tagsIn } from "@/lib/tags"
 
 /** "*119" or "119" → 119; anything else → null. */
 export function parseRecordNumber(query: string): number | null {
@@ -22,6 +23,10 @@ function amountDigits(value: string): string {
 export function matchesBayaranSearch(item: Bayaran, rawQuery: string): boolean {
   const query = rawQuery.trim().toLowerCase()
   if (!query) return true
+
+  // "#insentif": only records whose Nota Kaki carries that tag
+  const tag = tagQuery(query)
+  if (tag) return tagsIn(item.notaKaki).includes(tag)
 
   const recordNumber = parseRecordNumber(query)
   if (query.startsWith("*")) return recordNumber !== null && item.ids === recordNumber
