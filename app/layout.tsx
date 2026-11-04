@@ -1,14 +1,15 @@
 import type React from "react"
 import Script from "next/script"
-import { Inter } from "next/font/google"
+import { Archivo, Figtree } from "next/font/google"
 import { AuthProvider } from "@/lib/auth-provider"
 import { DirectionProvider } from "@/components/foundations/direction/direction"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-// BoardUI's type scale (styles/typography.css) expects Inter on --font-inter.
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], axes: ["opsz"] })
+// Body text in Figtree (--font-sans), headings in Archivo (--font-heading); see styles/theme.css
+const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] })
+const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"] })
 
 export const metadata = {
   title: "Sistem Pengurusan Surat dan Bayaran",
@@ -31,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ms" dir="ltr" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="ms" dir="ltr" className={`${figtree.variable} ${archivo.variable} h-full antialiased`} suppressHydrationWarning>
       <head />
       <body className="min-h-full font-sans">
         {/* Apply the stored theme before first paint. The key matches BoardUI's

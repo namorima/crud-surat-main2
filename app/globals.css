@@ -415,3 +415,18 @@ tbody.motion-stagger > * {
     animation-iteration-count: infinite !important;
   }
 }
+
+/*
+ * Headings in Archivo (--font-heading from styles/theme.css): real heading
+ * elements and every BoardUI title / headline / display style, including
+ * responsive variants such as sm:text-title-2-medium. Body text stays Figtree.
+ */
+h1,
+h2,
+h3,
+[class*="text-large-title-"],
+[class*="text-display-"],
+[class*="text-title-"],
+[class*="text-headline-"] {
+  font-family: var(--font-heading);
+}
