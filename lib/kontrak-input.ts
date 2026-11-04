@@ -1,7 +1,7 @@
 import type { KontrakEot, KontrakInput, KontrakStatus } from "@/types/kontrak"
 
-export const KONTRAK_KATEGORI = ["KONTRAK", "PERTANIAN AM", "ANGKUT BTS", "KIMIA", "PIECERATE"] as const
-export const JENIS_KERJA = ["RUNDING TERUS", "SEBUTHARGA KAWASAN", "KUASA EKSEKUTIF", "KONTRAK HQ"] as const
+export const KONTRAK_KATEGORI = ["KONTRAK", "PERTANIAN AM", "ANGKUT BTS", "KIMIA", "PIECERATE", "SEBUTHARGA"] as const
+export const JENIS_KERJA = ["RUNDING TERUS", "SEBUTHARGA KAWASAN", "SEBUTHARGA NEGERI", "KUASA EKSEKUTIF", "KONTRAK HQ"] as const
 export const KONTRAK_STATUS: readonly KontrakStatus[] = ["AKTIF", "SELESAI", "TIDAK AKTIF"]
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
