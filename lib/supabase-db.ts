@@ -526,7 +526,7 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
     const nextIds = (maxIdsData?.[0]?.ids || 0) + 1
 
     // Contractor name from the kontrak of this kawasan (daripada) and no kontrak;
-    // without one (PIECERATE) the name the route passed on
+    // without one (PIECERATE, LEBIH 5K) the name the route passed on
     const namaKontraktor = bayaran.noKontrak
       ? await lookupNamaKontraktor(bayaran.noKontrak, bayaran.daripada)
       : bayaran.namaKontraktor || ""

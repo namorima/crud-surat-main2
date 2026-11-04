@@ -6,12 +6,13 @@ import {
   getPenerimaData,
   getStatusBayaranData,
   getKawasanNames,
+  getAllKontraktor,
 } from "@/lib/supabase-db"
 
 export async function GET() {
   try {
     // Fetch all required data in parallel
-    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData, kawasanList] =
+    const [daripadaSuggestions, statusLadangData, contractCategoryData, penerimaData, statusBayaranData, kawasanList, kontraktorList] =
       await Promise.all([
         getDaripadaKepadaValues(),
         getStatusLadangData(),
@@ -19,12 +20,18 @@ export async function GET() {
         getPenerimaData(),
         getStatusBayaranData(),
         getKawasanNames(),
+        // Names only (no bank details): Nama Kontraktor for a LEBIH 5K bayaran
+        getAllKontraktor()
+          .then((rows) => rows.map((row) => row.namaKontraktor).filter(Boolean))
+          .catch(() => [] as string[]),
       ])
 
     return NextResponse.json({
       daripadaSuggestions,
       // Daripada choices of Tambah / Edit Rekod Bayaran (Tetapan → Kawasan)
       kawasanList,
+      // Every contractor in Tetapan → Kontraktor (Nama Kontraktor of a LEBIH 5K bayaran)
+      kontraktorList,
       statusLadangData, // Use data from AUTH sheet with colors
       contractData: contractCategoryData.contractData,
       categoryData: contractCategoryData.categoryData,

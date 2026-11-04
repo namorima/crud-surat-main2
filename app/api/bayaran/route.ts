@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllBayaran, addBayaran } from "@/lib/supabase-db"
 import { getActor } from "@/lib/audit"
-import { BayaranBaruSchema } from "@/types/bayaran-schema"
+import { BayaranBaruSchema, KONTRAKTOR_BY_NAME, LEBIH_5K } from "@/types/bayaran-schema"
 import { z } from "zod"
 
 export async function GET() {
@@ -53,9 +53,11 @@ export async function POST(request: NextRequest) {
     // Step 3: Pass data directly (dates already in YYYY-MM-DD format)
     const formattedData = {
       ...validatedData,
-      // Looked up from the kontrak by supabase-db; a PIECERATE bayaran has no
-      // kontrak and keeps the contractor picked in the form
-      namaKontraktor: validatedData.jenisBayaran === "PIECERATE" ? validatedData.namaKontraktor || "" : "",
+      // Looked up from the kontrak by supabase-db; a PIECERATE or LEBIH 5K bayaran
+      // has no kontrak and keeps the contractor picked in the form
+      namaKontraktor: KONTRAKTOR_BY_NAME.includes(validatedData.jenisBayaran ?? "") ? validatedData.namaKontraktor || "" : "",
+      // LEBIH 5K has no kategori or kontrak
+      ...(validatedData.jenisBayaran === LEBIH_5K ? { kategori: "", noKontrak: "" } : {}),
       // A WCP bayaran has no Bayaran Ke
       bayaranKe: validatedData.jenisBayaran === "WCP" ? "" : validatedData.bayaranKe,
       // Only a KEMAJUAN bayaran can be the last (Akhir) one (left as is when not sent)
