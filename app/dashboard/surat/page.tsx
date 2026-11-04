@@ -55,6 +55,12 @@ import { TertunggakDialog } from "@/components/surat/TertunggakDialog"
 import { canViewAudit } from "@/components/dashboard/audit-dialog"
 import { KOMEN_OPEN_EVENT } from "@/components/surat/KomenThread"
 import { TAG_EVENT, tagQuery, tagsIn } from "@/lib/tags"
+import { saveBayaranPrefill, toInputDate } from "@/lib/bayaran-prefill"
+
+/** Surat BIL to reopen after visiting one of its Reference Bayaran */
+const SURAT_BUKA_KEY = "surat:buka"
+import { useRouter } from "next/navigation"
+
 import type { SuratKomen } from "@/types/surat-komen"
 import { parseDate, suratTertunggak } from "@/lib/dashboard-stats"
 import { DateRangeFilter, inRange, type DateRange } from "@/components/dashboard/date-range-filter"
@@ -250,6 +256,66 @@ export default function SuratPage() {
 
   // Every signed-in user can comment: the Komen thread in Maklumat Surat
   const canComment = true
+
+  // "Respon To Bayaran": who may add a Rekod Bayaran (same rule as the Bayaran page's +)
+  const canCreateBayaran = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'create' })
+    : (user?.role === "semua" || user?.role === "PERLADANGAN")
+  // Tetapan → Kawasan names (upper case key → stored spelling), loaded once for that check
+  const [kawasanByKey, setKawasanByKey] = useState<Map<string, string>>(new Map())
+  useEffect(() => {
+    if (!canCreateBayaran) return
+    let cancelled = false
+    fetch("/api/kawasan/nama")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((names: string[]) => {
+        if (!cancelled) setKawasanByKey(new Map(names.map((n) => [n.trim().toUpperCase(), n])))
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [canCreateBayaran])
+  // Only a MASUK surat whose Daripada is a kawasan can start a Rekod Bayaran
+  const kawasanOfSurat = (item: Surat | null) =>
+    item && item.kategori === "MASUK" ? kawasanByKey.get((item.daripadaKepada || "").trim().toUpperCase()) : undefined
+  const router = useRouter()
+  // Reference Bayaran: open that Rekod Bayaran on the Bayaran page; closing it comes
+  // back here and reopens this surat (sessionStorage SURAT_BUKA_KEY)
+  const canViewBayaran = user?.permissions && user.permissions.length > 0
+    ? hasPermission(user.permissions, { resource: 'bayaran', action: 'view' })
+    : ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN"].includes(user?.role ?? "")
+  const openReferenceBayaran = (ids: number) => {
+    if (detailSurat) {
+      try {
+        sessionStorage.setItem(SURAT_BUKA_KEY, String(detailSurat.bil))
+      } catch {}
+    }
+    setIsDetailModalOpen(false)
+    router.push(`/dashboard/bayaran?buka=${ids}&dari=surat`)
+  }
+  // Back from a Reference Bayaran: reopen the surat it was opened from
+  useEffect(() => {
+    if (!surat.length) return
+    let bil = 0
+    try {
+      bil = Number(sessionStorage.getItem(SURAT_BUKA_KEY))
+      sessionStorage.removeItem(SURAT_BUKA_KEY)
+    } catch {}
+    const found = bil ? surat.find((s) => s.bil === bil) : undefined
+    if (found) {
+      setDetailSurat(found)
+      setIsDetailModalOpen(true)
+    }
+  }, [surat])
+
+  const respondToBayaran = (item: Surat) => {
+    const kawasan = kawasanOfSurat(item)
+    if (!kawasan) return
+    saveBayaranPrefill({ daripada: kawasan, tarikhTerima: toInputDate(item.tarikh), perkara: item.perkara || "", bil: item.bil })
+    setIsDetailModalOpen(false)
+    router.push("/dashboard/bayaran?tambah=surat")
+  }
   // Maklumat Surat opened to write a komen focuses its komen box
   const [focusKomen, setFocusKomen] = useState(false)
   const openCommentDialog = (item: Surat) => {
@@ -1654,6 +1720,8 @@ export default function SuratPage() {
           setIsDetailModalOpen(false)
           handleOpenAddDialog(item.bil)
         }}
+        onRespondBayaran={canCreateBayaran && kawasanOfSurat(detailSurat) ? respondToBayaran : undefined}
+        onBayaranClick={canViewBayaran ? openReferenceBayaran : undefined}
         onEdit={(item) => {
           setIsDetailModalOpen(false)
           openEditDialog(item)

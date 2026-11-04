@@ -6,6 +6,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { takeBayaranSeed } from "@/lib/bayaran-seed";
+import { takeBayaranPrefill } from "@/lib/bayaran-prefill";
 import { useAuth } from "@/lib/auth-provider";
 import type { Bayaran } from "@/types/bayaran";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,8 @@ export default function BayaranPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingBayaran, setEditingBayaran] = useState<Bayaran | null>(null);
+  // Surat this new record answers ("Respon To Bayaran"); saving it closes that surat
+  const [dariSuratBil, setDariSuratBil] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -866,6 +869,35 @@ export default function BayaranPage() {
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
+  // Closing Tambah Rekod Bayaran without saving forgets the surat it came from
+  // (declared before the ?tambah=surat effect so that one wins on first load)
+  useEffect(() => {
+    if (!showAddDialog) setDariSuratBil(null);
+  }, [showAddDialog]);
+
+  // /dashboard/bayaran?tambah=surat ("Respon To Bayaran" on a surat): Tambah
+  // Rekod Bayaran opens with Daripada, Tarikh Terima and Perkara from that surat
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tambah") !== "surat") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const prefill = takeBayaranPrefill();
+    if (!prefill) return;
+    setEditingBayaran(null);
+    setDariSuratBil(prefill.bil);
+    setFormData((prev) => ({
+      ...prev,
+      daripada: prefill.daripada,
+      tarikhTerima: prefill.tarikhTerima,
+      perkara: prefill.perkara,
+      jenisBayaran: "KEMAJUAN",
+      kategori: "",
+      noKontrak: "",
+      namaKontraktor: "",
+    }));
+    setShowAddDialog(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // /dashboard/bayaran?buka=<id>[&dari=dashboard] opens that Rekod Bayaran (from
   // the Dashboard's kontrak detail). Coming from the Dashboard, closing the
   // detail (or the edit form opened from it) goes back there.
@@ -882,7 +914,8 @@ export default function BayaranPage() {
       toast.error("Rekod bayaran tidak dijumpai");
       return;
     }
-    if (params.get("dari") === "dashboard") backToDashboard.current = "opening";
+    // From the Dashboard or a surat's Reference Bayaran: closing goes back there
+    if (params.get("dari") === "dashboard" || params.get("dari") === "surat") backToDashboard.current = "opening";
     setSelectedBayaran(found);
     setShowDetailDialog(true);
   }, [bayaran]);
@@ -963,18 +996,22 @@ export default function BayaranPage() {
           body: JSON.stringify(payload),
         });
       } else {
-        // Create new record
+        // Create new record (from "Respon To Bayaran": the server then closes that surat)
         response = await fetch("/api/bayaran", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(dariSuratBil ? { ...payload, dariSuratBil } : payload),
         });
       }
 
       if (response.ok) {
-        toast.success(`Rekod bayaran berjaya ${editingBayaran ? "dikemaskini" : "disimpan"}!`);
+        const result = editingBayaran ? null : await response.clone().json().catch(() => null);
+        toast.success(`Rekod bayaran berjaya ${editingBayaran ? "dikemaskini" : "disimpan"}!`, {
+          description: result?.suratSelesai ? `Surat #${result.suratSelesai} kini SELESAI.` : undefined,
+        });
+        setDariSuratBil(null);
 
         // Reset form after successful save
         setFormData({

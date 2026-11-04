@@ -60,14 +60,26 @@ function formatDateFromDB(dateString: string | null): string {
 export async function getAllSurat(): Promise<Surat[]> {
   try {
     // More than 1000 surat: read them a page at a time (PostgREST row limit)
-    const [data, komen] = await Promise.all([
+    const [data, komen, refs] = await Promise.all([
       selectAll<any>((from, to) => supabaseAdmin.from("surat").select("*").order("bil", { ascending: false }).range(from, to)),
       // The list still loads if the komen tables are unreachable
       getKomenSummary().catch((e) => {
         console.error("Error fetching komen summary:", e)
         return new Map() as Awaited<ReturnType<typeof getKomenSummary>>
       }),
+      // Reference Bayaran: Rekod Bayaran made from a surat ("Respon To Bayaran")
+      selectAll<{ ids: number; surat_bil: number }>((from, to) =>
+        supabaseAdmin.from("bayaran").select("ids, surat_bil").not("surat_bil", "is", null).order("ids").range(from, to),
+      ).catch((e) => {
+        console.error("Error fetching reference bayaran:", e)
+        return [] as { ids: number; surat_bil: number }[]
+      }),
     ])
+    const bayaranBySurat = new Map<number, number[]>()
+    for (const r of refs) {
+      if (r.ids == null) continue
+      bayaranBySurat.set(r.surat_bil, [...(bayaranBySurat.get(r.surat_bil) ?? []), r.ids])
+    }
 
     return (
       data?.map((row) => ({
@@ -89,6 +101,7 @@ export async function getAllSurat(): Promise<Surat[]> {
         untukMakluman: !!row.untuk_makluman,
         komenCount: komen.get(row.id)?.count ?? 0,
         komenTags: komen.get(row.id)?.tags ?? [],
+        bayaranRefs: bayaranBySurat.get(row.bil) ?? [],
         komenTerakhir: komen.get(row.id)
           ? { userName: komen.get(row.id)!.latest.userName, isi: komen.get(row.id)!.latest.isi }
           : null,
@@ -136,6 +149,28 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
 }
 
 /** The raw surat row (DB columns) for a bil, or null; used for the audit trail. */
+/**
+ * "Respon To Bayaran": once the Rekod Bayaran made from a MASUK surat is saved,
+ * that surat becomes SELESAI with today's tarikh selesai (Malaysia time). A surat
+ * that is not MASUK, or is already SELESAI, is left as it is. Returns the rows
+ * before and after, or null when nothing changed.
+ */
+export async function selesaikanSuratDariBayaran(
+  bilNumber: number,
+): Promise<{ before: Record<string, any>; after: Record<string, any> } | null> {
+  const before = await getSuratRow(bilNumber)
+  if (!before || before.kategori !== "MASUK" || before.status === "SELESAI") return null
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date())
+  const { data, error } = await supabaseAdmin
+    .from("surat")
+    .update({ status: "SELESAI", tarikh_selesai: today })
+    .eq("id", before.id)
+    .select("*")
+    .single()
+  if (error) throw new Error(error.message)
+  return { before, after: data }
+}
+
 export async function getSuratRow(bilNumber: number): Promise<Record<string, any> | null> {
   const { data, error } = await supabaseAdmin.from("surat").select("*").eq("bil", bilNumber).limit(1).maybeSingle()
   if (error) throw new Error(error.message)
@@ -492,6 +527,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
         bayaranKe: row.bayaran_ke || "",
         wangTahanan: row.wang_tahanan || "",
         bayaranAkhir: !!row.bayaran_akhir,
+        suratBil: row.surat_bil ?? null,
         jenisBayaran: row.jenis_bayaran || "",
         kategori: row.kategori || "",
         noKontrak: row.no_kontrak || "",
@@ -547,6 +583,8 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
         kategori: bayaran.kategori || null,
         no_kontrak: bayaran.noKontrak || null,
         nama_kontraktor: namaKontraktor || null,
+        // Set only by POST /api/bayaran for "Respon To Bayaran"
+        surat_bil: bayaran.suratBil ?? null,
         tarikh_memo_ladang: bayaran.tarikhMemoLadang || null,
         status_ladang: bayaran.statusLadang || null,
         tarikh_hantar: bayaran.tarikhHantar || null,

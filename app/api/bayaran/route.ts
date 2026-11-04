@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllBayaran, addBayaran } from "@/lib/supabase-db"
-import { getActor } from "@/lib/audit"
+import { getAllBayaran, addBayaran, selesaikanSuratDariBayaran } from "@/lib/supabase-db"
+import { SURAT_AUDIT_FIELDS, diffRows, getActor, logSuratAudit } from "@/lib/audit"
 import { BayaranBaruSchema, KONTRAKTOR_BY_NAME, LEBIH_5K } from "@/types/bayaran-schema"
 import { z } from "zod"
 
@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
     console.log("=== POST /api/bayaran ===")
     console.log("Body keys:", Object.keys(body))
     
-    const { user, ...bayaranData } = body
+    // dariSuratBil: made with "Respon To Bayaran" on that surat
+    const { user, dariSuratBil, ...bayaranData } = body
 
     // Step 2: Validate with Zod
     let validatedData: any
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest) {
       // Looked up from the kontrak by supabase-db; a PIECERATE or LEBIH 5K bayaran
       // has no kontrak and keeps the contractor picked in the form
       namaKontraktor: KONTRAKTOR_BY_NAME.includes(validatedData.jenisBayaran ?? "") ? validatedData.namaKontraktor || "" : "",
+      // "Respon To Bayaran": remember the surat it answers (Reference Bayaran)
+      suratBil: Number.isInteger(Number(dariSuratBil)) && Number(dariSuratBil) > 0 ? Number(dariSuratBil) : null,
       // LEBIH 5K has no kategori or kontrak
       ...(validatedData.jenisBayaran === LEBIH_5K ? { kategori: "", noKontrak: "" } : {}),
       // A WCP bayaran has no Bayaran Ke
@@ -69,9 +72,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Add to database
+    const actor = await getActor(request, user)
     try {
       // Who keyed it comes from the session; the client's name is only a fallback
-      await addBayaran(formattedData, await getActor(request, user))
+      await addBayaran(formattedData, actor)
     } catch (dbError) {
       console.error("Database Error:", dbError)
       return NextResponse.json({ 
@@ -80,7 +84,30 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
     
-    return NextResponse.json({ success: true, message: "Bayaran record added successfully" })
+    // Step 5: the surat it answers becomes SELESAI with today's tarikh selesai.
+    // The bayaran is already saved, so a failure here only skips the surat.
+    let suratSelesai: number | null = null
+    const bil = Number(dariSuratBil)
+    if (Number.isInteger(bil) && bil > 0) {
+      try {
+        const done = await selesaikanSuratDariBayaran(bil)
+        if (done) {
+          suratSelesai = bil
+          await logSuratAudit({
+            suratId: done.after.id,
+            bil,
+            action: "UPDATE",
+            actor,
+            details: `Status: ${done.before.status || "-"} → SELESAI (Respon To Bayaran)`,
+            changes: diffRows(done.before, done.after, SURAT_AUDIT_FIELDS),
+          })
+        }
+      } catch (suratError) {
+        console.error("Error closing surat after Respon To Bayaran:", suratError)
+      }
+    }
+
+    return NextResponse.json({ success: true, message: "Bayaran record added successfully", suratSelesai })
     
   } catch (error) {
     console.error("=== Unexpected Error ===")
