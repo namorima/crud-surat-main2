@@ -113,6 +113,8 @@ export default function BayaranPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingBayaran, setEditingBayaran] = useState<Bayaran | null>(null);
+  // Surat this new record answers ("Respon To Bayaran"); saving it closes that surat
+  const [dariSuratBil, setDariSuratBil] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -867,6 +869,12 @@ export default function BayaranPage() {
   const [selectedBayaran, setSelectedBayaran] = useState<Bayaran | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
+  // Closing Tambah Rekod Bayaran without saving forgets the surat it came from
+  // (declared before the ?tambah=surat effect so that one wins on first load)
+  useEffect(() => {
+    if (!showAddDialog) setDariSuratBil(null);
+  }, [showAddDialog]);
+
   // /dashboard/bayaran?tambah=surat ("Respon To Bayaran" on a surat): Tambah
   // Rekod Bayaran opens with Daripada, Tarikh Terima and Perkara from that surat
   useEffect(() => {
@@ -875,6 +883,7 @@ export default function BayaranPage() {
     const prefill = takeBayaranPrefill();
     if (!prefill) return;
     setEditingBayaran(null);
+    setDariSuratBil(prefill.bil);
     setFormData((prev) => ({
       ...prev,
       daripada: prefill.daripada,
@@ -986,18 +995,22 @@ export default function BayaranPage() {
           body: JSON.stringify(payload),
         });
       } else {
-        // Create new record
+        // Create new record (from "Respon To Bayaran": the server then closes that surat)
         response = await fetch("/api/bayaran", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(dariSuratBil ? { ...payload, dariSuratBil } : payload),
         });
       }
 
       if (response.ok) {
-        toast.success(`Rekod bayaran berjaya ${editingBayaran ? "dikemaskini" : "disimpan"}!`);
+        const result = editingBayaran ? null : await response.clone().json().catch(() => null);
+        toast.success(`Rekod bayaran berjaya ${editingBayaran ? "dikemaskini" : "disimpan"}!`, {
+          description: result?.suratSelesai ? `Surat #${result.suratSelesai} kini SELESAI.` : undefined,
+        });
+        setDariSuratBil(null);
 
         // Reset form after successful save
         setFormData({
