@@ -38,6 +38,7 @@ export const BAYARAN_KATEGORI_CHIP: Record<string, ChipColor> = {
   PIECERATE: "cyan",
   KIMIA: "yellow",
   KONTRAK: "purple",
+  SEBUTHARGA: "blue",
 }
 
 export const bayaranKategoriChip = (kategori: string): ChipColor =>
