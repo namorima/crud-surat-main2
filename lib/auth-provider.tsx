@@ -2,9 +2,10 @@
 
 import type React from "react"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { User } from "@/types/user"
+import { clearLogoutReason, codeOf, saveLogoutReason } from "@/lib/logout-reason"
 
 type AuthContextType = {
   user: User | null
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // before that (or whose cookie expired) has to sign in again.
             const sessionResponse = await fetch("/api/auth/session").catch(() => null)
             if (sessionResponse?.status === 401) {
+              saveLogoutReason({ path: "/api/auth/session", code: await codeOf(sessionResponse), source: "buka-aplikasi" })
               localStorage.removeItem("user")
               setLoading(false)
               return
@@ -67,14 +69,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser()
   }, [])
 
-  // Any API call rejected for a missing/expired session sends the user back to login.
+  // A 401 from one of our /api routes may mean the session is gone. Before
+  // signing out, ask /api/auth/session once (shared by 401s that arrive
+  // together): only a 401 there too signs the user out, and why is saved for
+  // the login page. A stray 401 (or one from another site) no longer signs out.
+  const sessionCheck = useRef<Promise<Response | null> | null>(null)
   useEffect(() => {
     const originalFetch = window.fetch
+    const checkSession = () => {
+      if (!sessionCheck.current) {
+        sessionCheck.current = originalFetch("/api/auth/session", { cache: "no-store" })
+          .catch(() => null)
+          .finally(() => {
+            setTimeout(() => (sessionCheck.current = null), 2000)
+          })
+      }
+      return sessionCheck.current
+    }
     window.fetch = async (...args) => {
       const response = await originalFetch(...args)
+      if (response.status !== 401) return response
       const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : args[0].url
-      const path = new URL(url, window.location.origin).pathname
-      if (response.status === 401 && path.startsWith("/api/") && !path.startsWith("/api/auth/login") && !path.startsWith("/api/auth/change-password") && localStorage.getItem("user")) {
+      const target = new URL(url, window.location.origin)
+      const path = target.pathname
+      if (
+        target.origin !== window.location.origin ||
+        !path.startsWith("/api/") ||
+        path.startsWith("/api/auth/login") ||
+        path.startsWith("/api/auth/change-password") ||
+        !localStorage.getItem("user")
+      ) {
+        return response
+      }
+      const check = await checkSession()
+      // Network error or a session that is still fine: keep the user signed in
+      if (check?.status !== 401) return response
+      if (localStorage.getItem("user")) {
+        saveLogoutReason({ path, code: (await codeOf(check)) ?? (await codeOf(response)), source: "permintaan-api" })
         localStorage.removeItem("user")
         setUser(null)
         router.push("/login")
@@ -119,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(foundUser)
       localStorage.setItem("user", JSON.stringify(foundUser))
+      clearLogoutReason()
       
       // Check if user must change password (first-time login or forced reset)
       if (foundUser.must_change_password) {
@@ -145,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    clearLogoutReason()
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
     setUser(null)
     localStorage.removeItem("user")
