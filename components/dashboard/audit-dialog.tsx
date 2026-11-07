@@ -12,21 +12,21 @@ import { cx } from "@/utils/cx"
 /** Admin and Super Admin see the audit (the API checks again). */
 export const canViewAudit = (user: User | null) => !!user && ["semua", "Super Admin", "admin"].includes(user.role)
 
-const ACTION: Record<string, { label: string; color: NonNullable<ChipProps["color"]> }> = {
+export const ACTION: Record<string, { label: string; color: NonNullable<ChipProps["color"]> }> = {
   CREATE: { label: "Dikeyin", color: "lime" },
   UPDATE: { label: "Dikemaskini", color: "blue" },
   BULK_UPDATE_STATUS: { label: "Status (pukal)", color: "purple" },
   DELETE: { label: "Dipadam", color: "rose" },
 }
 
-const formatWhen = (iso: string) => {
+export const formatWhen = (iso: string) => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-function Changes({ entry }: { entry: AuditEntry }) {
+export function Changes({ entry }: { entry: Pick<AuditEntry, "action" | "changes"> }) {
   if (entry.changes.length === 0) return null
   // A new or deleted record lists its values, not before → after
   const snapshot = entry.action === "CREATE" || entry.action === "DELETE"

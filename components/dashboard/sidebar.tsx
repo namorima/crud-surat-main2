@@ -42,8 +42,6 @@ const navigation: NavigationItem[] = [
     href: "/dashboard",
     icon: RiDonutChartFill,
     requiredPermission: { resource: 'dashboard', action: 'view' },
-    // Statistik was merged into Dashboard; its viewers keep access
-    alsoPermissions: [{ resource: 'statistik', action: 'view' }],
     legacyRoles: ["semua", "Super Admin", "admin", "PERLADANGAN", "PENGURUS", "KEWANGAN", "PEMASARAN", "PERANCANG", "MSPO"]
   },
   {

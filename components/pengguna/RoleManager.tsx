@@ -56,6 +56,25 @@ function SavingLabel({ busy, children }: { busy: boolean; children: React.ReactN
   )
 }
 
+/** Group titles and order in the Permissions dialog, in the order of the sidebar */
+const RESOURCE_LABEL: Record<string, string> = {
+  dashboard: "Dashboard",
+  surat: "Surat",
+  bayaran: "Rekod Bayaran",
+  pengguna: "Pengguna",
+  tetapan: "Tetapan",
+}
+const RESOURCE_ORDER = Object.keys(RESOURCE_LABEL)
+const ACTION_ORDER = ["view", "create", "edit", "delete", "manage_roles", "manage_all_units"]
+const rank = (list: string[], value: string) => {
+  const i = list.indexOf(value)
+  return i === -1 ? list.length : i
+}
+const orderedGroups = (grouped: Record<string, Permission[]>) =>
+  Object.entries(grouped)
+    .sort(([a], [b]) => rank(RESOURCE_ORDER, a) - rank(RESOURCE_ORDER, b) || a.localeCompare(b))
+    .map(([resource, perms]) => [resource, [...perms].sort((x, y) => rank(ACTION_ORDER, x.action) - rank(ACTION_ORDER, y.action))] as const)
+
 export function RoleManager({ onRoleCreated, onRoleUpdated, onRoleDeleted }: RoleManagerProps) {
   const [roles, setRoles] = useState<Role[]>([])
   const [permissionsGrouped, setPermissionsGrouped] = useState<Record<string, Permission[]>>({})
@@ -390,14 +409,14 @@ export function RoleManager({ onRoleCreated, onRoleUpdated, onRoleDeleted }: Rol
                 Memuatkan...
               </div>
             ) : (
-              Object.entries(permissionsGrouped).map(([resource, perms]) => {
+              orderedGroups(permissionsGrouped).map(([resource, perms]) => {
                 const chosen = perms.filter((p) => selectedPermissionIds.includes(p.id)).length
                 const all = chosen === perms.length
                 return (
                   <section key={resource} className="flex flex-col gap-2 rounded-2xl border border-border-table p-3 sm:p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-body-semibold capitalize text-text-primary">
-                        {resource}
+                      <h3 className="text-body-semibold text-text-primary">
+                        {RESOURCE_LABEL[resource] ?? resource}
                         <span className="ms-2 text-caption-1-regular text-text-tertiary tabular-nums">
                           {chosen}/{perms.length}
                         </span>
