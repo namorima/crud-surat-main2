@@ -145,7 +145,7 @@ Located in `types/` directory:
    - Sliding session: the cookie lasts 30 days (`SESSION_MAX_AGE`) and middleware renews it on the first `/api` request after it is a day old (`shouldRenewSession()` / `renewSessionToken()`), so active users stay signed in. `/api/auth/session` (checked when the app opens) signs out an account that no longer exists or is deactivated
    - [middleware.ts](middleware.ts) rejects every `/api` request without a valid cookie (401), except login/logout, forgot/reset password and the public share-link routes (`GET /api/share-link/[id]`, `GET /api/share-link/[id]/bayaran`, `POST /api/share-link/[id]/increment`)
    - Sensitive routes also check permissions server-side with `requirePermission()` ([lib/server-auth.ts](lib/server-auth.ts)): users/roles/permissions (pengguna), kontrak/kontraktor and share-link management (tetapan)
-   - The client logs out on any 401 from `/api` ([lib/auth-provider.tsx](lib/auth-provider.tsx))
+   - A 401 from a same-origin `/api` route makes the client ask `/api/auth/session` once (shared by 401s arriving together); only a 401 there too logs out ([lib/auth-provider.tsx](lib/auth-provider.tsx)), so a stray 401 or one from another site does not. 401 replies from middleware and `/api/auth/session` carry `code` (`no-cookie` | `invalid` | `inactive`); an automatic logout saves `{ at, path, code, source, host }` in localStorage `auth:logout-reason` ([lib/logout-reason.ts](lib/logout-reason.ts)) and the login page shows it until the next login (the Logout button clears it). No note after landing on Login means the browser had no stored login for that address (e.g. a per-deployment `*.vercel.app` URL)
    - `/share/[id]` fetches only its rows from `/api/share-link/[id]/bayaran` (filtered server-side by [lib/share-filter.ts](lib/share-filter.ts))
    - RLS: run [enable-rls.sql](enable-rls.sql) once this code is deployed everywhere; the app only uses the service-role client
 
@@ -641,7 +641,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 ### Auth Pages
 
-- **Login** ([app/login/page.tsx](app/login/page.tsx))
+- **Login** ([app/login/page.tsx](app/login/page.tsx)) - "Ingat log masuk di pelayar ini" (ticked by default, [lib/remember-login.ts](lib/remember-login.ts)): the ID is kept in localStorage `auth:remember` and filled in next time; the password is never stored by the app, it goes to the browser password manager via the Credential Management API (`PasswordCredential`, Chrome / Edge / Android) and is filled back silently; Safari / iOS fill it from Keychain through `autocomplete`. Unticking forgets the ID and calls `preventSilentAccess()`
 - **Forgot Password** ([app/forgot-password/page.tsx](app/forgot-password/page.tsx))
 - **Reset Password** ([app/reset-password/page.tsx](app/reset-password/page.tsx))
 - **Change Password** ([app/change-password/page.tsx](app/change-password/page.tsx))
