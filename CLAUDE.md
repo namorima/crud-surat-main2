@@ -239,6 +239,7 @@ Located in `types/` directory:
 - **Theme**: Dark/light mode toggle support ([components/theme-provider.tsx](components/theme-provider.tsx))
 - **Charts**: Recharts + HTML bar lists on the Dashboard ([components/dashboard/charts.tsx](components/dashboard/charts.tsx)); chart colours are `--viz-*` tokens in [app/globals.css](app/globals.css)
 - **Notifications**: Sonner toast notifications ([hooks/use-toast.ts](hooks/use-toast.ts))
+- **Loading skeletons**: [skullet](https://github.com/lochie/skullet) (`Skeleton` from `skullet/react`) replaces the "Memuatkan…" spinner on the first load of the Dashboard (whole section), Surat (`SuratList`) and Rekod Bayaran (`BayaranTable`): while loading, the real component is laid out unseen from `SAMPLE_SURAT` / `SAMPLE_BAYARAN` ([lib/skeleton-samples.ts](lib/skeleton-samples.ts), dates relative to today) and drawn as a shimmering skeleton of the same size. Colours are `--skullet-base` / `--skullet-highlight` at the end of [app/globals.css](app/globals.css), switched by the app's `.dark` class. Mark parts that must not be drawn with `skullet-ignore` (e.g. the closed "Lihat jadual" table in [components/dashboard/charts.tsx](components/dashboard/charts.tsx)). `PageLoader` is still used by Download and `/dashboard/surat/[id]`
 - **Motion**: CSS-only, defined at the end of [app/globals.css](app/globals.css) (`--ease-out-soft`, `--ease-sheet`)
   - `motion-page`: page rise, from [app/dashboard/template.tsx](app/dashboard/template.tsx)
   - `motion-panel`: BoardUI tab panels
