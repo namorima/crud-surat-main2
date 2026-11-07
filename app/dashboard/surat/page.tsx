@@ -2,6 +2,7 @@
 
 import { Skeleton } from "skullet/react"
 import { SAMPLE_SURAT } from "@/lib/skeleton-samples"
+import { useRowFlash } from "@/lib/use-row-flash"
 import type React from "react"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
@@ -582,6 +583,10 @@ export default function SuratPage() {
     filterSurat()
   }, [surat, searchQuery, statusFilter, unitFilter, kategoriFilter, dateFilter, user, sortField, sortDirection])
 
+  // A surat just added flashes in the list, on the page that holds it
+  const filteredBils = useMemo(() => filteredSurat.map((item) => item.bil), [filteredSurat])
+  const { flashKey: flashBil, flash: flashSurat } = useRowFlash(filteredBils, ITEMS_PER_PAGE, setCurrentPage)
+
   useEffect(() => {
     // Update displayed surat based on pagination
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -850,6 +855,7 @@ export default function SuratPage() {
       setIsAddDialogOpen(false)
       setReferenceBil(null)
       resetForm()
+      flashSurat(Number(generatedBil) || null)
       // Invalidate cache to force refresh
       setLastFetchTime(null)
       fetchWithCache()
@@ -1600,6 +1606,7 @@ export default function SuratPage() {
             pageSize={ITEMS_PER_PAGE}
             totalPages={firstLoad ? 1 : totalPages}
             onPageChange={handlePageChange}
+            flashBil={flashBil}
           />
           </Skeleton>
 
