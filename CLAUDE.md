@@ -174,7 +174,7 @@ Located in `types/` directory:
    - Dashboard: `{ resource: 'dashboard', action: 'view' }`
    - Surat: `{ resource: 'surat', action: 'view' }`
    - Bayaran: `{ resource: 'bayaran', action: 'view' }`
-   - Dashboard also opens for `{ resource: 'statistik', action: 'view' }` (Statistik was merged into Dashboard; `/dashboard/statistik` redirects)
+   - Statistik was merged into Dashboard (`/dashboard/statistik` redirects); `statistik:view` was removed by [update-permissions-terkini.sql](update-permissions-terkini.sql)
    - Pengguna: `{ resource: 'pengguna', action: 'view' }`
    - Tetapan: `{ resource: 'tetapan', action: 'view' }`
 
@@ -672,6 +672,8 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
    - `UserForm.tsx` - User add/edit dialog; a new account has no password field: its first password is the staff ID and `must_change_password` forces a change on first login
    - `RoleManager.tsx` - RBAC role management; permissions dialog grouped by resource with "Pilih semua" per group
    - `UnitPicManager.tsx` - Unit PIC, listed per person (one PIC, many units). The Atur Unit dialog picks the PIC from users (`/api/auth`; non-user PICs already in `unit_pic` stay selectable, the stored spelling is reused) and multi-selects units; it saves with `PUT /api/unit-pic` `{ pic, units, previousPic? }`, which inserts missing pairs before deleting extras (and duplicates). `DELETE ?pic=` removes a person from every unit. `PATCH` `{ pic, isActive }` disables / enables a person (Nyahaktif / Aktifkan in the row menu and the Atur Unit dialog); new unit rows of a disabled PIC stay disabled. Editing a surat keeps its PIC selectable even when it is no longer listed
+   - `AktivitiLog.tsx` - Pengguna → Aktiviti tab, admin / Super Admin only (`canViewAudit()`; `GET /api/aktiviti` checks `isAdminRequest()`): who keyed, edited and deleted Surat and Rekod Bayaran, newest first, from `audit_surat` + `audit_bayaran` merged by `getAktiviti()` ([lib/aktiviti.ts](lib/aktiviti.ts)). Columns Masa, Pengguna, Aktiviti, Surat / Rekod Bayaran (BIL or the bayaran `ids`, linked to `/dashboard/surat?buka=<bil>` / `/dashboard/bayaran?buka=<ids>` unless deleted), Butiran, and the changed fields on expand. Filters: pengguna, jenis, aktiviti (Dikeyin / Dikemaskini (incl. pukal) / Dipadam), dari / hingga (days in Malaysia time); 50 per page with "Muat lagi" (`sebelum` cursor)
+   - Role & Permissions groups permissions as Dashboard, Surat, Rekod Bayaran, Pengguna, Tetapan (view, create, edit, delete first). Names and descriptions come from [update-permissions-terkini.sql](update-permissions-terkini.sql), which also removed the unused `bayaran:approve` and `statistik:view`
    - Dialog frame classes and `FormField` are shared from [components/dashboard/form-field.tsx](components/dashboard/form-field.tsx)
 
 4. **Dashboard Components** ([components/dashboard/](components/dashboard/))
