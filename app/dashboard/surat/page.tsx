@@ -1,6 +1,7 @@
 "use client"
 
-import { PageLoader } from "@/components/dashboard/page-loader"
+import { Skeleton } from "skullet/react"
+import { SAMPLE_SURAT } from "@/lib/skeleton-samples"
 import type React from "react"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
@@ -1228,11 +1229,8 @@ export default function SuratPage() {
     setShareItem(null)
   }
 
-  if (loading && surat.length === 0) {
-    return (
-      <PageLoader />
-    )
-  }
+  // First load: the list is drawn as a skullet skeleton laid out from sample surat
+  const firstLoad = loading && surat.length === 0
 
   return (
     <div className="space-y-6">
@@ -1569,9 +1567,10 @@ export default function SuratPage() {
           </div>
         </CardHeader>
         <CardContent className="px-2 pb-3 sm:px-6 sm:pb-6">
+          <Skeleton loading={firstLoad} label="Memuatkan surat">
           <SuratList
-            items={displayedSurat}
-            totalCount={filteredSurat.length}
+            items={firstLoad ? SAMPLE_SURAT : displayedSurat}
+            totalCount={firstLoad ? SAMPLE_SURAT.length : filteredSurat.length}
             loading={loading}
             error={error}
             onReload={fetchWithCache}
@@ -1596,9 +1595,10 @@ export default function SuratPage() {
             sharingItemId={sharingItemId}
             page={currentPage}
             pageSize={ITEMS_PER_PAGE}
-            totalPages={totalPages}
+            totalPages={firstLoad ? 1 : totalPages}
             onPageChange={handlePageChange}
           />
+          </Skeleton>
 
           {/* Mobile Footer */}
           <div className="md:hidden pt-4 text-center text-caption-1-regular text-text-tertiary">Made By Akmal</div>

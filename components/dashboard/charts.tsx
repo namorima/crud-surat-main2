@@ -221,7 +221,8 @@ export function MonthlyStack({
       {hasData && (
         <details className="text-caption-1-regular text-text-secondary">
           <summary className="cursor-pointer select-none text-caption-1-medium text-accent-600 dark:text-accent-400">Lihat jadual</summary>
-          <div className="mt-2 overflow-x-auto">
+          {/* skullet-ignore: a closed <details> still lays its table out, so the skeleton would draw it */}
+          <div className="mt-2 overflow-x-auto" skullet-ignore="">
             <table className="w-full min-w-[260px] text-left tabular-nums">
               <thead>
                 <tr className="text-text-tertiary">
