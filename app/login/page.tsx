@@ -2,9 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-provider"
-import { RiErrorWarningLine, RiLockLine, RiUser3Line } from "@remixicon/react"
+import { RiErrorWarningLine, RiInformationLine, RiLockLine, RiUser3Line } from "@remixicon/react"
+import { describeLogoutReason, readLogoutReason } from "@/lib/logout-reason"
 import { LinkButton } from "@/components/base/buttons/link-button"
 import { PASSWORD_RESET_ENABLED } from "@/lib/password-reset-flag"
 import { Button } from "@/components/base/buttons/button"
@@ -16,6 +17,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const { login, loading } = useAuth()
+  // Why the app signed this browser out on its own, if it did (cleared on the next login)
+  const [logoutNote, setLogoutNote] = useState<string | null>(null)
+  useEffect(() => {
+    const reason = readLogoutReason()
+    if (reason) setLogoutNote(describeLogoutReason(reason))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,6 +45,16 @@ export default function LoginPage() {
           <h1 className="text-title-2-medium text-text-primary">CRUD Surat</h1>
           <p className="text-body-regular text-text-secondary">Masukkan ID dan kata laluan untuk akses sistem</p>
         </div>
+
+        {logoutNote && !error && (
+          <div
+            role="status"
+            className="mt-5 flex items-start gap-2 rounded-2lg bg-background-secondary-default p-3 text-caption-1-regular text-text-secondary"
+          >
+            <RiInformationLine className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{logoutNote}</span>
+          </div>
+        )}
 
         {error && (
           <div

@@ -20,9 +20,11 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_API.some((route) => route.method === request.method && route.pattern.test(pathname))
   if (isPublic) return NextResponse.next()
 
-  const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)
+  const token = request.cookies.get(SESSION_COOKIE)?.value
+  const session = await verifySessionToken(token)
   if (!session) {
-    return NextResponse.json({ error: "Sila log masuk semula" }, { status: 401 })
+    // `code` tells the client why (shown on the login page after an automatic logout)
+    return NextResponse.json({ error: "Sila log masuk semula", code: token ? "invalid" : "no-cookie" }, { status: 401 })
   }
   // Sliding session: a day after the cookie was issued, the next request gets
   // a renewed one, so people who keep using the app are not signed out
