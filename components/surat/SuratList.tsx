@@ -58,6 +58,8 @@ export interface SuratListProps {
   pageSize: number
   totalPages: number
   onPageChange: (page: number) => void
+  /** BIL of a surat just added: its row flashes (row-flash) */
+  flashBil?: number | null
 }
 
 const KATEGORI_TEXT: Record<string, string> = {
@@ -291,7 +293,7 @@ export function SuratList(props: SuratListProps) {
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className="hover:bg-background-secondary-default">
+                  <tr key={item.id} className={cx("hover:bg-background-secondary-default", props.flashBil === item.bil && "row-flash")}>
                     {cols.bil && (
                       <td className="align-top">
                         <BilButton item={item} />
@@ -364,7 +366,10 @@ export function SuratList(props: SuratListProps) {
           items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs"
+              className={cx(
+                "flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs",
+                props.flashBil === item.bil && "row-flash",
+              )}
             >
               <div className="flex min-w-0 items-center gap-2">
                 <BilButton item={item} className="shrink-0" />

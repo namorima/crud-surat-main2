@@ -45,6 +45,8 @@ interface BayaranTableProps {
   pageSize: number
   totalPages: number
   onPageChange: (page: number) => void
+  /** id of a record just added: its row flashes (row-flash) */
+  flashId?: string | null
 }
 
 /** Used when status_config has no colour for a status (same hues as before). */
@@ -111,6 +113,7 @@ export function BayaranTable({
   pageSize,
   totalPages,
   onPageChange,
+  flashId,
 }: BayaranTableProps) {
   const { rootRef, scrollBoxRef, goToPage } = useListPaging(onPageChange)
   const openDetail = (item: Bayaran) => {
@@ -225,7 +228,10 @@ export function BayaranTable({
                   <tr
                     key={item.id}
                     data-state={selectedRows.includes(item.id) ? "selected" : undefined}
-                    className="hover:bg-background-secondary-default data-[state=selected]:bg-accent-50 dark:data-[state=selected]:bg-accent-950/40"
+                    className={cx(
+                      "hover:bg-background-secondary-default data-[state=selected]:bg-accent-50 dark:data-[state=selected]:bg-accent-950/40",
+                      flashId === item.id && "row-flash",
+                    )}
                   >
                     <td className="align-top">
                       <Checkbox
@@ -321,7 +327,10 @@ export function BayaranTable({
             return (
               <li
                 key={item.id}
-                className="flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs"
+                className={cx(
+                  "flex flex-col gap-1.5 rounded-2xl border border-border-table bg-background-primary-default p-3 shadow-xs",
+                  flashId === item.id && "row-flash",
+                )}
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <IdButton item={item} className="shrink-0" />

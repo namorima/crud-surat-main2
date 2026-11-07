@@ -550,7 +550,7 @@ export async function getAllBayaran(): Promise<Bayaran[]> {
   }
 }
 
-export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Promise<void> {
+export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Promise<{ id: string; ids: number | null } | null> {
   try {
     // Get next available ids number
     const { data: maxIdsData } = await supabaseAdmin
@@ -611,6 +611,8 @@ export async function addBayaran(bayaran: Omit<Bayaran, "id">, actor: Actor): Pr
         changes: diffRows(null, data, BAYARAN_AUDIT_FIELDS),
       })
     }
+    // The new row, so the page can mark it in the list
+    return data ? { id: data.id, ids: data.ids ?? null } : null
   } catch (error: any) {
     console.error("Error adding bayaran to Supabase:", error)
     throw new Error(`Failed to add bayaran to Supabase: ${error.message}`)
