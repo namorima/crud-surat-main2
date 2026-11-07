@@ -2,6 +2,7 @@
 
 import { Skeleton } from "skullet/react"
 import { SAMPLE_BAYARAN } from "@/lib/skeleton-samples"
+import { useRowFlash } from "@/lib/use-row-flash"
 import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
@@ -299,6 +300,10 @@ export default function BayaranPage() {
     setDisplayedBayaran(filteredBayaran.slice(startIndex, endIndex));
     setTotalPages(Math.ceil(filteredBayaran.length / ITEMS_PER_PAGE));
   }, [filteredBayaran, currentPage]);
+
+  // A record just added flashes in the list, on the page that holds it
+  const filteredIds = useMemo(() => filteredBayaran.map((item) => item.id), [filteredBayaran]);
+  const { flashKey: flashId, flash: flashBayaran } = useRowFlash(filteredIds, ITEMS_PER_PAGE, setCurrentPage);
 
   // Focus search input when search button is clicked
   useEffect(() => {
@@ -1013,6 +1018,7 @@ export default function BayaranPage() {
           description: result?.suratSelesai ? `Surat #${result.suratSelesai} kini SELESAI.` : undefined,
         });
         setDariSuratBil(null);
+        if (result?.id) flashBayaran(result.id);
 
         // Reset form after successful save
         setFormData({
@@ -1046,12 +1052,10 @@ export default function BayaranPage() {
 
         // Force refresh data by clearing cache and fetching new data
         setLastFetchTime(null);
+        // The list re-filters itself when the new rows arrive (the bayaran effect).
+        // No delayed filterBayaran() here: its closure holds the old rows and,
+        // when the refetch is quick, put the stale list back.
         await fetchWithCache();
-
-        // Also force re-filter to update the display
-        setTimeout(() => {
-          filterBayaran();
-        }, 100);
       } else {
         const errorData = await response.json();
         toast.error(
@@ -1127,9 +1131,6 @@ export default function BayaranPage() {
         // Force refresh data
         setLastFetchTime(null);
         await fetchWithCache();
-        setTimeout(() => {
-          filterBayaran();
-        }, 100);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Gagal memadam rekod bayaran");
@@ -1329,6 +1330,7 @@ Detail: ${directLink}
             pageSize={ITEMS_PER_PAGE}
             totalPages={firstLoad ? 1 : totalPages}
             onPageChange={handlePageChange}
+            flashId={flashId}
           />
           </Skeleton>
 

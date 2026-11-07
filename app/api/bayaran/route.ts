@@ -73,9 +73,10 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Add to database
     const actor = await getActor(request, user)
+    let baru: Awaited<ReturnType<typeof addBayaran>> = null
     try {
       // Who keyed it comes from the session; the client's name is only a fallback
-      await addBayaran(formattedData, actor)
+      baru = await addBayaran(formattedData, actor)
     } catch (dbError) {
       console.error("Database Error:", dbError)
       return NextResponse.json({ 
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: "Bayaran record added successfully", suratSelesai })
+    return NextResponse.json({ success: true, message: "Bayaran record added successfully", suratSelesai, id: baru?.id ?? null, ids: baru?.ids ?? null })
     
   } catch (error) {
     console.error("=== Unexpected Error ===")

@@ -246,6 +246,7 @@ Located in `types/` directory:
   - `motion-stagger`: put on a list's `ul`/`tbody` and its first 12 children come in one by one (rows only fade)
   - `motion-bar`: Dashboard bar lists
   - `motion-press`: tap feedback
+  - `row-flash`: a Surat / Rekod Bayaran row (and its phone card) just added blinks in the accent tint 3 times over 3.6s (a steady tint under reduced motion). `useRowFlash()` ([lib/use-row-flash.ts](lib/use-row-flash.ts)): the page calls `flash(key)` after saving (the BIL from `POST /api/surat`, the `id` that `POST /api/bayaran` now returns); once the refreshed, filtered list holds it, the page turns to the page with it and scrolls the row into view. `SuratList` takes `flashBil`, `BayaranTable` `flashId`
   - Dialogs slide up as a sheet on phones and zoom on desktop; the nav drawer animates out
   - Entrances use fill-mode `backwards` so no transform stays behind; `prefers-reduced-motion` turns all of it off except spinners
 

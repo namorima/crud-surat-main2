@@ -399,7 +399,37 @@ tbody.motion-stagger > * {
   transform: scale(0.97);
 }
 
+/*
+ * row-flash: a newly added Surat / Rekod Bayaran row (or phone card) blinks
+ * in the accent tint three times, then fades out (3.6s, ROW_FLASH_MS in
+ * lib/use-row-flash.ts). On table rows the tint goes on the cells.
+ */
+@keyframes row-flash {
+  0%, 30%, 60% { background-color: var(--row-flash-color); }
+  15%, 45%, 75% { background-color: var(--row-flash-soft); }
+  100% { background-color: transparent; }
+}
+:root {
+  --row-flash-color: color-mix(in srgb, var(--color-accent-500) 26%, transparent);
+  --row-flash-soft: color-mix(in srgb, var(--color-accent-500) 8%, transparent);
+}
+.dark {
+  --row-flash-color: color-mix(in srgb, var(--color-accent-400) 32%, transparent);
+  --row-flash-soft: color-mix(in srgb, var(--color-accent-400) 10%, transparent);
+}
+.row-flash:not(tr),
+tr.row-flash > td {
+  /* backwards, not both: the card's own background returns once it ends */
+  animation: row-flash 3.6s var(--ease-out-soft) backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* No blinking: a steady tint for as long as the row is marked */
+  .row-flash:not(tr),
+  tr.row-flash > td {
+    animation: none !important;
+    background-color: var(--row-flash-soft);
+  }
   *,
   *::before,
   *::after {
