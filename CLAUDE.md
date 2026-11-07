@@ -641,7 +641,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 
 ### Auth Pages
 
-- **Login** ([app/login/page.tsx](app/login/page.tsx))
+- **Login** ([app/login/page.tsx](app/login/page.tsx)) - "Ingat log masuk di pelayar ini" (ticked by default, [lib/remember-login.ts](lib/remember-login.ts)): the ID is kept in localStorage `auth:remember` and filled in next time; the password is never stored by the app, it goes to the browser password manager via the Credential Management API (`PasswordCredential`, Chrome / Edge / Android) and is filled back silently; Safari / iOS fill it from Keychain through `autocomplete`. Unticking forgets the ID and calls `preventSilentAccess()`
 - **Forgot Password** ([app/forgot-password/page.tsx](app/forgot-password/page.tsx))
 - **Reset Password** ([app/reset-password/page.tsx](app/reset-password/page.tsx))
 - **Change Password** ([app/change-password/page.tsx](app/change-password/page.tsx))

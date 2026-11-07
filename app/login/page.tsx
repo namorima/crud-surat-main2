@@ -6,6 +6,8 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-provider"
 import { RiErrorWarningLine, RiInformationLine, RiLockLine, RiUser3Line } from "@remixicon/react"
 import { describeLogoutReason, readLogoutReason } from "@/lib/logout-reason"
+import { recallLogin, rememberLogin } from "@/lib/remember-login"
+import { Checkbox } from "@/components/base/checkbox/checkbox"
 import { LinkButton } from "@/components/base/buttons/link-button"
 import { PASSWORD_RESET_ENABLED } from "@/lib/password-reset-flag"
 import { Button } from "@/components/base/buttons/button"
@@ -23,6 +25,20 @@ export default function LoginPage() {
     const reason = readLogoutReason()
     if (reason) setLogoutNote(describeLogoutReason(reason))
   }, [])
+  // "Ingat log masuk": ticked by default; fills in the ID (and the password the browser saved)
+  const [remember, setRemember] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    recallLogin().then((saved) => {
+      if (cancelled) return
+      setRemember(saved.on)
+      if (saved.id) setId((current) => current || saved.id)
+      if (saved.password) setPassword((current) => current || saved.password)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,6 +46,7 @@ export default function LoginPage() {
 
     try {
       await login(id, password)
+      void rememberLogin(remember, id, password)
     } catch (err) {
       setError("Login gagal. Sila periksa ID dan kata laluan anda.")
     }
@@ -88,13 +105,16 @@ export default function LoginPage() {
             onChange={setPassword}
             isRequired
           />
-          {PASSWORD_RESET_ENABLED ? (
-            <div className="flex items-center justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <Checkbox isSelected={remember} onChange={setRemember} size="sm">
+              Ingat log masuk di pelayar ini
+            </Checkbox>
+            {PASSWORD_RESET_ENABLED ? (
               <LinkButton href="/forgot-password">Lupa Kata Laluan?</LinkButton>
-            </div>
-          ) : (
-            <p className="text-right text-sm text-text-secondary">Lupa kata laluan? Hubungi pentadbir.</p>
-          )}
+            ) : (
+              <p className="text-sm text-text-secondary">Lupa kata laluan? Hubungi pentadbir.</p>
+            )}
+          </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Sedang Masuk..." : "Log Masuk"}
           </Button>
