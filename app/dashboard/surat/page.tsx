@@ -335,16 +335,19 @@ export default function SuratPage() {
   // A komen notification opens its surat: /dashboard/surat?komen=<bil> from
   // another page, or KOMEN_OPEN_EVENT when the Surat page is already open
   useEffect(() => {
-    const open = (bil: number) => {
+    const open = (bil: number, focus = true) => {
       const found = surat.find((item) => item.bil === bil)
       if (!found) return false
       setDetailSurat(found)
-      setFocusKomen(true)
+      setFocusKomen(focus)
       setIsDetailModalOpen(true)
       return true
     }
-    const bil = Number(new URLSearchParams(window.location.search).get("komen"))
-    if (bil && open(bil)) window.history.replaceState(null, "", window.location.pathname)
+    // ?buka=<bil> (Pengguna → Aktiviti) opens the surat without focusing the komen box
+    const query = new URLSearchParams(window.location.search)
+    const bil = Number(query.get("komen"))
+    const buka = Number(query.get("buka"))
+    if ((bil && open(bil)) || (buka && open(buka, false))) window.history.replaceState(null, "", window.location.pathname)
     const onOpen = (e: Event) => open(Number((e as CustomEvent<{ bil: number }>).detail?.bil))
     window.addEventListener(KOMEN_OPEN_EVENT, onOpen)
     return () => window.removeEventListener(KOMEN_OPEN_EVENT, onOpen)

@@ -27,6 +27,8 @@ import { RowActions } from "@/components/dashboard/row-actions"
 import { RoleManager } from "@/components/pengguna/RoleManager"
 import { UnitPicManager } from "@/components/pengguna/UnitPicManager"
 import { UserForm } from "@/components/pengguna/UserForm"
+import { AktivitiLog } from "@/components/pengguna/AktivitiLog"
+import { canViewAudit } from "@/components/dashboard/audit-dialog"
 import type { User } from "@/types/user"
 import { cx } from "@/utils/cx"
 import type { Role } from "@/types/rbac"
@@ -225,6 +227,8 @@ export default function PenggunaPage() {
             </Tab>
             {canManageRoles && <Tab id="roles">Role & Permissions</Tab>}
             {canManageRoles && <Tab id="unit-pic">Unit PIC</Tab>}
+            {/* Admin and Super Admin only (GET /api/aktiviti checks the same) */}
+            {canViewAudit(user) && <Tab id="aktiviti">Aktiviti</Tab>}
           </TabList>
         </div>
 
@@ -385,6 +389,11 @@ export default function PenggunaPage() {
         {canManageRoles && (
           <TabPanel id="unit-pic">
             <UnitPicManager />
+          </TabPanel>
+        )}
+        {canViewAudit(user) && (
+          <TabPanel id="aktiviti">
+            <AktivitiLog users={users} />
           </TabPanel>
         )}
       </Tabs>
