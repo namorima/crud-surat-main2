@@ -12,7 +12,8 @@ import {
 import type { Surat } from "@/types/surat"
 import type { Bayaran } from "@/types/bayaran"
 import { NavTrigger } from "@/components/dashboard/app-shell"
-import { PageLoader } from "@/components/dashboard/page-loader"
+import { Skeleton } from "skullet/react"
+import { SAMPLE_BAYARAN, SAMPLE_SURAT } from "@/lib/skeleton-samples"
 import { useNavigation } from "@/components/dashboard/sidebar"
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control"
 import { BarList, ChartCard, KpiGrid, MonthlyStack, ORDINAL } from "@/components/dashboard/charts"
@@ -86,6 +87,8 @@ export default function DashboardPage() {
   const suratUnit = useMemo(() => suratForRole(surat, user?.role), [surat, user?.role])
   const unitLabel = user?.role && !SEMUA_UNIT_ROLES.includes(user.role) ? user.role.toUpperCase() : null
   const s = useMemo(() => suratStats(suratUnit, period), [suratUnit, period])
+  const sampleB = useMemo(() => bayaranStats(SAMPLE_BAYARAN, period), [period])
+  const sampleS = useMemo(() => suratStats(SAMPLE_SURAT, period), [period])
 
   return (
     <div className="flex flex-col gap-3 pb-2 sm:gap-4">
@@ -129,14 +132,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {loading ? (
-        <PageLoader inline />
-      ) : error ? (
+      {error && !loading ? (
         <p className="rounded-2xl border border-border-table bg-background-primary-default p-6 text-center text-body-regular text-text-secondary">{error}</p>
-      ) : shown === "bayaran" ? (
-        <BayaranSection stats={b} bayaran={bayaran} period={period} />
-      ) : shown === "surat" ? (
-        <SuratSection stats={s} />
+      ) : shown ? (
+        // While loading, skullet lays the section out from sample records and draws it as a skeleton
+        <Skeleton loading={loading} label="Memuatkan dashboard">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            {shown === "bayaran" ? (
+              <BayaranSection stats={loading ? sampleB : b} bayaran={loading ? SAMPLE_BAYARAN : bayaran} period={period} />
+            ) : (
+              <SuratSection stats={loading ? sampleS : s} />
+            )}
+          </div>
+        </Skeleton>
       ) : (
         <p className="rounded-2xl border border-border-table bg-background-primary-default p-6 text-center text-body-regular text-text-secondary">
           Tiada data yang boleh dipaparkan untuk akaun anda.

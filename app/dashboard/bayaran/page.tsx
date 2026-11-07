@@ -1,6 +1,7 @@
 "use client";
 
-import { PageLoader } from "@/components/dashboard/page-loader"
+import { Skeleton } from "skullet/react"
+import { SAMPLE_BAYARAN } from "@/lib/skeleton-samples"
 import type React from "react";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
@@ -1256,11 +1257,8 @@ Detail: ${directLink}
   const [selectedSurat, setSelectedSurat] = useState<any>(null);
   const [loadingSurat, setLoadingSurat] = useState(false);
 
-  if (loading && bayaran.length === 0) {
-    return (
-      <PageLoader />
-    );
-  }
+  // First load: the table is drawn as a skullet skeleton laid out from sample records
+  const firstLoad = loading && bayaran.length === 0;
 
   return (
     <div className="space-y-6">
@@ -1306,8 +1304,9 @@ Detail: ${directLink}
           setColumnVisibility={setColumnVisibility}
         />
         <CardContent className="px-2 pb-3 sm:px-6 sm:pb-6">
+          <Skeleton loading={firstLoad} label="Memuatkan rekod bayaran">
           <BayaranTable
-            displayedBayaran={displayedBayaran}
+            displayedBayaran={firstLoad ? SAMPLE_BAYARAN : displayedBayaran}
             columnVisibility={columnVisibility}
             handleSort={handleSort}
             setSelectedBayaran={setSelectedBayaran}
@@ -1325,12 +1324,13 @@ Detail: ${directLink}
             fetchWithCache={fetchWithCache}
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
-            totalCount={filteredBayaran.length}
+            totalCount={firstLoad ? SAMPLE_BAYARAN.length : filteredBayaran.length}
             page={currentPage}
             pageSize={ITEMS_PER_PAGE}
-            totalPages={totalPages}
+            totalPages={firstLoad ? 1 : totalPages}
             onPageChange={handlePageChange}
           />
+          </Skeleton>
 
         </CardContent>
       </Card>
