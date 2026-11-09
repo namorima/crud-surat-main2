@@ -16,6 +16,7 @@ import {
   RiReplyLine,
 } from "@remixicon/react"
 import type { Fail } from "@/types/fail"
+import { rujukanSurat } from "@/lib/rujukan-surat"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -48,6 +49,7 @@ export type SuratFormData = {
   kaedah: string
   unit: string
   tindakanPic: string
+  noBilanganSurat: string
   status: string
   tarikhSelesai: string
   nota: string
@@ -442,6 +444,26 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                </Field>
+
+                <Field label="No Bilangan Surat" htmlFor={id("noBilanganSurat")}>
+                  {/* A number only; the page strips anything else */}
+                  <Input
+                    id={id("noBilanganSurat")}
+                    name="noBilanganSurat"
+                    value={formData.noBilanganSurat}
+                    onChange={onInputChange}
+                    placeholder="Contoh: 5"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoComplete="off"
+                  />
+                  {formData.noBilanganSurat && selectedFail?.noRujukanFail && (
+                    <p className="text-caption-1-regular text-text-tertiary">
+                      Rujukan: {rujukanSurat(formData.noBilanganSurat, selectedFail.noRujukanFail)}
+                    </p>
+                  )}
                 </Field>
               </Section>
 

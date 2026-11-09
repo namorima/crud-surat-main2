@@ -115,7 +115,7 @@ export function FailManager({
   /** Switches to the Setup Locker tab (from the form's "no locker" hint). */
   onOpenLocker?: () => void
 }) {
-  const empty: FailForm = { part: "", noLocker: "", noFail: "", pecahan: "", pecahanKecil: "", unit: canViewAll ? "" : userUnit }
+  const empty: FailForm = { part: "", noLocker: "", noFail: "", noRujukanFail: "", pecahan: "", pecahanKecil: "", unit: canViewAll ? "" : userUnit }
 
   const [items, setItems] = useState<Fail[]>([])
   const [loading, setLoading] = useState(true)
@@ -212,7 +212,7 @@ export function FailManager({
       (fail) =>
         (activeUnit === ALL_UNITS || fail.unit === activeUnit) &&
         (!q ||
-          [fail.part, fail.noLocker, fail.noFail, fail.pecahan, fail.pecahanKecil, fail.unit].some((value) =>
+          [fail.part, fail.noLocker, fail.noFail, fail.noRujukanFail, fail.pecahan, fail.pecahanKecil, fail.unit].some((value) =>
             (value || "").toLowerCase().includes(q),
           )),
     )
@@ -262,6 +262,7 @@ export function FailManager({
       part: fail.part,
       noLocker: fail.noLocker,
       noFail: fail.noFail,
+      noRujukanFail: fail.noRujukanFail,
       pecahan: fail.pecahan,
       pecahanKecil: fail.pecahanKecil,
       unit: fail.unit,
@@ -476,6 +477,7 @@ export function FailManager({
                             <span className="text-body-semibold">{fail.noFail}</span>
                             {!fail.isActive && <InactiveChip />}
                           </span>
+                          {fail.noRujukanFail && <span className="block text-caption-1-regular text-text-tertiary">{fail.noRujukanFail}</span>}
                         </td>
                         <td>{fail.pecahan || <Dash />}</td>
                         <td className="text-text-secondary">{fail.pecahanKecil || <Dash />}</td>
@@ -507,6 +509,7 @@ export function FailManager({
                         {[fail.pecahan, fail.pecahanKecil].filter(Boolean).join(" · ")}
                       </span>
                     )}
+                    {fail.noRujukanFail && <span className="text-caption-1-regular text-text-secondary">Rujukan: {fail.noRujukanFail}</span>}
                     <span className="text-caption-1-regular text-text-tertiary">
                       {[fail.unit, fail.noLocker && `Locker ${fail.noLocker}`].filter(Boolean).join(" · ")}
                     </span>
@@ -648,6 +651,9 @@ export function FailManager({
                   </label>
                 </div>
               )}
+              <Field label="No Rujukan Fail" htmlFor="fail-no-rujukan">
+                <Input id="fail-no-rujukan" value={form.noRujukanFail} onChange={setField("noRujukanFail")} placeholder="Contoh: FELCRA/PJ/100-2/3" />
+              </Field>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Pecahan" htmlFor="fail-pecahan">
                   <Input id="fail-pecahan" value={form.pecahan} onChange={setField("pecahan")} />

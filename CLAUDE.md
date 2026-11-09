@@ -38,6 +38,7 @@ The application uses a **dual-database architecture**:
 1. **`surat`** - Letter/mail records
    - Columns: `id`, `bil`, `daripada_kepada`, `tarikh`, `perkara`, `kategori`, `unit`, `fail`, `tindakan_pic`, `status`, `tarikh_selesai`, `nota`, `komen`, `reference`
    - `kaedah` ("MELALUI EMEL" | "SERAHAN TANGAN", NULL on older surat) and `untuk_makluman` (boolean, default false) from [add-surat-kaedah.sql](add-surat-kaedah.sql)
+   - `no_bilangan_surat` (No Bilangan Surat: a number only, e.g. `5`, digits kept by the page and `addSurat()` / `updateSurat()`; NULL on older surat) from [add-surat-no-bilangan-fail-rujukan.sql](add-surat-no-bilangan-fail-rujukan.sql): typed in Tambah / Edit Surat under Fail (Tindakan), in the audit fields. With its fail's No Rujukan Fail it makes the full reference `rujukanSurat()` ([lib/rujukan-surat.ts](lib/rujukan-surat.ts)) "dlm FELCRA/PJ/100-2/3 (5)", shown under the input and in Maklumat Surat (the fail is found from `surat.fail`, same unit first)
    - `created_by` (username of who keyed it, set by `POST /api/surat` from the session; NULL on surat keyed before) from [create-surat-komen.sql](create-surat-komen.sql)
    - `komen` is the old single "Komen Pengurus"; its 2 values were copied into `surat_komen` and the UI no longer shows or edits it
    - Auto-increment: `bil` field uses sequence `surat_bil_seq`
@@ -57,6 +58,7 @@ The application uses a **dual-database architecture**:
 3. **`fail`** - File/document management
    - Columns: `id`, `part`, `no_locker`, `no_fail`, `pecahan`, `pecahan_kecil`, `unit`, `is_active` (default true), `disabled_at`, `created_at`
    - `is_active`/`disabled_at` from [add-fail-active.sql](add-fail-active.sql): a disabled fail is not offered in the Surat form; `surat.fail` stores the text `"<no_locker> <no_fail>"`, so old surat are unchanged
+   - `no_rujukan_fail` (No Rujukan Fail, optional text) from [add-surat-no-bilangan-fail-rujukan.sql](add-surat-no-bilangan-fail-rujukan.sql): in the Setup Fail form under No. Fail, shown under the No. Fail in the list and searchable
    - Parts: "HASIL", "PERTANIAN AM", "KONTRAK"
 
 4. **`users`** - User authentication and profile

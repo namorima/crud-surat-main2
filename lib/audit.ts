@@ -34,6 +34,7 @@ export const SURAT_AUDIT_FIELDS: Record<string, string> = {
   unit: "Unit",
   tindakan_pic: "Tindakan PIC",
   fail: "Fail",
+  no_bilangan_surat: "No Bilangan Surat",
   untuk_makluman: "Untuk Makluman",
   status: "Status",
   tarikh_selesai: "Tarikh Selesai",

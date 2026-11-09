@@ -7,6 +7,8 @@ export type Surat = {
   kategori: string
   unit: string
   fail: string
+  /** No Bilangan Surat (the letter's own reference number); "" when not set */
+  noBilanganSurat?: string
   tindakanPic: string
   status: "BELUM PROSES" | "HOLD / KIV" | "DALAM TINDAKAN" | "SELESAI" | "BATAL"
   tarikhSelesai: string | null

@@ -91,6 +91,7 @@ export async function getAllSurat(): Promise<Surat[]> {
         kategori: row.kategori,
         unit: row.unit,
         fail: row.fail || "",
+        noBilanganSurat: row.no_bilangan_surat || "",
         tindakanPic: row.tindakan_pic || "",
         status: row.status as "BELUM PROSES" | "HOLD / KIV" | "DALAM TINDAKAN" | "SELESAI" | "BATAL",
         tarikhSelesai: formatDateFromDB(row.tarikh_selesai),
@@ -124,6 +125,7 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
       kategori: surat.kategori,
       unit: surat.unit,
       fail: surat.fail || null,
+      no_bilangan_surat: surat.noBilanganSurat?.replace(/\D/g, "") || null,
       tindakan_pic: surat.tindakanPic || null,
       status: surat.status,
       tarikh_selesai: formatDateToDB(surat.tarikhSelesai),
@@ -208,6 +210,7 @@ export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): 
         reference: surat.reference || null,
         // Callers that don't send these (older clients) leave them as they are
         ...(surat.kaedah !== undefined && { kaedah: surat.kaedah || null }),
+        ...(surat.noBilanganSurat !== undefined && { no_bilangan_surat: surat.noBilanganSurat.replace(/\D/g, "") || null }),
         ...(surat.untukMakluman !== undefined && { untuk_makluman: !!surat.untukMakluman }),
       })
       .eq("id", existingSurat.id)
@@ -1408,6 +1411,7 @@ function mapFailRow(row: any): Fail {
     part: row.part,
     noLocker: row.no_locker || "",
     noFail: row.no_fail,
+    noRujukanFail: row.no_rujukan_fail || "",
     pecahan: row.pecahan || "",
     pecahanKecil: row.pecahan_kecil || "",
     unit: row.unit,
@@ -1438,6 +1442,7 @@ export async function addFail(failData: Omit<Fail, "id" | "isActive">): Promise<
         part: failData.part,
         no_locker: failData.noLocker || null,
         no_fail: failData.noFail,
+        no_rujukan_fail: failData.noRujukanFail?.trim() || null,
         pecahan: failData.pecahan || null,
         pecahan_kecil: failData.pecahanKecil || null,
         unit: failData.unit,
@@ -1462,6 +1467,7 @@ export async function updateFail(id: string, failData: Omit<Fail, "id" | "isActi
         part: failData.part,
         no_locker: failData.noLocker || null,
         no_fail: failData.noFail,
+        no_rujukan_fail: failData.noRujukanFail?.trim() || null,
         pecahan: failData.pecahan || null,
         pecahan_kecil: failData.pecahanKecil || null,
         unit: failData.unit,
