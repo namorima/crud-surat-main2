@@ -1,5 +1,6 @@
 "use client"
 
+import { rujukanSurat } from "@/lib/rujukan-surat"
 import type { ReactNode } from "react"
 import {
   RiArrowDownLine,
@@ -46,6 +47,8 @@ export interface SuratDetailDialogProps {
   failLabel: string
   /** HASIL / PERTANIAN AM / KONTRAK, for the chip colour. */
   failPart: string
+  /** No Rujukan Fail of the surat's fail, for "dlm FELCRA/PJ/100-2/3 (5)" */
+  failRujukan?: string
   canEdit: boolean
   /** Admin / Super Admin: show the audit (clock) button */
   showAudit?: boolean
@@ -77,6 +80,7 @@ export function SuratDetailDialog({
   surat,
   failLabel,
   failPart,
+  failRujukan = "",
   canEdit,
   showAudit = false,
   sharing,
@@ -181,6 +185,13 @@ export function SuratDetailDialog({
                   <Chip variant="caption" color={FAIL_PART_CHIP[failPart] ?? "neutral"} className="max-w-full whitespace-normal text-left">
                     {failLabel}
                   </Chip>
+                ) : (
+                  "-"
+                )}
+              </Field>
+              <Field label="No Bilangan Surat" className="col-span-2 sm:col-span-3">
+                {surat.noBilanganSurat ? (
+                  <span className="break-words tabular-nums [overflow-wrap:anywhere]">{rujukanSurat(surat.noBilanganSurat, failRujukan)}</span>
                 ) : (
                   "-"
                 )}
