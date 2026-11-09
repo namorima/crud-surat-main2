@@ -47,7 +47,7 @@ export interface SuratDetailDialogProps {
   failLabel: string
   /** HASIL / PERTANIAN AM / KONTRAK, for the chip colour. */
   failPart: string
-  /** No Rujukan Fail of the surat's fail, for "(5) dlm FELCRA/PJ/100-2/3" */
+  /** No Rujukan Fail of the surat's fail, for "dlm FELCRA/PJ/100-2/3 (5)" */
   failRujukan?: string
   canEdit: boolean
   /** Admin / Super Admin: show the audit (clock) button */
