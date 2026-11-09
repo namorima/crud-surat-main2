@@ -185,6 +185,9 @@ export function SuratDetailDialog({
                   "-"
                 )}
               </Field>
+              <Field label="No Bilangan Surat" className="col-span-2 sm:col-span-3">
+                {surat.noBilanganSurat ? <span className="break-words [overflow-wrap:anywhere]">{surat.noBilanganSurat}</span> : "-"}
+              </Field>
             </dl>
 
             {surat.nota && (

@@ -3,6 +3,8 @@ export interface Fail {
   part: string // HASIL, PERTANIAN AM, KONTRAK
   noLocker: string
   noFail: string
+  /** No Rujukan Fail (e.g. "FELCRA/PJ/100-2/3"); "" when not set */
+  noRujukanFail: string
   pecahan: string
   pecahanKecil: string
   unit: string

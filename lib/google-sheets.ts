@@ -736,6 +736,7 @@ export async function getAllFail(): Promise<Fail[]> {
       part: row[0] || "",
       noLocker: row[1] || "",
       noFail: row[2] || "",
+      noRujukanFail: "",
       pecahan: row[3] || "",
       pecahanKecil: row[4] || "",
       unit: row[6] || "", // Column G (index 6)

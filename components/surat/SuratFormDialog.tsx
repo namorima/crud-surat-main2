@@ -48,6 +48,7 @@ export type SuratFormData = {
   kaedah: string
   unit: string
   tindakanPic: string
+  noBilanganSurat: string
   status: string
   tarikhSelesai: string
   nota: string
@@ -442,6 +443,17 @@ export function SuratFormDialog(props: SuratFormDialogProps) {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                </Field>
+
+                <Field label="No Bilangan Surat" htmlFor={id("noBilanganSurat")}>
+                  <Input
+                    id={id("noBilanganSurat")}
+                    name="noBilanganSurat"
+                    value={formData.noBilanganSurat}
+                    onChange={onInputChange}
+                    placeholder="Contoh: (12) dlm FELCRA/PJ/100-2/3"
+                    autoComplete="off"
+                  />
                 </Field>
               </Section>
 
