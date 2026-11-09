@@ -3,6 +3,7 @@
 import { Skeleton } from "skullet/react"
 import { SAMPLE_SURAT } from "@/lib/skeleton-samples"
 import { useRowFlash } from "@/lib/use-row-flash"
+import { onlyDigits } from "@/lib/rujukan-surat"
 import type React from "react"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react"
@@ -120,6 +121,14 @@ const getFullFailDisplay = (storedValue: string, failData: Fail[]): string => {
 }
 
 // Helper function to get fail part from stored value
+/** No Rujukan Fail of a surat's fail: the stored "<locker> <no fail>", same unit first. */
+const getFailRujukan = (storedValue: string, unit: string, failData: Fail[]): string => {
+  if (!storedValue || storedValue === "-") return ""
+  const matches = failData.filter((fail) => getFailValue(fail) === storedValue)
+  const fail = matches.find((f) => f.unit.toLowerCase() === (unit || "").toLowerCase()) ?? matches[0]
+  return fail?.noRujukanFail || ""
+}
+
 const getFailPartFromStoredValue = (storedValue: string, failData: Fail[]): string => {
   if (!storedValue || storedValue === "-") return ""
 
@@ -1024,8 +1033,10 @@ export default function SuratPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
 
-    // Auto uppercase for specific fields
-    if (name === "daripadaKepada" || name === "perkara" || name === "fail") {
+    // No Bilangan Surat is a number only ("5"); its fail's No Rujukan Fail completes it
+    if (name === "noBilanganSurat") {
+      setFormData((prev) => ({ ...prev, noBilanganSurat: onlyDigits(value) }))
+    } else if (name === "daripadaKepada" || name === "perkara" || name === "fail") {
       setFormData((prev) => ({ ...prev, [name]: value.toUpperCase() }))
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }))
@@ -1725,6 +1736,7 @@ export default function SuratPage() {
         surat={detailSurat}
         failLabel={detailSurat ? getFullFailDisplay(detailSurat.fail, failData) : "-"}
         failPart={detailSurat ? getFailPartFromStoredValue(detailSurat.fail, failData) : ""}
+        failRujukan={detailSurat ? getFailRujukan(detailSurat.fail, detailSurat.unit, failData) : ""}
         canEdit={!!canEditFull}
         showAudit={canViewAudit(user)}
         sharing={!!detailSurat && sharingItemId === detailSurat.id}

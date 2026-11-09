@@ -125,7 +125,7 @@ export async function addSurat(rowIndex: number, surat: Omit<Surat, "id" | "bil"
       kategori: surat.kategori,
       unit: surat.unit,
       fail: surat.fail || null,
-      no_bilangan_surat: surat.noBilanganSurat?.trim() || null,
+      no_bilangan_surat: surat.noBilanganSurat?.replace(/\D/g, "") || null,
       tindakan_pic: surat.tindakanPic || null,
       status: surat.status,
       tarikh_selesai: formatDateToDB(surat.tarikhSelesai),
@@ -210,7 +210,7 @@ export async function updateSurat(bilNumber: number, surat: Omit<Surat, "id">): 
         reference: surat.reference || null,
         // Callers that don't send these (older clients) leave them as they are
         ...(surat.kaedah !== undefined && { kaedah: surat.kaedah || null }),
-        ...(surat.noBilanganSurat !== undefined && { no_bilangan_surat: surat.noBilanganSurat.trim() || null }),
+        ...(surat.noBilanganSurat !== undefined && { no_bilangan_surat: surat.noBilanganSurat.replace(/\D/g, "") || null }),
         ...(surat.untukMakluman !== undefined && { untuk_makluman: !!surat.untukMakluman }),
       })
       .eq("id", existingSurat.id)
