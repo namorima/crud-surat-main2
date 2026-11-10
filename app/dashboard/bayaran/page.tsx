@@ -415,8 +415,9 @@ export default function BayaranPage() {
     if (dateFilter[0]) {
       // Whole days, inclusive; a single day when there is no end date
       filtered = filtered.filter((item) => inRange(parseDate(item.tarikhTerima), dateFilter));
-    } else {
-      // Default filter for current year and previous year - show 2025 and 2026 records
+    } else if (!searchQuery.trim()) {
+      // Default: this year and last year only (by tarikh terima). A search
+      // looks through every year, so an older record can still be found.
       const currentYear = new Date().getFullYear();
       const previousYear = currentYear - 1;
       filtered = filtered.filter((item) => {

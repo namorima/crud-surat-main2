@@ -621,6 +621,7 @@ The Share Link feature allows admin users (role "semua") to generate secure, sha
 3. **Bayaran (Payments)** ([app/dashboard/bayaran/page.tsx](app/dashboard/bayaran/page.tsx))
    - Payment record management
    - Search ([lib/bayaran-search.ts](lib/bayaran-search.ts)): `*119` lists only record 119 and Enter opens it; a plain number also matches the ID and Nilai Bayaran
+   - Without a date range the list shows only this year and last year (by Tarikh Terima); a search looks through every year, so older records (e.g. 2024) are still found. Picking a date range in the header calendar replaces the year limit
    - Bulk status updates
    - Audit trail
    - Export functionality
